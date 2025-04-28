@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrum Poker Tool (WebSocket)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+
+        /* --- Card Flip Animation --- */
+        .card-container {
+            perspective: 1000px;
+            width: 40px; /* Adjust size as needed */
+            height: 60px; /* Adjust size as needed */
+            position: relative; /* Needed for checkmark positioning */
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: default; /* Indicate non-interactive */
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px; /* Rounded corners for cards */
+            font-size: 1rem; /* Adjust font size */
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card-front {
+            /* Styling for the back of the card (visible initially) */
+            background-color: #4a90e2; /* Blue card back */
+            color: white;
+            /* Simple pattern for card back */
+            background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.1) 75%, transparent 75%, transparent);
+            background-size: 10px 10px;
+        }
+
+        .card-back {
+            /* Styling for the front of the card (showing the vote) */
+            background-color: #ffffff; /* White card face */
+            color: #333;
+            transform: rotateY(180deg);
+            border: 1px solid #ccc;
+        }
+
+        /* Style for voting cards */
+        .vote-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .vote-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        }
+        .vote-card.selected {
+             border: 3px solid #2563eb; /* Blue border for selected */
+             transform: scale(1.05);
+        }
+
+        /* Hide elements */
+        .hidden {
+            display: none;
+        }
+
+        /* Basic modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            min-width: 300px;
+        }
+
+        /* Connection Status Indicator */
+        #connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 100;
+        }
+        #connection-status.connected {
+            background-color: #dcfce7; /* Light green */
+            color: #166534; /* Dark green */
+        }
+        #connection-status.disconnected {
+             background-color: #fee2e2; /* Light red */
+            color: #991b1b; /* Dark red */
+        }
+         #connection-status.connecting {
+             background-color: #fef9c3; /* Light yellow */
+            color: #854d0e; /* Dark yellow */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="connection-status" class="connecting">Connecting...</div>
+
+    <div id="login-section" class="bg-white p-8 rounded-lg shadow-md w-full max-w-sm text-center">
+        <h1 class="text-2xl font-bold mb-6 text-gray-700">Welcome to Scrum Poker</h1>
+        <input type="text" id="name-input" placeholder="Enter your name" class="w-full px-4 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        
+        <label for="role-select" class="block text-sm font-medium text-gray-700">Choose a role</label>
+<select id="role-select" class="w-full px-4 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <option value="Voter" selected>Voter</option>
+    <option value="Observer">Observer</option>
+    <option value="Facilitator">Facilitator</option>
+</select>
+
+        <button id="login-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-200 disabled:opacity-50" disabled>
+            Enter Room (Connecting...)
+        </button>
+
+        <p id="login-error" class="text-red-500 text-sm mt-2 hidden"></p>
+    </div>
+
+    <div id="poker-room-section" class="hidden w-full max-w-4xl mx-auto">
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h1 class="text-3xl font-bold text-gray-800">Scrum Poker Room</h1>
+                <div>
+                    <span id="user-greeting" class="text-gray-600 mr-4"></span>
+                    <button id="edit-name-button" class="text-sm text-blue-600 hover:underline">Edit Name</button>
+                     <button id="logout-button" class="text-sm text-red-600 hover:underline ml-2">Logout</button>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Cast Your Vote:</h2>
+                <div id="voting-cards" class="flex flex-wrap justify-center gap-3">
+                    <span class="text-gray-500 text-sm italic hidden" id="observer-message">Observers cannot vote.</span>
+                </div>
+                 <p id="vote-error" class="text-red-500 text-sm mt-2 text-center hidden"></p>
+            </div>
+
+            <div>
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Participants</h2>
+                <div id="participants-list" class="space-y-3">
+                    </div>
+            </div>
+
+             <div id="vote-summary" class="mt-6 pt-4 border-t hidden">
+                 <h3 class="text-lg font-semibold text-gray-700">Vote Results</h3>
+                 <p class="text-gray-600">Average Vote: <span id="average-vote" class="font-bold">--</span></p>
+            </div>
+
+            <div id="facilitator-controls" class="mt-8 text-center hidden">
+                <button id="show-votes-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-md transition duration-200 mr-2 disabled:opacity-50">
+                    Show Votes
+                </button>
+                 <button id="reset-votes-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md transition duration-200 disabled:opacity-50">
+                    Reset Votes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-name-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="text-xl font-semibold mb-4">Edit Your Name</h2>
+            <input type="text" id="edit-name-input" placeholder="New name" class="w-full px-4 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+             <p id="edit-name-error" class="text-red-500 text-sm mb-2 hidden"></p>
+            <div class="flex justify-end gap-3">
+                 <button id="cancel-edit-name-button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md transition duration-200">
+                    Cancel
+                </button>
+                <button id="save-name-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-200">
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const loginSection = document.getElementById('login-section');
+        const pokerRoomSection = document.getElementById('poker-room-section');
+        const nameInput = document.getElementById('name-input');
+        const loginButton = document.getElementById('login-button');
+        const loginError = document.getElementById('login-error');
+        const userGreeting = document.getElementById('user-greeting');
+        const votingCardsContainer = document.getElementById('voting-cards');
+        const observerMessage = document.getElementById('observer-message');
+        const voteError = document.getElementById('vote-error');
+        const participantsListContainer = document.getElementById('participants-list');
+        const facilitatorControls = document.getElementById('facilitator-controls');
+        const showVotesButton = document.getElementById('show-votes-button');
+        const resetVotesButton = document.getElementById('reset-votes-button');
+        const voteSummary = document.getElementById('vote-summary');
+        const averageVoteSpan = document.getElementById('average-vote');
+        const editNameButton = document.getElementById('edit-name-button');
+        const logoutButton = document.getElementById('logout-button');
+        const editNameModal = document.getElementById('edit-name-modal');
+        const editNameInput = document.getElementById('edit-name-input');
+        const editNameError = document.getElementById('edit-name-error');
+        const saveNameButton = document.getElementById('save-name-button');
+        const cancelEditNameButton = document.getElementById('cancel-edit-name-button');
+        const connectionStatus = document.getElementById('connection-status');
+
+        // --- Application State (Managed primarily by server now) ---
+        let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
+        let participants = []; // Array of user objects received from server
+        let votesRevealed = false; // Status received from server
+        let facilitatorId = null; // ID received from server
+        const fibonacciVotes = ['0', '1', '2', '3', '5', '8', '13', '?']; // Voting options
+
+        // --- WebSocket Setup ---
+        let ws = null;
+        // IMPORTANT: Replace with your actual WebSocket server URL
+        // If running locally: 'ws://localhost:8080'
+        // If deployed: 'wss://your-deployed-server.com'
+        const WEBSOCKET_URL = 'ws://127.0.0.30:8080/ws';
+
+        function connectWebSocket() {
+            console.log('Attempting to connect to WebSocket server...');
+            updateConnectionStatus('connecting', 'Connecting...');
+            loginButton.disabled = true;
+            loginButton.textContent = 'Enter Room (Connecting...)';
+            loginError.classList.add('hidden'); // Hide previous errors
+
+            ws = new WebSocket(WEBSOCKET_URL);
+
+            ws.onopen = () => {
+
+                console.log('WebSocket connection established.');
+
+             
+                 // Automatically send login request after connecting
+                //ws.send(JSON.stringify({ type: 'login', payload: { name: 'David' } }));
+              
+                updateConnectionStatus('connected', 'Connected');
+
+                loginButton.disabled = false;
+                loginButton.textContent = 'Enter Room';
+
+                // Check if user was previously logged in (e.g., page refresh)
+                const savedUserId = sessionStorage.getItem('scrumPokerUserId');
+                 const savedUserName = sessionStorage.getItem('scrumPokerUserName');
+
+
+                if (savedUserId && savedUserName) {
+                    // Attempt re-login or request state based on ID
+                    // For simplicity, we'll just require manual login again on refresh/reconnect for now.
+                    // A more robust solution would handle re-authentication.
+                    console.log('Found saved user ID, but requiring login again.');
+
+                   // sessionStorage.removeItem('scrumPokerUserId'); // Clear session on reconnect for now
+                   // sessionStorage.removeItem('scrumPokerUserName');
+
+                    showLogin(); // Go back to login screen
+                } else {
+                     showLogin(); // Show login screen for first time connection
+                }
+            };
+
+            ws.addEventListener('close', (event) => {
+                console.log('WebSocket closed:', event);
+            });
+
+            ws.addEventListener('error', (event) => {
+                console.error('WebSocket error:', event);
+            });
+
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    console.log('Message received from server:', message);
+                    handleServerMessage(message);
+                } catch (error) {
+                    console.error('Failed to parse server message:', event.data, error);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus('disconnected', 'Connection Error');
+                loginButton.disabled = true;
+                loginButton.textContent = 'Enter Room (Error)';
+                // Show appropriate error to user, maybe on login screen
+                loginError.textContent = 'Cannot connect to the server. Please try again later.';
+                loginError.classList.remove('hidden');
+                showLogin(); // Force back to login on connection error
+
+                ws.removeAllListeners('connection');
+                ws.on('connection', (socket) => {
+                    console.log('New connection established');
+                });
+            };
+
+            ws.onclose = (event) => {
+                console.log('WebSocket connection closed:', event.reason, `Code: ${event.code}`);
+                updateConnectionStatus('disconnected', 'Disconnected');
+                loginButton.disabled = true;
+                loginButton.textContent = 'Enter Room (Disconnected)';
+                currentUser = null; // Clear user state
+                participants = [];
+                showLogin(); // Go back to login screen
+                // Optional: Attempt to reconnect after a delay
+                setTimeout(connectWebSocket, 5000); // Reconnect after 5 seconds
+
+            };
+        }
+
+        function updateConnectionStatus(status, text) {
+            connectionStatus.className = status; // 'connected', 'disconnected', 'connecting'
+            connectionStatus.textContent = text;
+        }
+
+        // --- Server Message Handler ---
+        function handleServerMessage(message) {
+            const { type, payload } = message;
+
+            switch (type) {
+                case 'yourId':
+                    // Store the ID assigned by the server
+                    if (payload && payload.id) {
+                         // We don't set currentUser here yet, wait for login success / state update
+                         sessionStorage.setItem('scrumPokerUserId_temp', payload.id); // Store temporarily until login
+                         console.log('Received my user ID:', payload.id);
+                    }
+                    break;
+
+                case 'updateState':
+                    if (payload) {
+                        participants = payload.participants || [];
+                        votesRevealed = payload.votesRevealed || false;
+                        facilitatorId = payload.facilitatorId || null;
+
+                        // Find the current user in the updated participant list
+                        const myTempId = sessionStorage.getItem('scrumPokerUserId_temp');
+                        const mySessionId = sessionStorage.getItem('scrumPokerUserId');
+                        const myId = mySessionId || myTempId; // Use session ID if logged in, otherwise temp ID
+
+                        if (myId) {
+                           currentUser = participants.find(p => p.id === myId) || null;
+                        } else {
+                            currentUser = null; // Should not happen if connected/logged in
+                        }
+
+
+                        // If currentUser exists, we are in the room, otherwise stay/go to login
+                        if (currentUser) {
+                            // Update session storage with potentially changed details (like role)
+                            sessionStorage.setItem('scrumPokerUserId', currentUser.id);
+                            sessionStorage.setItem('scrumPokerUserName', currentUser.name);
+                            sessionStorage.removeItem('scrumPokerUserId_temp'); // Clean up temp ID
+
+                            showPokerRoom(); // Ensure poker room is visible
+                            updateUI(); // Update the UI with the new state
+                        } else if (!loginSection.classList.contains('hidden')) {
+                            // Still on login screen, do nothing until login action
+                        } else {
+                            // Was in room, but now not in participant list (e.g., kicked?)
+                            console.log("User no longer in participant list. Returning to login.");
+                            logout(); // Go back to login
+                        }
+                    }
+                    break;
+
+                case 'error':
+                    console.error('Server Error:', payload.message);
+                    // Display error messages appropriately (e.g., for voting, name change)
+                    if (document.getElementById('vote-error') && !voteError.classList.contains('hidden')) {
+                         voteError.textContent = payload.message;
+                         voteError.classList.remove('hidden');
+                         setTimeout(() => voteError.classList.add('hidden'), 3000); // Hide after 3s
+                    } else if (document.getElementById('edit-name-error') && !editNameModal.classList.contains('hidden')) {
+                         editNameError.textContent = payload.message;
+                         editNameError.classList.remove('hidden');
+                    } else if (document.getElementById('login-error') && !loginSection.classList.contains('hidden')) {
+                         loginError.textContent = payload.message;
+                         loginError.classList.remove('hidden');
+                    } else {
+                        alert(`Server error: ${payload.message}`); // Fallback
+                    }
+                    break;
+
+                default:
+                    console.log(`Unknown message type received: ${type}`);
+            }
+        }
+
+        // --- Send Message Helper ---
+        function sendMessage(type, payload) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const message = JSON.stringify({ type, payload });
+                console.log('Sending message:', message);
+                ws.send(message);
+            } else {
+                console.error('WebSocket is not connected. Cannot send message.');
+                // Handle disconnected state appropriately (e.g., show error)
+                 updateConnectionStatus('disconnected', 'Disconnected');
+                 alert('Connection lost. Please refresh the page.');
+                 showLogin();
+            }
+        }
+
+
+        // --- Initialization ---
+        function init() {
+            setupEventListeners();
+            connectWebSocket(); // Start WebSocket connection attempt
+        }
+
+        // --- Event Listeners ---
+        function setupEventListeners() {
+            loginButton.addEventListener('click', handleLogin);
+            nameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !loginButton.disabled) handleLogin();
+            });
+            showVotesButton.addEventListener('click', handleShowVotes);
+            resetVotesButton.addEventListener('click', handleResetVotes);
+            editNameButton.addEventListener('click', openEditNameModal);
+             logoutButton.addEventListener('click', logout);
+            saveNameButton.addEventListener('click', handleSaveName);
+            cancelEditNameButton.addEventListener('click', closeEditNameModal);
+            // Voting card listeners are added dynamically in renderVotingCards
+        }
+
+        function setHiddenValue(newValue) {
+            const hiddenField = document.getElementById('reloadCounter');
+            hiddenField.value = newValue; // Set the new value
+        }
+
+        // Function to get the value from the hidden field
+        function getHiddenValue() {
+            const hiddenField = document.getElementById('reloadCounter');
+            return hiddenField.value; // Read and return the value
+        }
+
+        function reloadPage() {
+            location.reload();
+        }
+
+        // --- View Management ---
+        function showLogin() {
+            loginSection.classList.remove('hidden');
+            pokerRoomSection.classList.add('hidden');
+            editNameModal.classList.add('hidden');
+            loginError.classList.add('hidden'); // Ensure login error is hidden initially
+        }
+
+        function showPokerRoom() {
+            loginSection.classList.add('hidden');
+            pokerRoomSection.classList.remove('hidden');
+            // UI update will be triggered by receiving state from server
+        }
+
+        function openEditNameModal() {
+            if (!currentUser) return;
+            editNameInput.value = currentUser.name; // Pre-fill current name
+            editNameError.classList.add('hidden'); // Hide previous errors
+            editNameModal.classList.remove('hidden');
+        }
+
+        function closeEditNameModal() {
+             editNameModal.classList.add('hidden');
+        }
+
+        // --- UI Updates (Reflects state from server) ---
+        function updateUI() {
+            if (!currentUser) {
+                // If no current user data, likely means we should be on login screen
+                // This might happen if server removes user or connection drops unexpectedly
+                console.log("updateUI called without currentUser, redirecting to login.");
+                logout(); // Use logout to ensure clean state
+                return;
+            }
+
+            // Update greeting
+            userGreeting.textContent = `Hello, ${currentUser.name} (${currentUser.role})`;
+
+            // Generate/Update Voting Cards
+            renderVotingCards();
+
+            // Render Participants List
+            renderParticipantsList();
+
+            // Show/Hide Facilitator Controls & Enable/Disable buttons
+            if (currentUser.role === 'Facilitator') {
+                facilitatorControls.classList.remove('hidden');
+                showVotesButton.disabled = votesRevealed; // Disable if already revealed
+                resetVotesButton.disabled = false;
+            } else {
+                facilitatorControls.classList.add('hidden');
+            }
+
+            // Show/Hide Observer Message & Disable Voting Cards
+            if (currentUser.role === 'Observer') {
+                observerMessage.classList.remove('hidden');
+                votingCardsContainer.classList.add('pointer-events-none', 'opacity-50'); // Disable clicks
+            } else {
+                 observerMessage.classList.add('hidden');
+                 votingCardsContainer.classList.remove('pointer-events-none', 'opacity-50');
+            }
+
+            // Show/Hide Vote Summary & Calculate Average
+            if (votesRevealed) {
+                voteSummary.classList.remove('hidden');
+                calculateAndDisplayAverage();
+            } else {
+                voteSummary.classList.add('hidden');
+            }
+        }
+
+        function renderVotingCards() {
+            votingCardsContainer.innerHTML = ''; // Clear existing cards
+             // Add observer message placeholder back if needed
+            votingCardsContainer.appendChild(observerMessage);
+            votingCardsContainer.appendChild(voteError); // Keep error element
+
+            fibonacciVotes.forEach(value => {
+                const cardButton = document.createElement('button');
+                cardButton.textContent = value;
+                cardButton.dataset.value = value;
+                cardButton.classList.add(
+                    'vote-card', 'bg-white', 'text-blue-600', 'font-bold', 'py-4', 'px-6',
+                    'rounded-lg', 'shadow-md', 'hover:shadow-lg', 'border', 'border-gray-200',
+                    'disabled:opacity-60', 'disabled:cursor-not-allowed'
+                );
+                // Highlight selected card based on currentUser state from server
+                if (currentUser && currentUser.vote === value) {
+                    cardButton.classList.add('selected');
+                }
+
+                // Disable voting if observer, or if votes are revealed
+                cardButton.disabled = (currentUser?.role === 'Observer' || votesRevealed);
+
+                // Add click listener only if user can vote
+                if (currentUser && currentUser.role !== 'Observer') {
+                    cardButton.addEventListener('click', handleVote);
+                }
+
+                votingCardsContainer.appendChild(cardButton);
+            });
+        }
+
+        function renderParticipantsList() {
+            participantsListContainer.innerHTML = ''; // Clear list
+
+            // Sort participants: current user first, then alphabetically by name
+            const sortedParticipants = [...participants].sort((a, b) => {
+                if (a.id === currentUser?.id) return -1; // Use optional chaining
+                if (b.id === currentUser?.id) return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+
+            sortedParticipants.forEach(participant => {
+                const div = document.createElement('div');
+                div.classList.add('flex', 'items-center', 'justify-between', 'p-3', 'bg-gray-50', 'rounded-md', 'shadow-sm');
+
+                // --- Left side: Name and Role ---
+                const nameRoleDiv = document.createElement('div');
+                nameRoleDiv.classList.add('flex', 'flex-col', 'sm:flex-row', 'sm:items-center', 'flex-grow', 'mr-2'); // Allow wrapping and spacing
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = participant.name;
+                nameSpan.classList.add('font-medium', 'text-gray-800', 'mr-2');
+                if (participant.id === currentUser?.id) {
+                    nameSpan.textContent += ' (You)';
+                    nameSpan.classList.add('font-bold');
+                }
+                nameRoleDiv.appendChild(nameSpan);
+
+                const roleSpan = document.createElement('span');
+                roleSpan.textContent = `(${participant.role})`; // Display role clearly
+                roleSpan.classList.add('text-sm', 'text-gray-500');
+                 if (participant.id === facilitatorId) {
+                     roleSpan.textContent += ' 👑'; // Indicate Facilitator
+                     roleSpan.classList.add('font-semibold', 'text-yellow-600');
+                 }
+                nameRoleDiv.appendChild(roleSpan);
+
+                 // --- Role change controls (for Facilitator view) ---
+                 if (currentUser?.role === 'Facilitator' && participant.id !== currentUser.id) {
+                     const controlsDiv = document.createElement('div');
+                     controlsDiv.classList.add('mt-1', 'sm:mt-0', 'sm:ml-4', 'flex', 'gap-2', 'flex-wrap'); // Spacing and wrapping for controls
+
+                     // Select dropdown for roles
+                     const roleSelect = document.createElement('select');
+                     roleSelect.classList.add('text-xs', 'border', 'border-gray-300', 'rounded', 'px-1', 'py-0.5', 'bg-white');
+                     const roles = ['Voter', 'Observer', 'Facilitator'];
+                     roles.forEach(r => {
+                         const option = document.createElement('option');
+                         option.value = r;
+                         option.textContent = r;
+                         if (r === participant.role) {
+                             option.selected = true;
+                         }
+                         roleSelect.appendChild(option);
+                     });
+                     roleSelect.addEventListener('change', (e) => {
+                         handleChangeRole(participant.id, e.target.value);
+                     });
+                     controlsDiv.appendChild(roleSelect);
+
+                    // Maybe add a "Kick" button simulation later if needed
+                    // const kickButton = document.createElement('button');
+                    // kickButton.textContent = 'Kick';
+                    // kickButton.classList.add('text-xs', 'bg-red-100', 'text-red-700', 'px-2', 'py-0.5', 'rounded', 'hover:bg-red-200');
+                    // kickButton.onclick = () => handleKickUser(participant.id); // Need handleKickUser function
+                    // controlsDiv.appendChild(kickButton);
+
+                     nameRoleDiv.appendChild(controlsDiv); // Add controls below/beside name/role
+                 }
+
+
+                div.appendChild(nameRoleDiv);
+
+                // --- Right side: Vote display / Card placeholder ---
+                const voteContainer = document.createElement('div');
+                voteContainer.classList.add('card-container', 'flex-shrink-0'); // Prevent shrinking
+                voteContainer.dataset.userId = participant.id; // Link container to user
+
+                const card = document.createElement('div');
+                card.classList.add('card');
+                // Determine flip state based on global votesRevealed and if participant voted
+                if (votesRevealed && participant.vote !== null) {
+                    card.classList.add('flipped');
+                }
+
+                const cardFaceFront = document.createElement('div');
+                cardFaceFront.classList.add('card-face', 'card-front');
+                cardFaceFront.textContent = '♢'; // Symbol for card back
+
+                const cardFaceBack = document.createElement('div');
+                cardFaceBack.classList.add('card-face', 'card-back');
+                // Show vote value only if revealed, otherwise show placeholder
+                cardFaceBack.textContent = (votesRevealed && participant.vote !== null) ? participant.vote : '--';
+
+                card.appendChild(cardFaceFront);
+                card.appendChild(cardFaceBack);
+                voteContainer.appendChild(card);
+
+                // Show checkmark if voted (and votes not revealed yet)
+                // Position checkmark relative to card-container
+                if (!votesRevealed && participant.vote !== null && participant.role !== 'Observer') {
+                     const checkMark = document.createElement('span');
+                     checkMark.textContent = '✓';
+                     checkMark.classList.add('text-green-500', 'font-bold', 'absolute', '-top-1', '-right-1', 'bg-white', 'rounded-full', 'px-1', 'text-xs', 'shadow');
+                     voteContainer.appendChild(checkMark);
+                }
+
+
+                div.appendChild(voteContainer);
+                participantsListContainer.appendChild(div);
+            });
+        }
+
+        // --- Event Handlers (Send messages to server) ---
+        function handleLogin() {
+            const name = nameInput.value.trim();
+            const role = document.getElementById('role-select').value; 
+
+            if (name && role) {
+                loginError.classList.add('hidden');
+                sendMessage('login', { name: name, role: role });
+                // State update from server will handle moving to the poker room
+            } else {
+                loginError.textContent = 'Please enter your name and role.';
+                loginError.classList.remove('hidden');
+            }
+        }
+
+        function handleVote(event) {
+            if (votesRevealed || !currentUser || currentUser.role === 'Observer') return;
+
+            const selectedValue = event.target.dataset.value;
+
+            // Send vote to server
+            sendMessage('vote', { vote: selectedValue });
+
+            // Optimistic UI update (optional but good for responsiveness):
+            // Highlight the selected card immediately
+            document.querySelectorAll('.vote-card').forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+            // Note: The actual `currentUser.vote` state will be updated when server confirms via `updateState`
+        }
+
+        function handleShowVotes() {
+             if (currentUser?.role === 'Facilitator' && !votesRevealed) {
+                sendMessage('revealVotes', {});
+            }
+        }
+
+        function resetAllCards() {
+
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('flipped'));
+        }
+
+        function handleResetVotes() {
+             if (currentUser?.role === 'Facilitator') {
+                sendMessage('resetVotes', {});
+                resetAllCards()
+            }
+        }
+
+        function handleSaveName() {
+            const newName = editNameInput.value.trim();
+            if (newName && currentUser) {
+                if (newName === currentUser.name) {
+                     closeEditNameModal(); // No change needed
+                     return;
+                }
+                sendMessage('changeName', { name: newName });
+                closeEditNameModal(); // Close modal, server update will refresh UI
+            } else if (!newName) {
+                 editNameError.textContent = "Name cannot be empty.";
+                 editNameError.classList.remove('hidden');
+            }
+        }
+
+         function handleChangeRole(targetUserId, newRole) {
+             if (currentUser?.role === 'Facilitator') {
+                 console.log(`Requesting role change for ${targetUserId} to ${newRole}`);
+                 sendMessage('changeRole', { targetUserId: targetUserId, newRole: newRole });
+             }
+         }
+
+         function logout() {
+            
+            console.log("Logging out.");
+
+            // Clear local state without closing the WebSocket connection
+            currentUser = null; // Reset current user to null to signify logged out state
+            participants = [];
+            votesRevealed = false;
+            facilitatorId = null;
+            sessionStorage.clear();
+
+            sessionStorage.removeItem('scrumPokerUserId'); 
+            sessionStorage.removeItem('scrumPokerUserName');
+            sessionStorage.removeItem('scrumPokerUserId_temp');
+
+            // Close the old WebSocket if still open
+            if (ws && ws.readyState === WebSocket.OPEN) {
+
+                sendMessage('logout', {});
+
+                ws.close();
+            }
+    
+            // Show login screen
+            showLogin();
+            
+            // Only update connection status message, do not close WebSocket
+            updateConnectionStatus('disconnected', 'Disconnected'); 
+            
+            // Optionally reset UI elements that depend on the user state
+            // For example, you can also modify or clear participant UI here
+
+            // Create a new WebSocket connection
+
+            // Reconnect after slight delay
+          //  setTimeout(connectWebSocket, 300); // 300ms delay
+            //connectWebSocket();
+
+            }
+
+        // --- Calculations (Uses local state derived from server) ---
+        function calculateAndDisplayAverage() {
+            let sum = 0;
+            let numericVoteCount = 0;
+
+            participants.forEach(p => {
+                // Only include numeric votes from Voters or Facilitators
+                if ((p.role === 'Voter' || p.role === 'Facilitator') && p.vote !== null && !isNaN(parseInt(p.vote))) {
+                    sum += parseInt(p.vote);
+                    numericVoteCount++;
+                }
+            });
+
+            const average = numericVoteCount > 0 ? (sum / numericVoteCount).toFixed(1) : '--';
+            averageVoteSpan.textContent = average;
+        }
+
+        // --- Start the application ---
+        init();
+
+    </script>
+
+</body>
+</html>
