@@ -167,58 +167,49 @@ wss.on('connection', (ws) => {
                 broadcast(getRoomState()); // Broadcast reset state
                 break;
 
-             case 'changeName':
-                 if (!currentUser) { sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } }); return; }
-                 if (payload && payload.name && typeof payload.name === 'string' && payload.name.trim()) {
-                     const oldName = currentUser.name;
-                     currentUser.name = payload.name.trim();
-                     console.log(`User ${userId} changed name from ${oldName} to ${currentUser.name}`);
-                     broadcast(getRoomState()); // Broadcast updated participant list
-                 } else {
-                      sendToClient(ws, { type: 'error', payload: { message: 'Invalid name provided.' } });
-                 }
-                 break;
+   
 
-             case 'changeRole':
-                 if (!currentUser) { sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } }); return; }
-                 if (currentUser.role !== 'Facilitator') { sendToClient(ws, { type: 'error', payload: { message: 'Only Facilitators can change roles.' } }); return; }
-                 if (!payload || !payload.targetUserId || !payload.newRole) { sendToClient(ws, { type: 'error', payload: { message: 'Missing target user ID or new role.' } }); return; }
-
-                 const targetUser = participants[payload.targetUserId];
-                 if (!targetUser) { sendToClient(ws, { type: 'error', payload: { message: 'Target user not found.' } }); return; }
-
-                 // Prevent changing own role via this message type
-                 if (targetUser.id === currentUser.id) { sendToClient(ws, { type: 'error', payload: { message: 'Cannot change your own role this way.' } }); return; }
-
-                 // Basic validation for roles
-                 const allowedRoles = ['Voter', 'Observer', 'Facilitator'];
-                 if (!allowedRoles.includes(payload.newRole)) { sendToClient(ws, { type: 'error', payload: { message: 'Invalid role specified.' } }); return; }
-
-                 // If making someone else Facilitator, demote the current one
-                 if (payload.newRole === 'Facilitator') {
-                     if (facilitatorId && participants[facilitatorId] && facilitatorId !== targetUser.id) {
-                         participants[facilitatorId].role = 'Voter'; // Demote old facilitator
-                         console.log(`Demoted previous facilitator: ${participants[facilitatorId].name}`);
-                     }
-                     facilitatorId = targetUser.id; // Assign new facilitator
-                 }
-
-                 // If the target user *was* the facilitator and is being changed to something else
-                 if (targetUser.id === facilitatorId && payload.newRole !== 'Facilitator') {
-                      facilitatorId = null; // Clear facilitator ID
-                      // Need to assign a new one if possible
-                 }
-
-                 targetUser.role = payload.newRole;
-                 console.log(`Role for ${targetUser.name} changed to ${payload.newRole} by ${currentUser.name}`);
-
-                 // Re-evaluate facilitator assignment if the current one was changed
-                 if (facilitatorId === null) {
-                    
-                 }
-
-                 broadcast(getRoomState()); // Broadcast changes
-                 break;
+                case 'changeRole': {
+                    if (!currentUser) {
+                        return sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } });
+                    }
+                    const { targetUserId, newRole } = payload || {};
+                    if (!newRole) {
+                        return sendToClient(ws, { type: 'error', payload: { message: 'Missing new role.' } });
+                    }
+                
+                    const allowed = ['Voter', 'Observer', 'Facilitator'];
+                    if (!allowed.includes(newRole)) {
+                        return sendToClient(ws, { type: 'error', payload: { message: 'Invalid role specified.' } });
+                    }
+                
+                    // If no targetUserId, assume self-change
+                    const uid = targetUserId || currentUser.id;
+                    const target = participants[uid];
+                    if (!target) {
+                        return sendToClient(ws, { type: 'error', payload: { message: 'User not found.' } });
+                    }
+                
+                    // Only facilitators can change others’ roles
+                    if (uid !== currentUser.id && currentUser.role !== 'Facilitator') {
+                        return sendToClient(ws, { type: 'error', payload: { message: 'Only facilitators can change other users’ roles.' } });
+                    }
+                
+                    // Handle facilitator assignment/demotion
+                    if (newRole === 'Facilitator') {
+                        if (facilitatorId && facilitatorId !== uid && participants[facilitatorId]) {
+                            participants[facilitatorId].role = 'Voter';
+                        }
+                        facilitatorId = uid;
+                    } else if (uid === facilitatorId && newRole !== 'Facilitator') {
+                        facilitatorId = null;
+                    }
+                
+                    target.role = newRole;
+                    console.log(`Role for ${target.name} changed to ${newRole} by ${currentUser.name}`);
+                    broadcast(getRoomState());
+                    break;
+                }
 
             default:
                 console.log(`Unknown message type received: ${type}`);

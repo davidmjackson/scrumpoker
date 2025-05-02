@@ -158,8 +158,15 @@
                 <h1 class="text-3xl font-bold text-gray-800">Scrum Poker Room</h1>
                 <div>
                     <span id="user-greeting" class="text-gray-600 mr-4"></span>
-                    <button id="edit-name-button" class="text-sm text-blue-600 hover:underline">Edit Name</button>
-                     <button id="logout-button" class="text-sm text-red-600 hover:underline ml-2">Logout</button>
+                    
+                <button id="edit-role-button" class="text-sm text-blue-600 hover:underline">Change Role</button>
+
+                  
+                  
+                  
+                    <button id="logout-button" class="text-sm text-red-600 hover:underline ml-2">Logout</button>
+
+
                 </div>
             </div>
 
@@ -193,21 +200,22 @@
         </div>
     </div>
 
-    <div id="edit-name-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h2 class="text-xl font-semibold mb-4">Edit Your Name</h2>
-            <input type="text" id="edit-name-input" placeholder="New name" class="w-full px-4 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-             <p id="edit-name-error" class="text-red-500 text-sm mb-2 hidden"></p>
+    <div id="edit-role-modal" class="modal-overlay hidden">
+          <div class="modal-content">
+           <h2 class="text-xl font-semibold mb-4">Change Your Role</h2>
+            <label for="edit-role-select" class="block text-sm font-medium text-gray-700 mb-2">New Role</label>
+            <select id="edit-role-select" class="w-full px-4 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+             <option value="Voter">Voter</option>
+             <option value="Observer">Observer</option>
+              <option value="Facilitator">Facilitator</option>
+            </select>
+                <p id="edit-role-error" class="text-red-500 text-sm mb-2 hidden"></p>
             <div class="flex justify-end gap-3">
-                 <button id="cancel-edit-name-button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md transition duration-200">
-                    Cancel
-                </button>
-                <button id="save-name-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-200">
-                    Save
-                </button>
-            </div>
+              <button id="cancel-edit-role-button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md">Cancel</button>
+            <button id="save-role-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Save</button>
+           </div>
+         </div>
         </div>
-    </div>
 
     <script>
         // --- DOM Elements ---
@@ -226,13 +234,15 @@
         const resetVotesButton = document.getElementById('reset-votes-button');
         const voteSummary = document.getElementById('vote-summary');
         const averageVoteSpan = document.getElementById('average-vote');
-        const editNameButton = document.getElementById('edit-name-button');
         const logoutButton = document.getElementById('logout-button');
-        const editNameModal = document.getElementById('edit-name-modal');
-        const editNameInput = document.getElementById('edit-name-input');
-        const editNameError = document.getElementById('edit-name-error');
-        const saveNameButton = document.getElementById('save-name-button');
-        const cancelEditNameButton = document.getElementById('cancel-edit-name-button');
+
+        const editRoleButton = document.getElementById('edit-role-button');
+        const editRoleModal  = document.getElementById('edit-role-modal');
+        const editRoleSelect = document.getElementById('edit-role-select');
+        const editRoleError  = document.getElementById('edit-role-error');
+        const saveRoleButton   = document.getElementById('save-role-button');
+        const cancelEditRoleButton = document.getElementById('cancel-edit-role-button');
+
         const connectionStatus = document.getElementById('connection-status');
 
         // --- Application State (Managed primarily by server now) ---
@@ -241,6 +251,7 @@
         let votesRevealed = false; // Status received from server
         let facilitatorId = null; // ID received from server
         const fibonacciVotes = ['0', '1', '2', '3', '5', '8', '13', '?']; // Voting options
+
 
         // --- WebSocket Setup ---
         let ws = null;
@@ -448,12 +459,43 @@
             });
             showVotesButton.addEventListener('click', handleShowVotes);
             resetVotesButton.addEventListener('click', handleResetVotes);
-            editNameButton.addEventListener('click', openEditNameModal);
+         
              logoutButton.addEventListener('click', logout);
-            saveNameButton.addEventListener('click', handleSaveName);
-            cancelEditNameButton.addEventListener('click', closeEditNameModal);
-            // Voting card listeners are added dynamically in renderVotingCards
+        // saveNameButton.addEventListener('click', handleSaveName);
+        // cancelEditNameButton.addEventListener('click', closeEditNameModal);
+        // Voting card listeners are added dynamically in renderVotingCards
+        // editNameButton.addEventListener('click', openEditNameModal);
+
+            // Replace the old event binding:
+            editRoleButton.addEventListener('click', openEditRoleModal);
+            saveRoleButton.addEventListener('click', handleSaveRole);
+            cancelEditRoleButton.addEventListener('click', closeEditRoleModal);
         }
+
+        // Function to open modal and pre‐select current role
+        function openEditRoleModal() {
+        if (!currentUser) return;
+        editRoleSelect.value = currentUser.role;
+        editRoleError.classList.add('hidden');
+        editRoleModal.classList.remove('hidden');
+        }
+        function closeEditRoleModal() {
+        editRoleModal.classList.add('hidden');
+        }
+
+        // On save, send changeRole for self
+        function handleSaveRole() {
+        const newRole = editRoleSelect.value;
+        if (!newRole) {
+            editRoleError.textContent = 'Please select a role.';
+            return editRoleError.classList.remove('hidden');
+        }
+        if (newRole !== currentUser.role) {
+            sendMessage('changeRole', { targetUserId: currentUser.id, newRole });
+        }
+        closeEditRoleModal();
+        }
+
 
         function setHiddenValue(newValue) {
             const hiddenField = document.getElementById('reloadCounter');
