@@ -36,8 +36,6 @@
  // --- WebSocket Setup ---
  let ws = null;
  // IMPORTANT: Replace with your actual WebSocket server URL
- // If running locally: 'ws://localhost:8080'
- // If deployed: 'wss://your-deployed-server.com'
  const WEBSOCKET_URL = 'ws://127.0.0.30:8080/ws';
 
  function connectWebSocket() {
@@ -53,9 +51,7 @@
 
          console.log('WebSocket connection established.');
 
-      
-          // Automatically send login request after connecting
-         //ws.send(JSON.stringify({ type: 'login', payload: { name: 'David' } }));
+
        
          updateConnectionStatus('connected', 'Connected');
 

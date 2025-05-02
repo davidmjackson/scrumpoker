@@ -3,3 +3,5 @@ Scrum\ Poker.code-workspace
 node_modules/.package-lock.json
 package-lock.json
 package.json
+scrumpoker.code-workspace
+.gitignore
