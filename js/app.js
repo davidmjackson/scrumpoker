@@ -486,7 +486,6 @@
               voteContainer.appendChild(checkMark);
          }
 
-
          div.appendChild(voteContainer);
          participantsListContainer.appendChild(div);
      });

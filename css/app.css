@@ -1,0 +1,119 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6; /* Light gray background */
+}
+
+/* --- Card Flip Animation --- */
+.card-container {
+    perspective: 1000px;
+    width: 40px; /* Adjust size as needed */
+    height: 60px; /* Adjust size as needed */
+    position: relative; /* Needed for checkmark positioning */
+}
+
+.card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+    cursor: default; /* Indicate non-interactive */
+}
+
+.card.flipped {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px; /* Rounded corners for cards */
+    font-size: 1rem; /* Adjust font size */
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-front {
+    /* Styling for the back of the card (visible initially) */
+    background-color: #4a90e2; /* Blue card back */
+    color: white;
+    /* Simple pattern for card back */
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.1) 75%, transparent 75%, transparent);
+    background-size: 10px 10px;
+}
+
+.card-back {
+    /* Styling for the front of the card (showing the vote) */
+    background-color: #ffffff; /* White card face */
+    color: #333;
+    transform: rotateY(180deg);
+    border: 1px solid #ccc;
+}
+
+/* Style for voting cards */
+.vote-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.vote-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+}
+.vote-card.selected {
+     border: 3px solid #2563eb; /* Blue border for selected */
+     transform: scale(1.05);
+}
+
+/* Hide elements */
+.hidden {
+    display: none;
+}
+
+/* Basic modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+.modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    min-width: 300px;
+}
+
+/* Connection Status Indicator */
+#connection-status {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    z-index: 100;
+}
+#connection-status.connected {
+    background-color: #dcfce7; /* Light green */
+    color: #166534; /* Dark green */
+}
+#connection-status.disconnected {
+     background-color: #fee2e2; /* Light red */
+    color: #991b1b; /* Dark red */
+}
+ #connection-status.connecting {
+     background-color: #fef9c3; /* Light yellow */
+    color: #854d0e; /* Dark yellow */
+}
