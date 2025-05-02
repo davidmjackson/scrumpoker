@@ -23,8 +23,6 @@ function broadcast(message, senderWs = null) {
     const data = JSON.stringify(message);
     console.log(`Broadcasting: ${data}`);
     wss.clients.forEach(client => {
-        // Optionally skip sending back to the original sender if needed
-        // if (client !== senderWs && client.readyState === WebSocket.OPEN) {
         if (client.readyState === WebSocket.OPEN) {
             client.send(data);
         }
@@ -125,8 +123,6 @@ wss.on('connection', (ws) => {
                     vote: null
                 };
 
-
-                
               //  assignFacilitator(); // Check and assign facilitator role if needed
                 console.log(`User logged in: ${payload.name} (${userId}), Role: ${participants[userId].role}`);
                 broadcast(getRoomState()); // Broadcast updated state to everyone
@@ -166,8 +162,6 @@ wss.on('connection', (ws) => {
                 console.log(`Votes reset by ${currentUser.name}`);
                 broadcast(getRoomState()); // Broadcast reset state
                 break;
-
-   
 
                 case 'changeRole': 
                     if (!currentUser) {
@@ -222,7 +216,6 @@ wss.on('connection', (ws) => {
                             broadcast(getRoomState());
                         }
                         break;
-
 
             default:
                 console.log(`Unknown message type received: ${type}`);
