@@ -169,7 +169,7 @@ wss.on('connection', (ws) => {
 
    
 
-                case 'changeRole': {
+                case 'changeRole': 
                     if (!currentUser) {
                         return sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } });
                     }
@@ -209,7 +209,20 @@ wss.on('connection', (ws) => {
                     console.log(`Role for ${target.name} changed to ${newRole} by ${currentUser.name}`);
                     broadcast(getRoomState());
                     break;
-                }
+                
+
+                    case 'logout':
+                        if (participants[userId]) {
+                            console.log(`User logged out: ${participants[userId].name} (${userId})`);
+                            delete participants[userId];
+                            if (userId === facilitatorId) {
+                                facilitatorId = null;
+                                assignFacilitator();
+                            }
+                            broadcast(getRoomState());
+                        }
+                        break;
+
 
             default:
                 console.log(`Unknown message type received: ${type}`);
