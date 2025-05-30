@@ -1,4 +1,4 @@
- // --- DOM Elements ---
+ // --- DOM Elements --- ****
  const loginSection = document.getElementById('login-section');
  const pokerRoomSection = document.getElementById('poker-room-section');
  const nameInput = document.getElementById('name-input');
@@ -36,7 +36,7 @@
  // --- WebSocket Setup ---
  let ws = null;
  // IMPORTANT: Replace with your actual WebSocket server URL
- const WEBSOCKET_URL = 'ws://127.0.0.30:8080/ws';
+ const WEBSOCKET_URL = 'wss://scrum-poker.uk/ws';
 
  function connectWebSocket() {
      console.log('Attempting to connect to WebSocket server...');
