@@ -43,6 +43,7 @@ function broadcast(message) {
   });
 }
 
+
 function sendToClient(ws, message) {
   if (ws.readyState === WebSocket.OPEN) {
     const data = JSON.stringify(message);
