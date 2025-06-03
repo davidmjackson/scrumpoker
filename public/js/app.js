@@ -36,22 +36,22 @@
  // --- WebSocket Setup ---
  let ws = null;
  // IMPORTANT: Replace with your actual WebSocket server URL
- //const WEBSOCKET_URL = 'wss://scrum-poker.uk/ws';
-
- console.log('Detected hostname:', location.hostname);
-
 
 const hostname = location.hostname.trim().toLowerCase();
 console.log('Detected hostname:', hostname);
 
-const devHosts = ['192.168.0.94', '172.18.109.47', 'localhost'];
-const isDev = devHosts.includes(hostname);
-const WEBSOCKET_URL = isDev
-  ? `ws://${hostname}:3000`
-  : 'wss://scrum-poker.uk/ws';
+// dynamically determine WebSocket URL based on hostname 
+// This allows for different URLs in development vs production
+//const devHosts = ['192.168.0.94', '172.18.109.47', 'localhost'];
+//const isDev = devHosts.includes(hostname);
+//const WEBSOCKET_URL = isDev
+ // ? `ws://${hostname}:3000`
+//  : 'wss://scrum-poker.uk/ws';
 
-  
-    console.log('Using WebSocket URL:', WEBSOCKET_URL);
+const loc = window.location;
+const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
+
 
  function connectWebSocket() {
      console.log('Attempting to connect to WebSocket server...');
@@ -67,7 +67,6 @@ const WEBSOCKET_URL = isDev
          console.log('WebSocket connection established.');
 
 
-       
          updateConnectionStatus('connected', 'Connected');
 
          loginButton.disabled = false;
