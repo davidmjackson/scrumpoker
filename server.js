@@ -4,7 +4,7 @@ console.log('⏳ server.js is starting');
 
 const path = require('path');
 const express = require('express');
-const { WebSocketServer } = require('ws');
+const { WebSocketServer, WebSocket } = require('ws');
 const { v4: uuidv4 } = require('uuid');
 
 console.log('✅ Required modules loaded');
