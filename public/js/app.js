@@ -154,9 +154,10 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
                  facilitatorId = payload.facilitatorId || null;
 
                  // Find the current user in the updated participant list
-                 const myTempId = sessionStorage.getItem('scrumPokerUserId_temp');
-                 const mySessionId = sessionStorage.getItem('scrumPokerUserId');
-                 const myId = mySessionId || myTempId; // Use session ID if logged in, otherwise temp ID
+                const myTempId    = sessionStorage.getItem('scrumPokerUserId_temp');
+                const mySessionId = sessionStorage.getItem('scrumPokerUserId');
+                // Use stored session-id only if it still matches someone in the room; otherwise use temp:
+                const myId = participants.some(p => p.id === mySessionId) ? mySessionId : myTempId;
 
                  if (myId) {
                     currentUser = participants.find(p => p.id === myId) || null;
@@ -380,9 +381,9 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
         line.textContent = `${entry.name}: ${entry.vote}`;
         orderedList.appendChild(line);
         });
-        
+
         // Only reveal the container if at least one vote exists
-        if (voteValues.length > 0) {
+        if (voteEntries.length > 0) {
             orderedContainer.classList.remove('hidden');
         }
      
