@@ -357,12 +357,48 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
      // Show/Hide Vote Summary & Calculate Average
      if (votesRevealed) {
+        
          voteSummary.classList.remove('hidden');
-         calculateAndDisplayAverage();
-     } else {
+        calculateAndDisplayAverage();
+
+        // NEW: Gather numeric votes and sort descending
+        const voteEntries = participants
+        .filter(p => (p.role === 'Voter' || p.role === 'Facilitator') && p.vote !== null && !isNaN(parseInt(p.vote)))
+        .map(p => ({ name: p.name, vote: parseInt(p.vote) }))
+        .sort((a, b) => b.vote - a.vote);
+
+        // Show and populate the “Ordered Results” section
+        const orderedContainer = document.getElementById('ordered-votes');
+        const orderedList = document.getElementById('ordered-votes-list');
+
+        // Clear any prior content
+        orderedList.innerHTML = '';
+
+        // If there are votes, render each on its own line
+        voteEntries.forEach(entry => {
+        const line = document.createElement('div');
+        line.textContent = `${entry.name}: ${entry.vote}`;
+        orderedList.appendChild(line);
+        });
+        
+        // Only reveal the container if at least one vote exists
+        if (voteValues.length > 0) {
+            orderedContainer.classList.remove('hidden');
+        }
+     
+    } else {
          voteSummary.classList.add('hidden');
+
+        // Hide ordered results when votes are reset or hidden
+        document.getElementById('ordered-votes').classList.add('hidden');
      }
  }
+
+
+
+
+
+
 
  function renderVotingCards() {
      votingCardsContainer.innerHTML = ''; // Clear existing cards
