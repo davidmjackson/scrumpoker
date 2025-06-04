@@ -377,9 +377,25 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
         // If there are votes, render each on its own line
         voteEntries.forEach(entry => {
-        const line = document.createElement('div');
-        line.textContent = `${entry.name}: ${entry.vote}`;
-        orderedList.appendChild(line);
+            const line = document.createElement('div');
+            // Apply flex container with space between columns, padding, and bottom border
+            line.className = 'flex justify-between px-4 py-2 border-b';
+
+            // Create a span for the name (left side)
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'text-left font-medium';
+            nameSpan.textContent = entry.name;
+
+            // Create a span for the vote (right side)
+            const voteSpan = document.createElement('span');
+            voteSpan.className = 'text-right font-bold';
+            voteSpan.textContent = entry.vote;
+
+            // Append the two spans to the flex container
+            line.appendChild(nameSpan);
+            line.appendChild(voteSpan);
+
+            orderedList.appendChild(line);
         });
 
         // Only reveal the container if at least one vote exists
