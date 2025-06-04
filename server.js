@@ -19,7 +19,7 @@ console.log('✅ Express app created');
 app.use('/', express.static(path.join(__dirname, 'public')));
 
 // ── 2) Start an HTTP server, then attach WebSocketServer on /ws ──────────
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0',() => {
   console.log(`✅ HTTP server listening on port ${PORT}`);
 });
 
