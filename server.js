@@ -47,8 +47,11 @@ function broadcast(message) {
 function sendToClient(ws, message) {
   if (ws.readyState === WebSocket.OPEN) {
     const data = JSON.stringify(message);
-    console.log(`Sending to client ${participants[ws.userId]?.name || 'Unknown'}: ${data}`);
-    ws.send(data);
+
+   const clientName = participants[ws.userId] && participants[ws.userId].name ? participants[ws.userId].name : 'Unknown';
+  console.log(`Sending to client ${clientName}: ${data}`);
+   
+ws.send(data);
   }
 }
 
@@ -109,7 +112,7 @@ wss.on('connection', (ws) => {
 
     switch (type) {
       case 'login':
-        if (!payload?.name || !payload?.role) {
+        if (!payload || !payload.name || !payload.role) {
           return sendToClient(ws, { type: 'error', payload: { message: 'Login requires name and role.' } });
         }
         participants[userId] = {
