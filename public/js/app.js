@@ -321,98 +321,98 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
  // --- UI Updates (Reflects state from server) ---
  function updateUI() {
-     if (!currentUser) {
-         // If no current user data, likely means we should be on login screen
-         // This might happen if server removes user or connection drops unexpectedly
-         console.log("updateUI called without currentUser, redirecting to login.");
-         logout(); // Use logout to ensure clean state
-         return;
-     }
+    if (!currentUser) {
+        // If no current user data, likely means we should be on login screen
+        // This might happen if server removes user or connection drops unexpectedly
+        console.log("updateUI called without currentUser, redirecting to login.");
+        logout(); // Use logout to ensure clean state
+        return;
+    }
 
-     // Update greeting
-     userGreeting.textContent = `Hello, ${currentUser.name} (${currentUser.role})`;
+    // Update greeting
+    userGreeting.textContent = `Hello, ${currentUser.name} (${currentUser.role})`;
 
-     // Generate/Update Voting Cards
-     renderVotingCards();
+    // Generate/Update Voting Cards
+    renderVotingCards();
 
-     // Render Participants List
-     renderParticipantsList();
+    // Render Participants List
+    renderParticipantsList();
 
-     // Show/Hide Facilitator Controls & Enable/Disable buttons
-     if (currentUser.role === 'Facilitator') {
-         facilitatorControls.classList.remove('hidden');
-         showVotesButton.disabled = votesRevealed; // Disable if already revealed
-         resetVotesButton.disabled = false;
-     } else {
-         facilitatorControls.classList.add('hidden');
-     }
+    // Show/Hide Facilitator Controls & Enable/Disable buttons
+    if (currentUser.role === 'Facilitator') {
+        facilitatorControls.classList.remove('hidden');
+        showVotesButton.disabled = votesRevealed; // Disable if already revealed
+        resetVotesButton.disabled = false;
+    } else {
+        facilitatorControls.classList.add('hidden');
+    }
 
-     // Show/Hide Observer Message & Disable Voting Cards
-     if (currentUser.role === 'Observer') {
-         observerMessage.classList.remove('hidden');
-         votingCardsContainer.classList.add('pointer-events-none', 'opacity-50'); // Disable clicks
-     } else {
-          observerMessage.classList.add('hidden');
-          votingCardsContainer.classList.remove('pointer-events-none', 'opacity-50');
-     }
+    // Show/Hide Observer Message & Disable Voting Cards
+    if (currentUser.role === 'Observer') {
+        observerMessage.classList.remove('hidden');
+        votingCardsContainer.classList.add('pointer-events-none', 'opacity-50'); // Disable clicks
+    } else {
+        observerMessage.classList.add('hidden');
+        votingCardsContainer.classList.remove('pointer-events-none', 'opacity-50');
+    }
 
-     // Show/Hide Vote Summary & Calculate Average
-     if (votesRevealed) {
-        
-         voteSummary.classList.remove('hidden');
+    // Show/Hide Vote Summary & Calculate Average
+    if (votesRevealed) {
+        voteSummary.classList.remove('hidden');
         calculateAndDisplayAverage();
 
-        // NEW: Gather numeric votes and sort descending
+        // Build an array of { name, vote }, sorted descending
         const voteEntries = participants
-        .filter(p => (p.role === 'Voter' || p.role === 'Facilitator') && p.vote !== null && !isNaN(parseInt(p.vote)))
-        .map(p => ({ name: p.name, vote: parseInt(p.vote) }))
-        .sort((a, b) => b.vote - a.vote);
+            .filter(p => (p.role === 'Voter' || p.role === 'Facilitator') && p.vote !== null && !isNaN(parseInt(p.vote)))
+            .map(p => ({ name: p.name, vote: parseInt(p.vote) }))
+            .sort((a, b) => b.vote - a.vote);
 
-        // Show and populate the “Ordered Results” section
         const orderedContainer = document.getElementById('ordered-votes');
         const orderedList = document.getElementById('ordered-votes-list');
-
-        // Clear any prior content
         orderedList.innerHTML = '';
 
-        // If there are votes, render each on its own line
-        voteEntries.forEach(entry => {
+        // Group by vote value: { 8: ['John','David'], 5: ['Mike','Steve'], ... }
+        const groups = {};
+        voteEntries.forEach(({ name, vote }) => {
+            if (!groups[vote]) groups[vote] = [];
+            groups[vote].push(name);
+        });
+
+        // Get vote values sorted descending (keys are strings, so convert back to Number)
+        const sortedVotes = Object.keys(groups)
+            .map(v => parseInt(v))
+            .sort((a, b) => b - a);
+
+        // Render each group as "Name1, Name2, …    —— voteValue"
+        sortedVotes.forEach(voteValue => {
+            const names = groups[voteValue].join(', ');
             const line = document.createElement('div');
-            // Use the same “card” style as participants:
             line.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-md shadow-sm';
 
-            // Left side: name (font‐medium, gray‐800)
-            const nameSpan = document.createElement('span');
-            nameSpan.className = 'font-medium text-gray-800';
-            nameSpan.textContent = entry.name;
+            const namesSpan = document.createElement('span');
+            namesSpan.className = 'font-medium text-gray-800';
+            namesSpan.textContent = names;
 
-            // Right side: vote (font‐bold, blue‐600 for consistency with participants’ flipped card color)
             const voteSpan = document.createElement('span');
             voteSpan.className = 'font-bold text-blue-600';
-            voteSpan.textContent = entry.vote;
+            voteSpan.textContent = voteValue;
 
-            line.appendChild(nameSpan);
+            line.appendChild(namesSpan);
             line.appendChild(voteSpan);
             orderedList.appendChild(line);
         });
 
-        // Only reveal the container if at least one vote exists
-        if (voteEntries.length > 0) {
+        // Show container only if at least one group exists
+        if (sortedVotes.length > 0) {
             orderedContainer.classList.remove('hidden');
         }
-     
     } else {
-         voteSummary.classList.add('hidden');
+        voteSummary.classList.add('hidden');
 
         // Hide ordered results when votes are reset or hidden
         document.getElementById('ordered-votes').classList.add('hidden');
-     }
- }
-
-
-
-
-
+    }
+}
 
 
  function renderVotingCards() {
