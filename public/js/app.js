@@ -378,23 +378,21 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
         // If there are votes, render each on its own line
         voteEntries.forEach(entry => {
             const line = document.createElement('div');
-            // Apply flex container with space between columns, padding, and bottom border
-            line.className = 'flex justify-between px-4 py-2 border-b';
+            // Use the same “card” style as participants:
+            line.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-md shadow-sm';
 
-            // Create a span for the name (left side)
+            // Left side: name (font‐medium, gray‐800)
             const nameSpan = document.createElement('span');
-            nameSpan.className = 'text-left font-medium';
+            nameSpan.className = 'font-medium text-gray-800';
             nameSpan.textContent = entry.name;
 
-            // Create a span for the vote (right side)
+            // Right side: vote (font‐bold, blue‐600 for consistency with participants’ flipped card color)
             const voteSpan = document.createElement('span');
-            voteSpan.className = 'text-right font-bold';
+            voteSpan.className = 'font-bold text-blue-600';
             voteSpan.textContent = entry.vote;
 
-            // Append the two spans to the flex container
             line.appendChild(nameSpan);
             line.appendChild(voteSpan);
-
             orderedList.appendChild(line);
         });
 
