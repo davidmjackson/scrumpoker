@@ -2,6 +2,42 @@
 
 console.log('⏳ server.js is starting');
 
+// Map<roomName: string, { users: Set<string>, lastActive: number }>
+const rooms = new Map();
+
+function joinRoom(roomName, userId) {
+  const now = Date.now();
+  if (!rooms.has(roomName)) {
+    // Create new room if missing
+    rooms.set(roomName, { users: new Set(), lastActive: now });
+  }
+  const room = rooms.get(roomName);
+  room.users.add(userId);
+  room.lastActive = now;
+}
+
+function leaveRoom(roomName, userId) {
+  if (!rooms.has(roomName)) return;
+  const room = rooms.get(roomName);
+  room.users.delete(userId);
+  room.lastActive = Date.now();
+  // Optional: you can immediately delete an empty room here,
+  // but we’ll rely on the periodic cleanup to remove expired rooms.
+}
+
+// Every minute: sweep out rooms idle for ≥5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+  for (const [roomName, data] of rooms.entries()) {
+    if (now - data.lastActive > EXPIRY_MS) {
+      rooms.delete(roomName);
+      console.log(`Expired room deleted: ${roomName}`);
+    }
+  }
+}, 60 * 1000);
+
+
 const path = require('path');
 const express = require('express');
 const { WebSocketServer, WebSocket } = require('ws');
@@ -89,6 +125,7 @@ function assignFacilitator() {
 
 // ── 4) Handle WebSocket connections ───────────────────────────────────────
 wss.on('connection', (ws) => {
+
   const userId = uuidv4();
   ws.userId = userId;
   console.log(`Client connected: ${userId}`);
@@ -112,18 +149,69 @@ wss.on('connection', (ws) => {
 
     switch (type) {
       case 'login':
-        if (!payload || !payload.name || !payload.role) {
-          return sendToClient(ws, { type: 'error', payload: { message: 'Login requires name and role.' } });
+
+
+        if ( !payload || !payload.name || !payload.role || !payload.room) {
+          return sendToClient(ws, { type: 'error',payload: { message: 'Login requires name, role, and room.' } });
         }
+
+              // ─── 5.3.1) Extract name, role, and room from payload
+        const { name, role, room } = payload;
+
+        // ─── 5.3.2) Store user info on the WebSocket and in participants
+        //    (userId was already set at connection time)
+        ws.name = name;
+        ws.role = role;
+        ws.roomName = room;
         participants[userId] = {
           id: userId,
-          ws,
-          name: payload.name,
-          role: payload.role,
+          ws: ws,
+          name: name,
+          role: role,
           vote: null,
+          roomName: room
         };
+
+        // ─── 5.3.3) Add this user to our in‐memory rooms Map
+        joinRoom(room, userId);
+
+        // ─── 5.3.4) Build a “userJoined” payload including all users currently in that room
+        const joinedPayload = {
+          type: 'userJoined',
+          payload: {
+            userId: userId,
+            name: name,
+            role: role,
+            allUsersInRoom: Array.from(rooms.get(room).users).map((id) => {
+              const p = participants[id];
+              return { userId: id, name: p.name, role: p.role };
+            })
+          }
+        };
+
+        // ─── 5.3.5) Broadcast that payload to every socket in the same room
+          rooms.get(room).users.forEach((id) => {
+            const clientSocket = participants[id].ws;
+            if (
+              clientSocket &&
+              clientSocket.readyState === WebSocket.OPEN
+            ) {
+              sendToClient(clientSocket, joinedPayload);
+            }
+          });
+
         console.log(`User logged in: ${payload.name} (${userId}), Role: ${payload.role}`);
-        broadcast(getRoomState());
+
+          // ─── 5.4.1) Use the existing `room` from payload (no `const room = …`)
+          const roomState = getRoomState(room);
+          rooms.get(room).users.forEach((id) => {
+            const clientSocket = participants[id].ws;
+            if (clientSocket.readyState === WebSocket.OPEN) {
+              sendToClient(clientSocket, roomState);
+            }
+          });
+
+
         break;
 
       case 'vote':

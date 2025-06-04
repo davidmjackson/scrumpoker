@@ -1,7 +1,9 @@
  // --- DOM Elements --- ****
  const loginSection = document.getElementById('login-section');
+ const roomDisplay = document.getElementById('room-display');
  const pokerRoomSection = document.getElementById('poker-room-section');
  const nameInput = document.getElementById('name-input');
+ const roomInput = document.getElementById('room-input');
  const loginButton = document.getElementById('login-button');
  const loginError = document.getElementById('login-error');
  const userGreeting = document.getElementById('user-greeting');
@@ -27,6 +29,7 @@
 
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
+ let currentRoom = null;   // ← NEW: will hold the room name after login
  let participants = []; // Array of user objects received from server
  let votesRevealed = false; // Status received from server
  let facilitatorId = null; // ID received from server
@@ -329,6 +332,9 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
         return;
     }
 
+     // ─── 8.3.1) Show current room at the top of the poker room UI
+  roomDisplay.textContent = currentRoom ? `Room: ${currentRoom}` : '';
+
     // Update greeting
     userGreeting.textContent = `Hello, ${currentUser.name} (${currentUser.role})`;
 
@@ -556,15 +562,21 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
  function handleLogin() {
      const name = nameInput.value.trim();
      const role = document.getElementById('role-select').value; 
+     const room = roomInput.value.trim(); 
 
-     if (name && role) {
-         loginError.classList.add('hidden');
-         sendMessage('login', { name: name, role: role });
-         // State update from server will handle moving to the poker room
-     } else {
-         loginError.textContent = 'Please enter your name and role.';
-         loginError.classList.remove('hidden');
-     }
+  if (name && role && room) {
+
+    loginError.classList.add('hidden');
+
+    currentRoom = room;
+
+    sendMessage('login', {name: name, role: role, room: room  });
+    // The server’s “login” handler will now know which room to put you in.
+  } else {
+    // Show a combined error if any field is empty
+    loginError.textContent = 'Please enter your room name, your name, and your role.';
+    loginError.classList.remove('hidden');
+  }
  }
 
  function handleVote(event) {
