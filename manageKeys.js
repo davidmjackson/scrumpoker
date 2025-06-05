@@ -30,7 +30,15 @@ function saveKeys(obj) {
 
 // Generate a secure random key (32 hex characters)
 function generateRandomKey() {
-  return crypto.randomBytes(16).toString('hex'); 
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let key = '';
+  // Generate 6 random bytes, then map each byte to one of the 62 chars
+  const buf = crypto.randomBytes(6);
+  for (let i = 0; i < buf.length; i++) {
+    // Use the byte value modulo chars.length (62) to pick an index
+    key += chars[buf[i] % chars.length];
+  }
+  return key;
 }
 
 // Parse command-line arguments
