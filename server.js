@@ -42,13 +42,30 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
-
+const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { WebSocketServer, WebSocket } = require('ws');
 const { v4: uuidv4 } = require('uuid');
 
 console.log('✅ Required modules loaded');
+
+const KEYS_FILE = path.join(__dirname, 'keys.json');
+
+
+function loadKeys() {
+  try {
+    const data = fs.readFileSync(KEYS_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Failed to load keys.json:', err);
+    return {};
+  }
+}
+
+
+
+
 
 // Use PORT from env or default to 3000
 const PORT = process.env.PORT || 3000;
@@ -162,18 +179,40 @@ wss.on('connection', (ws) => {
     const currentUser = participants[userId];
 
     switch (type) {
-      case 'login':
+        case 'login':
 
 
-        if ( !payload || !payload.name || !payload.role || !payload.room) {
-          return sendToClient(ws, { type: 'error',payload: { message: 'Login requires name, role, and room.' } });
+  
+
+
+        // 1) Ensure all fields including accessKey
+        if (
+          !payload ||
+          !payload.name ||
+          !payload.role ||
+          !payload.room ||
+          !payload.accessKey
+        ) {
+          return sendToClient(ws, {
+            type: 'error',
+            payload: { message: 'Login requires key, name, role, and room.' }
+          });
         }
 
-              // ─── 5.3.1) Extract name, role, and room from payload
-        const { name, role, room } = payload;
+        const { name, role, room, accessKey } = payload;
 
-        // ─── 5.3.2) Store user info on the WebSocket and in participants
-        //    (userId was already set at connection time)
+        // 2) Validate accessKey against saved keys
+        const allKeys = loadKeys();
+        const valid = Object.values(allKeys).includes(accessKey);
+
+        if (!valid) {
+          return sendToClient(ws, {
+            type: 'error',
+            payload: { message: 'Invalid access key.' }
+          });
+        }
+
+        // 3) (Existing) Continue with login
         ws.name = name;
         ws.role = role;
         ws.roomName = room;
@@ -185,22 +224,17 @@ wss.on('connection', (ws) => {
           vote: null,
           roomName: room
         };
-
-        // ─── 5.3.3) Add this user to our in‐memory rooms Map
         joinRoom(room, userId);
 
-        // 6.3) Send the room state only to that room (including the new user)
-        {
-          const roomState = getRoomState(room);
-          rooms.get(room).users.forEach((id) => {
-            const clientSocket = participants[id].ws;
-            if (clientSocket.readyState === WebSocket.OPEN) {
-              sendToClient(clientSocket, roomState);
-            }
-          });
-        }
+        // Broadcast updated room state…
+        const roomState = getRoomState(room);
+        rooms.get(room).users.forEach((id) => {
+          const clientSocket = participants[id].ws;
+          if (clientSocket.readyState === WebSocket.OPEN) {
+            sendToClient(clientSocket, roomState);
+          }
+        });
 
-        // ─── 5.3.4) Build a “userJoined” payload including all users currently in that room
         const joinedPayload = {
           type: 'userJoined',
           payload: {
@@ -213,20 +247,14 @@ wss.on('connection', (ws) => {
             })
           }
         };
+        rooms.get(room).users.forEach((id) => {
+          const clientSocket = participants[id].ws;
+          if (clientSocket && clientSocket.readyState === WebSocket.OPEN) {
+            sendToClient(clientSocket, joinedPayload);
+          }
+        });
 
-        // ─── 5.3.5) Broadcast that payload to every socket in the same room
-          rooms.get(room).users.forEach((id) => {
-            const clientSocket = participants[id].ws;
-            if (
-              clientSocket &&
-              clientSocket.readyState === WebSocket.OPEN
-            ) {
-              sendToClient(clientSocket, joinedPayload);
-            }
-          });
-
-          console.log(`User logged in: ${name} (${userId}), Room: ${room}`);
-
+        console.log(`User logged in: ${name} (${userId}), Room: ${room}`);
         break;
 
         case 'vote': {

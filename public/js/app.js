@@ -560,24 +560,25 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
  // --- Event Handlers (Send messages to server) ---
  function handleLogin() {
-     const name = nameInput.value.trim();
-     const role = document.getElementById('role-select').value; 
-     const room = roomInput.value.trim(); 
+  const key = document.getElementById('access-key-input').value.trim();
+  const name = nameInput.value.trim();
+  const role = document.getElementById('role-select').value;
+  const room = roomInput.value.trim();
 
-  if (name && role && room) {
-
+  if (key && name && role && room) {
     loginError.classList.add('hidden');
-
     currentRoom = room;
-
-    sendMessage('login', {name: name, role: role, room: room  });
-    // The server’s “login” handler will now know which room to put you in.
+    sendMessage('login', {
+      accessKey: key,
+      name: name,
+      role: role,
+      room: room
+    });
   } else {
-    // Show a combined error if any field is empty
-    loginError.textContent = 'Please enter your room name, your name, and your role.';
+    loginError.textContent = 'Please enter your key, room name, name, and role.';
     loginError.classList.remove('hidden');
   }
- }
+}
 
  function handleVote(event) {
      if (votesRevealed || !currentUser || currentUser.role === 'Observer') return;
