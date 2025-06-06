@@ -197,6 +197,8 @@ wss.on('connection', (ws) => {
 
         const { name, role, room, accessKey } = payload;
 
+        const internalRoom = `${room}-${accessKey}`;
+
         // 2) Validate accessKey against saved keys
         const allKeys = loadKeys();
         const valid = Object.values(allKeys).includes(accessKey);
@@ -211,20 +213,22 @@ wss.on('connection', (ws) => {
         // 3) (Existing) Continue with login
         ws.name = name;
         ws.role = role;
-        ws.roomName = room;
+        ws.roomName = internalRoom;
         participants[userId] = {
           id: userId,
           ws: ws,
           name: name,
           role: role,
           vote: null,
-          roomName: room
+          roomName: internalRoom
         };
-        joinRoom(room, userId);
+
+        joinRoom(internalRoom, userId);
 
         // Broadcast updated room state…
-        const roomState = getRoomState(room);
-        rooms.get(room).users.forEach((id) => {
+        const roomState = getRoomState(internalRoom);
+
+        rooms.get(internalRoom).users.forEach((id) => {
           const clientSocket = participants[id].ws;
           if (clientSocket.readyState === WebSocket.OPEN) {
             sendToClient(clientSocket, roomState);
@@ -237,13 +241,13 @@ wss.on('connection', (ws) => {
             userId: userId,
             name: name,
             role: role,
-            allUsersInRoom: Array.from(rooms.get(room).users).map((id) => {
+            allUsersInRoom: Array.from(rooms.get(internalRoom).users).map((id) => {
               const p = participants[id];
               return { userId: id, name: p.name, role: p.role };
             })
           }
         };
-        rooms.get(room).users.forEach((id) => {
+        rooms.get(internalRoom).users.forEach((id) => {
           const clientSocket = participants[id].ws;
           if (clientSocket && clientSocket.readyState === WebSocket.OPEN) {
             sendToClient(clientSocket, joinedPayload);
