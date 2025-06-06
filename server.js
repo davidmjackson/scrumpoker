@@ -181,10 +181,6 @@ wss.on('connection', (ws) => {
     switch (type) {
         case 'login':
 
-
-  
-
-
         // 1) Ensure all fields including accessKey
         if (
           !payload ||
