@@ -37,7 +37,7 @@ setInterval(() => {
   for (const [roomName, data] of rooms.entries()) {
     if (now - data.lastActive > EXPIRY_MS) {
       rooms.delete(roomName);
-      console.log(`Expired room deleted: ${roomName}`);
+      //console.log(`Expired room deleted: ${roomName}`);
     }
   }
 }, 60 * 1000);
@@ -48,7 +48,7 @@ const express = require('express');
 const { WebSocketServer, WebSocket } = require('ws');
 const { v4: uuidv4 } = require('uuid');
 
-console.log('✅ Required modules loaded');
+//console.log('✅ Required modules loaded');
 
 const KEYS_FILE = path.join(__dirname, 'keys.json');
 
@@ -71,20 +71,20 @@ function loadKeys() {
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-console.log('✅ Express app created');
+//console.log('✅ Express app created');
 
 // ── 1) Serve static files from public/ ───────────────────────────────────
 app.use('/', express.static(path.join(__dirname, 'public')));
 
 // ── 2) Start an HTTP server, then attach WebSocketServer on /ws ──────────
 const server = app.listen(PORT, '0.0.0.0',() => {
-  console.log(`✅ HTTP server listening on port ${PORT}`);
+  //console.log(`✅ HTTP server listening on port ${PORT}`);
 });
 
 // WebSocketServer will only upgrade on the "/ws" path:
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-console.log('✅ WebSocketServer initialized');
+//console.log('✅ WebSocketServer initialized');
 
 // ── 3) Keep room state and helper functions ─────────────────────────────
 let participants = {};     // { userId: { id, ws, name, role, vote } }
@@ -92,7 +92,7 @@ let participants = {};     // { userId: { id, ws, name, role, vote } }
 
 function broadcast(message) {
   const data = JSON.stringify(message);
-  console.log(`Broadcasting: ${data}`);
+  //console.log(`Broadcasting: ${data}`);
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(data);
@@ -106,7 +106,7 @@ function sendToClient(ws, message) {
     const data = JSON.stringify(message);
 
    const clientName = participants[ws.userId] && participants[ws.userId].name ? participants[ws.userId].name : 'Unknown';
-  console.log(`Sending to client ${clientName}: ${data}`);
+  //console.log(`Sending to client ${clientName}: ${data}`);
    
 ws.send(data);
   }
@@ -143,10 +143,10 @@ function assignFacilitator(roomName) {
     if (ids.length > 0) {
       roomObj.facilitatorId = ids[0];
       participants[ids[0]].role = 'Facilitator';
-      console.log(`Assigned Facilitator in "${roomName}" to: ${participants[ids[0]].name}`);
+      //console.log(`Assigned Facilitator in "${roomName}" to: ${participants[ids[0]].name}`);
     } else {
       roomObj.facilitatorId = null;
-      console.log(`No users left in "${roomName}", cleared facilitator.`);
+      //console.log(`No users left in "${roomName}", cleared facilitator.`);
     }
   } else if (participants[roomObj.facilitatorId]) {
     // Ensure they still have the “Facilitator” role
@@ -159,7 +159,7 @@ wss.on('connection', (ws) => {
 
   const userId = uuidv4();
   ws.userId = userId;
-  console.log(`Client connected: ${userId}`);
+  //console.log(`Client connected: ${userId}`);
 
   // Send the client their assigned ID and the current room state
   sendToClient(ws, { type: 'yourId', payload: { id: userId } });
@@ -169,7 +169,7 @@ wss.on('connection', (ws) => {
     let parsed;
     try {
       parsed = JSON.parse(message);
-      console.log(`Received from ${userId}:`, parsed);
+      //console.log(`Received from ${userId}:`, parsed);
     } catch (err) {
       console.error('Invalid message:', message);
       return sendToClient(ws, { type: 'error', payload: { message: 'Invalid JSON.' } });
@@ -254,7 +254,7 @@ wss.on('connection', (ws) => {
           }
         });
 
-        console.log(`User logged in: ${name} (${userId}), Room: ${room}`);
+        //console.log(`User logged in: ${name} (${userId}), Room: ${room}`);
         break;
 
         case 'vote': {
@@ -275,7 +275,7 @@ wss.on('connection', (ws) => {
           if (payload && typeof payload.vote !== 'undefined') {
             // 7.2) Record the vote
             currentUser.vote = payload.vote;
-            console.log(`User ${currentUser.name} voted: ${payload.vote}`);
+            //console.log(`User ${currentUser.name} voted: ${payload.vote}`);
 
             // 7.3) Send the updated state only to users in this room
             {
@@ -308,7 +308,7 @@ wss.on('connection', (ws) => {
             roomObjReveal.votesRevealed = true;
           }
 
-          console.log(`Votes revealed by ${currentUser.name} in room "${roomNameReveal}"`);
+          //console.log(`Votes revealed by ${currentUser.name} in room "${roomNameReveal}"`);
 
           // 8.2) Send updated state only to sockets in this room
           {
@@ -348,7 +348,7 @@ wss.on('connection', (ws) => {
             p.vote = null;
           });
 
-        console.log(`Votes reset by ${currentUser.name} in room "${roomNameReset}"`);
+        //console.log(`Votes reset by ${currentUser.name} in room "${roomNameReset}"`);
 
         // 9.4) Send the updated state only to sockets in this room
         {
@@ -404,7 +404,7 @@ wss.on('connection', (ws) => {
 
         // 10.3) Set the new role on the target
         target.role = newRole;
-        console.log(`Role for ${target.name} changed to ${newRole} by ${currentUser.name} in room "${roomNameCR}"`);
+        //console.log(`Role for ${target.name} changed to ${newRole} by ${currentUser.name} in room "${roomNameCR}"`);
 
         // 10.4) Send updated state only to that room
         {
@@ -424,7 +424,7 @@ wss.on('connection', (ws) => {
           const leavingUser = participants[userId];
           if (leavingUser) {
             const roomNameLO = leavingUser.roomName;
-            console.log(`User logged out: ${leavingUser.name} (${userId}) from room "${roomNameLO}"`);
+            //console.log(`User logged out: ${leavingUser.name} (${userId}) from room "${roomNameLO}"`);
 
             // 11.1) Remove user from the room's Set
             leaveRoom(roomNameLO, userId);
@@ -459,7 +459,7 @@ wss.on('connection', (ws) => {
         }
 
       default:
-        console.log(`Unknown message type received: ${type}`);
+        //console.log(`Unknown message type received: ${type}`);
         sendToClient(ws, { type: 'error', payload: { message: `Unknown type: ${type}` } });
     }
   });
@@ -468,7 +468,7 @@ wss.on('connection', (ws) => {
     const disc = participants[userId];
     if (disc) {
       const roomNameDC = disc.roomName;
-      console.log(`Client disconnected: ${disc.name} (${userId}) from room "${roomNameDC}"`);
+      //console.log(`Client disconnected: ${disc.name} (${userId}) from room "${roomNameDC}"`);
 
       // 12.1) Remove user from their room
       leaveRoom(roomNameDC, userId);
@@ -498,7 +498,7 @@ wss.on('connection', (ws) => {
         });
       }
     } else {
-      console.log(`Client disconnected (not logged in): ${userId}`);
+      //console.log(`Client disconnected (not logged in): ${userId}`);
     }
   });
 
@@ -507,7 +507,7 @@ ws.on('error', (error) => {
   const errUser = participants[userId];
   if (errUser) {
     const roomNameErr = errUser.roomName;
-    console.log(`WebSocket error cleanup: ${errUser.name} (${userId}) in room "${roomNameErr}"`);
+    //console.log(`WebSocket error cleanup: ${errUser.name} (${userId}) in room "${roomNameErr}"`);
 
     // 13.1) Remove user from their room’s Set
     leaveRoom(roomNameErr, userId);
