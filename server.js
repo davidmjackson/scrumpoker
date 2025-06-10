@@ -33,7 +33,7 @@ function leaveRoom(roomName, userId) {
 // Every minute: sweep out rooms idle for ≥5 minutes
 setInterval(() => {
   const now = Date.now();
-  const EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+  const EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
   for (const [roomName, data] of rooms.entries()) {
     if (now - data.lastActive > EXPIRY_MS) {
       rooms.delete(roomName);
