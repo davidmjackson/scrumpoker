@@ -30,7 +30,7 @@ function leaveRoom(roomName, userId) {
   // but we’ll rely on the periodic cleanup to remove expired rooms.
 }
 
-// Every minute: sweep out rooms idle for ≥5 minutes
+// Every minute: sweep out rooms idle for 45 minutes
 setInterval(() => {
   const now = Date.now();
   const EXPIRY_MS = 45 * 60 * 1000; // 30 minutes
