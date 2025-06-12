@@ -74,7 +74,21 @@ const app = express();
 //console.log('✅ Express app created');
 
 // ── 1) Serve static files from public/ ───────────────────────────────────
-app.use('/', express.static(path.join(__dirname, 'public')));
+//app.use('/', express.static(path.join(__dirname, 'public')));
+
+
+// add file security options to static middleware
+app.use(
+  '/',
+  express.static(path.join(__dirname, 'public'), {
+    dotfiles: 'ignore',    // never serve “.gitignore”, “.env”, etc.
+    index: false,          // don’t auto-serve index.html on directory access
+    extensions: ['html'],  // only resolve .html if a plain name is requested
+    redirect: false        // forbid trailing-slash redirects
+  })
+);
+
+
 
 // ── 2) Start an HTTP server, then attach WebSocketServer on /ws ──────────
 const server = app.listen(PORT, '0.0.0.0',() => {
