@@ -81,6 +81,7 @@ const app = express();
 app.use(
   '/',
   express.static(path.join(__dirname, 'public'), {
+
     dotfiles: 'ignore',    // never serve “.gitignore”, “.env”, etc.
     index: false,          // don’t auto-serve index.html on directory access
     extensions: ['html'],  // only resolve .html if a plain name is requested
@@ -88,6 +89,9 @@ app.use(
   })
 );
 
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
 
 
 // ── 2) Start an HTTP server, then attach WebSocketServer on /ws ──────────
