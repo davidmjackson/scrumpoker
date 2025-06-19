@@ -26,8 +26,7 @@ function leaveRoom(roomName, userId) {
   const room = rooms.get(roomName);
   room.users.delete(userId);
   room.lastActive = Date.now();
-  // Optional: you can immediately delete an empty room here,
-  // but we’ll rely on the periodic cleanup to remove expired rooms.
+
 }
 
 // Every minute: sweep out rooms idle for 45 minutes
@@ -62,9 +61,6 @@ function loadKeys() {
     return {};
   }
 }
-
-
-
 
 
 // Use PORT from env or default to 3000
