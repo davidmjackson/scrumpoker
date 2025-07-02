@@ -1,3 +1,5 @@
+
+ 
  // --- DOM Elements --- ****
  const loginSection = document.getElementById('login-section');
  const roomDisplay = document.getElementById('room-display');
@@ -27,6 +29,10 @@
 
  const connectionStatus = document.getElementById('connection-status');
 
+// Card dealer
+
+
+ let animateVotingCards = true; // Controls whether cards animate in
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
@@ -175,6 +181,13 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
                      sessionStorage.setItem('scrumPokerUserId', currentUser.id);
                      sessionStorage.setItem('scrumPokerUserName', currentUser.name);
 
+                    if (!pokerRoomSection || pokerRoomSection.classList.contains('hidden')) {
+                        // Only entering the room for the first time!
+                        animateVotingCards = true;
+                    }
+
+
+
                      showPokerRoom(); // Ensure poker room is visible
                      updateUI(); // Update the UI with the new state
                  } else if (!loginSection.classList.contains('hidden')) {
@@ -306,6 +319,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
 
  function showPokerRoom() {
+    
      loginSection.classList.add('hidden');
      pokerRoomSection.classList.remove('hidden');
      // UI update will be triggered by receiving state from server
@@ -422,6 +436,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
 
  function renderVotingCards() {
+
      votingCardsContainer.innerHTML = ''; // Clear existing cards
       // Add observer message placeholder back if needed
      votingCardsContainer.appendChild(observerMessage);
@@ -429,28 +444,73 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
      fibonacciVotes.forEach(value => {
          const cardButton = document.createElement('button');
-         cardButton.textContent = value;
-         cardButton.dataset.value = value;
-         cardButton.classList.add(
-             'vote-card', 'bg-white', 'text-blue-600', 'font-bold', 'py-4', 'px-6',
-             'rounded-lg', 'shadow-md', 'hover:shadow-lg', 'border', 'border-gray-200',
-             'disabled:opacity-60', 'disabled:cursor-not-allowed'
-         );
-         // Highlight selected card based on currentUser state from server
-         if (currentUser && currentUser.vote === value) {
-             cardButton.classList.add('selected');
-         }
+            cardButton.dataset.value = value;
+            cardButton.classList.add(
+            'vote-card', 'transform', 'relative', 
+            'w-12',  // width: 3rem (smaller than before)
+            'h-20',  // height: 5rem
+            'm-1',   // margin smaller for more compact layout
+            'perspective-1000',
+            'focus:outline-none', 'disabled:opacity-60', 'disabled:cursor-not-allowed'
+            );
+            cardButton.style.minWidth = "3rem"; // For even spacing fallback
 
-         // Disable voting if observer, or if votes are revealed
-         cardButton.disabled = (currentUser?.role === 'Observer' || votesRevealed);
+            // Card inner for the 3D flip
+            const cardInner = document.createElement('div');
+            cardInner.classList.add('card-inner', 'w-full', 'h-full', 'relative');
 
-         // Add click listener only if user can vote
-         if (currentUser && currentUser.role !== 'Observer') {
-             cardButton.addEventListener('click', handleVote);
-         }
+            // Card back (what you see first)
+            const cardBack = document.createElement('div');
+            cardBack.classList.add('card-face', 'card-back', 'absolute', 'inset-0', 'flex', 'items-center', 'justify-center', 'bg-blue-700', 'text-white', 'rounded-lg');
+            
+            const cardBackImg = document.createElement('img');
+            cardBackImg.src = '/images/cardback.jpg'; // or your actual image path
+            cardBackImg.alt = 'Playing card back';
+            cardBackImg.classList.add('w-full', 'h-full', 'object-cover', 'rounded-lg');
+            cardBack.appendChild(cardBackImg);
 
-         votingCardsContainer.appendChild(cardButton);
+            // Card front (the vote value)
+            const cardFront = document.createElement('div');
+            cardFront.classList.add('card-face', 'card-front', 'absolute', 'inset-0', 'flex', 'items-center', 'justify-center', 'bg-white', 'text-blue-600', 'font-bold', 'rounded-lg');
+            cardFront.textContent = value;
+
+            // Stack them
+            cardInner.appendChild(cardBack);
+            cardInner.appendChild(cardFront);
+            cardButton.appendChild(cardInner);
+
+            // Highlight selected card
+            if (currentUser && currentUser.vote === value) {
+            cardButton.classList.add('selected');
+            }
+
+            // Disable if observer or votes revealed
+            cardButton.disabled = (currentUser?.role === 'Observer' || votesRevealed);
+
+            // Add click listener if can vote
+            if (currentUser && currentUser.role !== 'Observer') {
+            cardButton.addEventListener('click', handleVote);
+            }
+
+            votingCardsContainer.appendChild(cardButton);
      });
+
+        // Only animate if votes are not revealed
+        if (!votesRevealed && animateVotingCards) {
+        // Set all cards face-down (back visible)
+        document.querySelectorAll('.vote-card .card-inner').forEach(card => {
+            card.style.transform = 'rotateY(180deg)';
+        });
+        anime({
+            targets: '.vote-card .card-inner',
+            rotateY: [
+            { value: 0, duration: 700, delay: anime.stagger(120, { start: 1000 }) } // Flip to face-up/front
+            ],
+            easing: 'easeOutQuart'
+        });
+        animateVotingCards = false;
+        }
+
  }
 
  function renderParticipantsList() {
@@ -581,19 +641,13 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 }
 
  function handleVote(event) {
-     if (votesRevealed || !currentUser || currentUser.role === 'Observer') return;
 
-     const selectedValue = event.target.dataset.value;
-
-     // Send vote to server
-     sendMessage('vote', { vote: selectedValue });
-
-     // Optimistic UI update (optional but good for responsiveness):
-     // Highlight the selected card immediately
-     document.querySelectorAll('.vote-card').forEach(btn => btn.classList.remove('selected'));
-     event.target.classList.add('selected');
-     // Note: The actual `currentUser.vote` state will be updated when server confirms via `updateState`
- }
+    if (votesRevealed || !currentUser || currentUser.role === 'Observer') return;
+        const selectedValue = event.currentTarget.dataset.value; // Use currentTarget!
+        sendMessage('vote', { vote: selectedValue });
+        document.querySelectorAll('.vote-card').forEach(btn => btn.classList.remove('selected'));
+        event.currentTarget.classList.add('selected');
+    }
 
  function handleShowVotes() {
       if (currentUser?.role === 'Facilitator' && !votesRevealed) {
@@ -607,6 +661,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
  }
 
  function handleResetVotes() {
+     animateVotingCards = true;
       if (currentUser?.role === 'Facilitator') {
          sendMessage('resetVotes', {});
          resetAllCards()
@@ -678,3 +733,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
  // --- Start the application ---
  init();
+
+
+
+ 
