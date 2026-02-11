@@ -116,16 +116,11 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
          loginError.textContent = 'Cannot connect to the server. Please try again later.';
          loginError.classList.remove('hidden');
          showLogin(); // Force back to login on connection error
-
-         ws.removeAllListeners('connection');
-         ws.on('connection', (socket) => {
-             console.log('New connection established');
-         });
      };
 
      ws.onclose = (event) => {
          console.log('WebSocket connection closed:', event.reason, `Code: ${event.code}`);
-         updateConnectionStatus('connected', 'Connected');
+         updateConnectionStatus('disconnected', 'Disconnected');
          loginButton.disabled = true;
          loginButton.textContent = 'Enter Room (Disconnected)';
          currentUser = null; // Clear user state
@@ -203,13 +198,10 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
          case 'error':
              console.error('Server Error:', payload.message);
              // Display error messages appropriately (e.g., for voting, name change)
-             if (document.getElementById('vote-error') && !voteError.classList.contains('hidden')) {
-                  voteError.textContent = payload.message;
-                  voteError.classList.remove('hidden');
-                  setTimeout(() => voteError.classList.add('hidden'), 3000); // Hide after 3s
-             } else if (document.getElementById('edit-name-error') && !editNameModal.classList.contains('hidden')) {
-                  editNameError.textContent = payload.message;
-                  editNameError.classList.remove('hidden');
+         if (document.getElementById('vote-error') && !voteError.classList.contains('hidden')) {
+              voteError.textContent = payload.message;
+              voteError.classList.remove('hidden');
+              setTimeout(() => voteError.classList.add('hidden'), 3000); // Hide after 3s
              } else if (document.getElementById('login-error') && !loginSection.classList.contains('hidden')) {
                   loginError.textContent = payload.message;
                   loginError.classList.remove('hidden');
@@ -323,17 +315,6 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
      loginSection.classList.add('hidden');
      pokerRoomSection.classList.remove('hidden');
      // UI update will be triggered by receiving state from server
- }
-
- function openEditNameModal() {
-     if (!currentUser) return;
-     editNameInput.value = currentUser.name; // Pre-fill current name
-     editNameError.classList.add('hidden'); // Hide previous errors
-     editNameModal.classList.remove('hidden');
- }
-
- function closeEditNameModal() {
-      editNameModal.classList.add('hidden');
  }
 
  // --- UI Updates (Reflects state from server) ---
@@ -665,21 +646,6 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
       if (currentUser?.role === 'Facilitator') {
          sendMessage('resetVotes', {});
          resetAllCards()
-     }
- }
-
- function handleSaveName() {
-     const newName = editNameInput.value.trim();
-     if (newName && currentUser) {
-         if (newName === currentUser.name) {
-              closeEditNameModal(); // No change needed
-              return;
-         }
-         sendMessage('changeName', { name: newName });
-         closeEditNameModal(); // Close modal, server update will refresh UI
-     } else if (!newName) {
-          editNameError.textContent = "Name cannot be empty.";
-          editNameError.classList.remove('hidden');
      }
  }
 

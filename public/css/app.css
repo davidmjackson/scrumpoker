@@ -86,6 +86,9 @@ body {
     justify-content: center;
     z-index: 50;
 }
+.modal-overlay.hidden {
+    display: none;
+}
 .modal-content {
     background-color: white;
     padding: 2rem;

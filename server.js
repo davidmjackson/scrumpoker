@@ -26,7 +26,9 @@ function leaveRoom(roomName, userId) {
   const room = rooms.get(roomName);
   room.users.delete(userId);
   room.lastActive = Date.now();
-
+  if (room.users.size === 0) {
+    rooms.delete(roomName);
+  }
 }
 
 // Every minute: sweep out rooms idle for 45 minutes
@@ -66,6 +68,28 @@ function loadKeys() {
 // Use PORT from env or default to 3000
 const PORT = process.env.PORT || 3000;
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
+app.use((req, res, next) => {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-eval'",
+    "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data:",
+    "connect-src 'self' ws: wss:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests"
+  ].join('; ');
+
+  res.setHeader('Content-Security-Policy', csp);
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.removeHeader('Server');
+  next();
+});
 
 //console.log('✅ Express app created');
 
@@ -93,6 +117,9 @@ app.use(
 // ── 2) Start an HTTP server, then attach WebSocketServer on /ws ──────────
 const server = app.listen(PORT, '0.0.0.0',() => {
   //console.log(`✅ HTTP server listening on port ${PORT}`);
+});
+server.on('request', (_req, res) => {
+  res.removeHeader('Server');
 });
 
 // WebSocketServer will only upgrade on the "/ws" path:
@@ -210,6 +237,13 @@ wss.on('connection', (ws) => {
         }
 
         const { name, role, room, accessKey } = payload;
+        const allowedRoles = ['Voter', 'Observer', 'Facilitator'];
+        if (!allowedRoles.includes(role)) {
+          return sendToClient(ws, {
+            type: 'error',
+            payload: { message: 'Invalid role.' }
+          });
+        }
 
         const internalRoom = `${room}-${accessKey}`;
 
@@ -228,16 +262,28 @@ wss.on('connection', (ws) => {
         ws.name = name;
         ws.role = role;
         ws.roomName = internalRoom;
+        joinRoom(internalRoom, userId);
+
+        let assignedRole = role;
+        const roomForLogin = rooms.get(internalRoom);
+        if (assignedRole === 'Facilitator') {
+          if (!roomForLogin.facilitatorId) {
+            roomForLogin.facilitatorId = userId;
+          } else {
+            assignedRole = 'Voter';
+          }
+        }
+
         participants[userId] = {
           id: userId,
           ws: ws,
           name: name,
-          role: role,
+          role: assignedRole,
           vote: null,
           roomName: internalRoom
         };
 
-        joinRoom(internalRoom, userId);
+        assignFacilitator(internalRoom);
 
         // Broadcast updated room state…
         const roomState = getRoomState(internalRoom);
@@ -254,7 +300,7 @@ wss.on('connection', (ws) => {
           payload: {
             userId: userId,
             name: name,
-            role: role,
+            role: assignedRole,
             allUsersInRoom: Array.from(rooms.get(internalRoom).users).map((id) => {
               const p = participants[id];
               return { userId: id, name: p.name, role: p.role };
@@ -405,6 +451,15 @@ wss.on('connection', (ws) => {
         // 10.1) Determine which room this change affects
         const roomNameCR = currentUser.roomName;
         const roomObjCR = rooms.get(roomNameCR);
+        if (!roomObjCR) {
+          return sendToClient(ws, { type: 'error', payload: { message: 'Room not found.' } });
+        }
+        if (target.roomName !== roomNameCR) {
+          return sendToClient(ws, {
+            type: 'error',
+            payload: { message: 'Target user is not in your room.' }
+          });
+        }
 
         // 10.2) Update facilitatorId for this room only
         if (newRole === 'Facilitator') {
