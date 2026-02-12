@@ -86,14 +86,31 @@ app.use((req, res, next) => {
     "upgrade-insecure-requests"
   ].join('; ');
 
+  const permissionsPolicy = [
+    'accelerometer=()',
+    'camera=()',
+    'geolocation=()',
+    'gyroscope=()',
+    'microphone=()',
+    'payment=()',
+    'usb=()',
+    'browsing-topics=()',
+    'interest-cohort=()'
+  ].join(', ');
+
   res.setHeader('Content-Security-Policy', csp);
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-  res.setHeader('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=(), browsing-topics=()');
+  res.setHeader('Permissions-Policy', permissionsPolicy);
   res.removeHeader('Server');
   next();
 });
