@@ -81,12 +81,19 @@ app.use((req, res, next) => {
     "connect-src 'self' ws: wss:",
     "object-src 'none'",
     "base-uri 'self'",
+    "form-action 'self'",
     "frame-ancestors 'none'",
     "upgrade-insecure-requests"
   ].join('; ');
 
   res.setHeader('Content-Security-Policy', csp);
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=(), browsing-topics=()');
   res.removeHeader('Server');
   next();
 });
@@ -123,7 +130,12 @@ server.on('request', (_req, res) => {
 });
 
 // WebSocketServer will only upgrade on the "/ws" path:
-const wss = new WebSocketServer({ server, path: '/ws' });
+const wss = new WebSocketServer({
+  server,
+  path: '/ws',
+  perMessageDeflate: false,
+  maxPayload: 64 * 1024
+});
 
 //console.log('✅ WebSocketServer initialized');
 

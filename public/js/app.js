@@ -49,13 +49,7 @@
 const hostname = location.hostname.trim().toLowerCase();
 console.log('Detected hostname:', hostname);
 
-// dynamically determine WebSocket URL based on hostname 
-// This allows for different URLs in development vs production
-//const devHosts = ['192.168.0.94', '172.18.109.47', 'localhost'];
-//const isDev = devHosts.includes(hostname);
-//const WEBSOCKET_URL = isDev
- // ? `ws://${hostname}:3000`
-//  : 'wss://scrum-poker.uk/ws';
+// Dynamically determine WebSocket URL from the current page origin.
 
 const loc = window.location;
 const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
