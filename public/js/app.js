@@ -33,6 +33,7 @@
 
 
  let animateVotingCards = true; // Controls whether cards animate in
+ let flipAnimationTimers = [];
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
@@ -129,6 +130,35 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
      connectionStatus.className = status; // 'connected', 'disconnected', 'connecting'
      connectionStatus.textContent = text;
  }
+
+function clearFlipAnimationTimers() {
+    flipAnimationTimers.forEach(clearTimeout);
+    flipAnimationTimers = [];
+}
+
+function animateCardsIntoView() {
+    clearFlipAnimationTimers();
+
+    const cards = Array.from(document.querySelectorAll('.vote-card .card-inner'));
+    if (cards.length === 0) return;
+
+    cards.forEach((card) => {
+        card.classList.add('is-face-down');
+    });
+
+    const introDelayMs = 300;
+    const staggerDelayMs = 120;
+    const firstTimer = setTimeout(() => {
+        cards.forEach((card, index) => {
+            const timer = setTimeout(() => {
+                card.classList.remove('is-face-down');
+            }, index * staggerDelayMs);
+            flipAnimationTimers.push(timer);
+        });
+    }, introDelayMs);
+
+    flipAnimationTimers.push(firstTimer);
+}
 
  // --- Server Message Handler ---
  function handleServerMessage(message) {
@@ -410,6 +440,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
 
  function renderVotingCards() {
+     clearFlipAnimationTimers();
 
      votingCardsContainer.innerHTML = ''; // Clear existing cards
       // Add observer message placeholder back if needed
@@ -470,17 +501,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
         // Only animate if votes are not revealed
         if (!votesRevealed && animateVotingCards) {
-        // Set all cards face-down (back visible)
-        document.querySelectorAll('.vote-card .card-inner').forEach(card => {
-            card.classList.add('is-face-down');
-        });
-        anime({
-            targets: '.vote-card .card-inner',
-            rotateY: [
-            { value: 0, duration: 700, delay: anime.stagger(120, { start: 1000 }) } // Flip to face-up/front
-            ],
-            easing: 'easeOutQuart'
-        });
+        animateCardsIntoView();
         animateVotingCards = false;
         }
 
