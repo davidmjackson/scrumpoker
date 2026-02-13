@@ -128,6 +128,7 @@ body {
   border: none;
   box-shadow: none;
   padding: 0;
+  min-width: 3rem;
 }
 
 .card-inner {
@@ -136,6 +137,10 @@ body {
   position: relative;
   transform-style: preserve-3d;
   transition: transform 0.6s cubic-bezier(.4,2,.4,.8);
+}
+
+.card-inner.is-face-down {
+  transform: rotateY(180deg);
 }
 
 .card-face {

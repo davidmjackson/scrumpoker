@@ -70,48 +70,59 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
+app.set('etag', false);
 
-app.use((req, res, next) => {
-  const csp = [
-    "default-src 'self'",
-    "script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-eval'",
-    "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
-    "font-src 'self' https://fonts.gstatic.com data:",
-    "img-src 'self' data:",
-    "connect-src 'self' ws: wss:",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    "upgrade-insecure-requests"
-  ].join('; ');
+const csp = [
+  "default-src 'self'",
+  "script-src 'self' https://cdnjs.cloudflare.com",
+  "style-src 'self' https://cdn.jsdelivr.net",
+  "font-src 'self' data:",
+  "img-src 'self' data:",
+  "connect-src 'self' ws: wss:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests"
+].join('; ');
 
-  const permissionsPolicy = [
-    'accelerometer=()',
-    'camera=()',
-    'geolocation=()',
-    'gyroscope=()',
-    'microphone=()',
-    'payment=()',
-    'usb=()',
-    'browsing-topics=()',
-    'interest-cohort=()'
-  ].join(', ');
+const permissionsPolicy = [
+  'accelerometer=()',
+  'camera=()',
+  'geolocation=()',
+  'gyroscope=()',
+  'microphone=()',
+  'payment=()',
+  'usb=()'
+].join(', ');
 
+function setNoCacheHeaders(res) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+}
+
+function applySecurityHeaders(res) {
   res.setHeader('Content-Security-Policy', csp);
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.setHeader('Surrogate-Control', 'no-store');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('Origin-Agent-Cluster', '?1');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
   res.setHeader('Permissions-Policy', permissionsPolicy);
+  res.removeHeader('X-Powered-By');
   res.removeHeader('Server');
+}
+
+app.use((req, res, next) => {
+  applySecurityHeaders(res);
+  setNoCacheHeaders(res);
   next();
 });
 
@@ -129,16 +140,36 @@ app.use(
     dotfiles: 'ignore',    // never serve “.gitignore”, “.env”, etc.
     index: false,          // don’t auto-serve index.html on directory access
     extensions: ['html'],  // only resolve .html if a plain name is requested
-    redirect: false        // forbid trailing-slash redirects
+    redirect: false,       // forbid trailing-slash redirects
+    etag: false,
+    lastModified: false,
+    cacheControl: false,
+    acceptRanges: false,
+    setHeaders: (res) => {
+      applySecurityHeaders(res);
+      setNoCacheHeaders(res);
+    }
   })
 );
 
   app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    applySecurityHeaders(res);
+    setNoCacheHeaders(res);
+    res.sendFile(path.join(__dirname, 'public', 'index.html'), {
+      lastModified: false,
+      cacheControl: false,
+      acceptRanges: false
+    });
   });
 
   app.get(['/license', '/licence'], (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'license.html'));
+    applySecurityHeaders(res);
+    setNoCacheHeaders(res);
+    res.sendFile(path.join(__dirname, 'public', 'license.html'), {
+      lastModified: false,
+      cacheControl: false,
+      acceptRanges: false
+    });
   });
 
 

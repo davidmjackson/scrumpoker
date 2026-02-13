@@ -44,7 +44,6 @@
 
  // --- WebSocket Setup ---
  let ws = null;
- // IMPORTANT: Replace with your actual WebSocket server URL
 
 const hostname = location.hostname.trim().toLowerCase();
 console.log('Detected hostname:', hostname);
@@ -428,7 +427,6 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
             'perspective-1000',
             'focus:outline-none', 'disabled:opacity-60', 'disabled:cursor-not-allowed'
             );
-            cardButton.style.minWidth = "3rem"; // For even spacing fallback
 
             // Card inner for the 3D flip
             const cardInner = document.createElement('div');
@@ -474,7 +472,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
         if (!votesRevealed && animateVotingCards) {
         // Set all cards face-down (back visible)
         document.querySelectorAll('.vote-card .card-inner').forEach(card => {
-            card.style.transform = 'rotateY(180deg)';
+            card.classList.add('is-face-down');
         });
         anime({
             targets: '.vote-card .card-inner',
