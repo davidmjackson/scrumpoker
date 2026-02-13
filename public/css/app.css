@@ -169,3 +169,42 @@ body {
   font-weight: bold;
   z-index: 1;
 }
+
+/* License page styles (kept in external CSS for CSP compatibility). */
+.license-wrap {
+  max-width: 900px;
+  margin: 2rem auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
+}
+
+.license-wrap h1 {
+  font-size: 1.75rem;
+  margin: 0 0 1rem;
+  color: #111827;
+}
+
+.license-wrap p {
+  margin: 0 0 1rem;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.license-wrap a {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.license-wrap pre {
+  margin-top: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #111827;
+  line-height: 1.5;
+}

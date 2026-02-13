@@ -75,7 +75,7 @@ app.set('etag', false);
 const csp = [
   "default-src 'self'",
   "script-src 'self' https://cdnjs.cloudflare.com",
-  "style-src 'self' https://cdn.jsdelivr.net",
+  "style-src 'self'",
   "font-src 'self' data:",
   "img-src 'self' data:",
   "connect-src 'self' ws: wss:",
