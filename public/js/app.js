@@ -402,7 +402,7 @@ function animateCardsIntoView() {
             groups[vote].push(name);
         });
 
-        // Get vote values sorted descending (keys are strings, so convert back to Number)
+        // Sort vote values descending.
         const sortedVotes = Object.keys(groups)
             .map(v => parseInt(v))
             .sort((a, b) => b - a);
