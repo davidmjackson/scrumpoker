@@ -137,6 +137,10 @@ app.use(
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
 
+  app.get(['/license', '/licence'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'license.html'));
+  });
+
 
 // ── 2) Start an HTTP server, then attach WebSocketServer on /ws ──────────
 const server = app.listen(PORT, '0.0.0.0',() => {

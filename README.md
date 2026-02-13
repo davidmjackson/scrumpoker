@@ -80,3 +80,13 @@ server {
   - `style-src 'unsafe-inline'`
 
 These are currently tolerated because the app uses browser-side Tailwind runtime and inline-style patterns. If you compile Tailwind ahead of time and remove runtime generation, these can be removed for stronger CSP.
+
+## License
+
+This project is provided under a custom free-use license.
+
+- Free to use at no charge.
+- Copying, redistribution, modification, and resale are prohibited.
+- The software is provided "as is" with no warranty or liability.
+- Full legal text: `LICENSE`
+- In-app license page: `/license` (also available at `/licence`)
