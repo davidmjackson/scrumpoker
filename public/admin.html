@@ -100,15 +100,15 @@
     </section>
   </main>
 
-  <div id="rotate-key-modal" class="modal-overlay hidden">
-    <section class="modal-content admin-warning-modal" role="dialog" aria-modal="true" aria-labelledby="rotate-key-title" aria-describedby="rotate-key-message rotate-key-note">
-      <span class="admin-warning-kicker">Key rotation</span>
-      <h2 id="rotate-key-title">Rotate team key?</h2>
-      <p id="rotate-key-message" class="admin-warning-message"></p>
-      <p id="rotate-key-note" class="admin-warning-note">Existing invite links for this team will stop working immediately.</p>
+  <div id="key-action-modal" class="modal-overlay hidden">
+    <section class="modal-content admin-warning-modal" role="dialog" aria-modal="true" aria-labelledby="key-action-title" aria-describedby="key-action-message key-action-note">
+      <span id="key-action-kicker" class="admin-warning-kicker"></span>
+      <h2 id="key-action-title"></h2>
+      <p id="key-action-message" class="admin-warning-message"></p>
+      <p id="key-action-note" class="admin-warning-note"></p>
       <div class="modal-actions">
-        <button id="cancel-rotate-key-button" type="button" class="secondary-action">Cancel</button>
-        <button id="confirm-rotate-key-button" type="button" class="danger-action">Rotate key</button>
+        <button id="cancel-key-action-button" type="button" class="secondary-action">Cancel</button>
+        <button id="confirm-key-action-button" type="button" class="danger-action"></button>
       </div>
     </section>
   </div>

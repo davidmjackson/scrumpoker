@@ -1426,3 +1426,42 @@ Result:
 - `npm test` ran 48 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Admin Action Confirmation Modals
+
+Branch: `feature/admin-action-modals`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `e3d15dc Add admin rotate key modal`
+- Working tree: clean before branch changes
+- Server status: local `node server.js` process was running on PID `209446`
+
+Work planned:
+- Replace the remaining native browser confirmations for admin team key actions.
+- Reuse the styled admin warning modal for rotate, suspend, and remove actions.
+- Keep restore as a direct safe action.
+
+Work completed:
+- Refactored the rotate confirmation dialog into a reusable `key-action-modal`.
+- Added styled modal flows for suspending and removing team keys.
+- Removed native `window.confirm` usage from the admin key controls.
+- Extended admin browser coverage for cancel and confirm paths on rotate, suspend, and remove.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `find . -path ./node_modules -prune -o -name '*.js' -print | xargs -r -n1 node --check`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 48 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
