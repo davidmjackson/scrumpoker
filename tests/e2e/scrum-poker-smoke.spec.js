@@ -53,6 +53,11 @@ test('facilitator can enter a room, vote, reveal, and reset', async ({ page }) =
     await expect(page.locator('#room-display')).toHaveText('Room: browser-room');
     await expect(page.locator('#user-greeting')).toHaveText('Hello, Alice (Facilitator)');
     await expect(page.locator('#admin-room-link')).toBeVisible();
+    await expect(page.locator('#current-item-display')).toHaveText('No item set');
+
+    await page.locator('#round-item-input').fill('Checkout flow estimate');
+    await page.locator('#round-item-form').getByRole('button', { name: 'Set item' }).click();
+    await expect(page.locator('#current-item-display')).toHaveText('Checkout flow estimate');
 
     await page.locator('button.vote-card[data-value="5"]').click();
     await expect(page.locator('button.vote-card[data-value="5"]')).toHaveClass(/selected/);
@@ -60,8 +65,12 @@ test('facilitator can enter a room, vote, reveal, and reset', async ({ page }) =
     await page.locator('#show-votes-button').click();
     await expect(page.locator('#vote-summary')).toBeVisible();
     await expect(page.locator('#average-vote')).toHaveText('5.0');
+    await expect(page.locator('#result-item-name')).toHaveText('Checkout flow estimate');
     await expect(page.locator('#ordered-votes-list')).toContainText('Alice');
     await expect(page.locator('#ordered-votes-list')).toContainText('5');
+    await expect(page.locator('#round-history-section')).toBeVisible();
+    await expect(page.locator('#round-history-list')).toContainText('Checkout flow estimate');
+    await expect(page.locator('#round-history-list')).toContainText('Average 5.0');
 
     await page.locator('#reset-votes-button').click();
     await page.waitForFunction(() => {
@@ -78,6 +87,7 @@ test('facilitator can enter a room, vote, reveal, and reset', async ({ page }) =
       return cards.length > 0 && cards.every((card) => card.classList.contains('is-face-down'));
     });
     await expect(page.locator('#vote-summary')).toBeHidden();
+    await expect(page.locator('#round-history-section')).toBeVisible();
     await expect(page.locator('.vote-card .card-inner').first()).not.toHaveClass(/is-face-down/, { timeout: 6000 });
     await expect(page.locator('button.vote-card[data-value="5"]')).not.toHaveClass(/selected/);
   } finally {

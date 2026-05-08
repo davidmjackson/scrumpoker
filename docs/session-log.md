@@ -1467,6 +1467,55 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 
+## 2026-05-08 - Estimation Rounds And History
+
+Branch: `feature/estimation-rounds-history`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `ad5a5ad Equalize entry panel heights`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+
+Work planned:
+- Add a facilitator-controlled current estimate item to the room.
+- Keep the current item synchronized for voters, observers, and facilitators.
+- Save revealed rounds into in-memory room history so teams can review and copy the result.
+- Preserve the existing reveal/reset/card animation behavior.
+
+Work completed:
+- Added `currentItem` and capped `roundHistory` state to each in-memory room.
+- Added a `setRoundItem` WebSocket message that only facilitators can use.
+- Locked current item edits while votes are revealed so history labels stay consistent.
+- Snapshotted revealed rounds with title, reveal time, numeric average, vote count, votes, and grouped vote spread.
+- Added a current item panel to the room UI.
+- Added a revealed rounds history panel with a `Copy summary` action for each round.
+- Kept history room-local and in-memory; if the final participant leaves a room, that room and its round history are removed with the existing lifecycle.
+- Bumped the app script query to `js/app.js?v=4`.
+
+Verification:
+- `node --check lib/roomState.js`
+- `node --check lib/wsHandlers.js`
+- `node --check lib/wsServer.js`
+- `node --check public/js/app.js`
+- `node --check tests/room-state.test.js`
+- `node --check tests/ws-handlers.test.js`
+- `find . -path ./node_modules -prune -o -name '*.js' -print | xargs -r -n1 node --check`
+- `git diff --check`
+- `npm test`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- `npm test` ran 51 tests successfully.
+- Focused smoke and multi-user browser tests passed.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
 ## 2026-05-08 - Return To Room From Admin
 
 Branch: `feature/return-to-room-from-admin`

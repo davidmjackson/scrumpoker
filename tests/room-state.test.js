@@ -9,7 +9,9 @@ const {
   getRoomState,
   joinRoom,
   leaveRoom,
-  reassignFacilitatorIfLeaving
+  recordRoundHistory,
+  reassignFacilitatorIfLeaving,
+  setCurrentItem
 } = require('../lib/roomState');
 
 function participant(id, roomName, overrides = {}) {
@@ -35,6 +37,8 @@ test('joinRoom creates and updates room membership', () => {
   assert.equal(updatedRoom.lastActive, 150);
   assert.equal(updatedRoom.votesRevealed, false);
   assert.equal(updatedRoom.facilitatorId, null);
+  assert.equal(updatedRoom.currentItem, '');
+  assert.deepEqual(updatedRoom.roundHistory, []);
 });
 
 test('leaveRoom updates activity and removes empty rooms', () => {
@@ -104,6 +108,16 @@ test('getRoomState projects room reveal and facilitator state', () => {
   const room = joinRoom(rooms, 'alpha', 'alice', 100);
   room.votesRevealed = true;
   room.facilitatorId = 'alice';
+  room.currentItem = 'Checkout flow';
+  room.roundHistory = [{
+    id: 'round-1',
+    title: 'Checkout flow',
+    average: '8.0',
+    voteCount: 1,
+    votes: [{ name: 'alice', role: 'Facilitator', vote: '8' }],
+    groups: [{ vote: '8', names: ['alice'] }],
+    revealedAt: '2026-05-08T12:00:00.000Z'
+  }];
 
   const participants = {
     alice: participant('alice', 'alpha', { role: 'Facilitator', vote: '8' })
@@ -122,9 +136,54 @@ test('getRoomState projects room reveal and facilitator state', () => {
         }
       ],
       votesRevealed: true,
-      facilitatorId: 'alice'
+      facilitatorId: 'alice',
+      currentItem: 'Checkout flow',
+      roundHistory: [{
+        id: 'round-1',
+        title: 'Checkout flow',
+        average: '8.0',
+        voteCount: 1,
+        votes: [{ name: 'alice', role: 'Facilitator', vote: '8' }],
+        groups: [{ vote: '8', names: ['alice'] }],
+        revealedAt: '2026-05-08T12:00:00.000Z'
+      }]
     }
   });
+});
+
+test('setCurrentItem trims the active estimate target', () => {
+  const rooms = new Map();
+  const room = joinRoom(rooms, 'alpha', 'alice', 100);
+
+  const currentItem = setCurrentItem(room, '  Checkout flow  ');
+
+  assert.equal(currentItem, 'Checkout flow');
+  assert.equal(room.currentItem, 'Checkout flow');
+});
+
+test('recordRoundHistory snapshots votes and keeps newest rounds first', () => {
+  const rooms = new Map();
+  const room = joinRoom(rooms, 'alpha', 'alice', 100);
+  room.currentItem = 'Checkout flow';
+
+  const participants = {
+    alice: participant('alice', 'alpha', { role: 'Facilitator', vote: '8' }),
+    bob: participant('bob', 'alpha', { vote: '5' }),
+    carol: participant('carol', 'alpha', { role: 'Observer', vote: null }),
+    dana: participant('dana', 'alpha', { vote: '?' })
+  };
+
+  const entry = recordRoundHistory(room, participants, 'alpha', Date.UTC(2026, 4, 8, 12));
+
+  assert.equal(entry.title, 'Checkout flow');
+  assert.equal(entry.average, '6.5');
+  assert.equal(entry.voteCount, 3);
+  assert.deepEqual(entry.groups, [
+    { vote: '8', names: ['alice'] },
+    { vote: '5', names: ['bob'] },
+    { vote: '?', names: ['dana'] }
+  ]);
+  assert.equal(room.roundHistory[0], entry);
 });
 
 test('assignFacilitator chooses the first room member when needed', () => {
