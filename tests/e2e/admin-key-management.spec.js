@@ -43,10 +43,14 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(gammaRow).toBeVisible();
     await expect(page.locator('#admin-status')).toHaveText('Created team key for Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('3 teams');
+    await expect(gammaRow.locator('.admin-team-body')).toBeHidden();
+    await gammaRow.locator('summary').click();
+    await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
     const gammaKey = await gammaRow.locator('code').innerText();
 
     await page.locator('#invite-room-input').fill('Release Planning');
     await page.locator('#invite-role-select').selectOption('Observer');
+    await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
 
     const invitePreview = gammaRow.locator('.admin-invite-preview');
     await expect(invitePreview).toContainText('Team: Gamma Team');

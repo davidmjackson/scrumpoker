@@ -102,7 +102,16 @@ function createTeamInvite(key) {
   return inviteLines.join('\n');
 }
 
+function getOpenTeamNames() {
+  return new Set(
+    Array.from(keysList.querySelectorAll('.admin-key-row[open]'))
+      .map((row) => row.dataset.teamName)
+      .filter(Boolean)
+  );
+}
+
 function renderKeys(keys) {
+  const openTeamNames = getOpenTeamNames();
   keysList.innerHTML = '';
   keyCount.textContent = `${keys.length} ${keys.length === 1 ? 'team' : 'teams'}`;
 
@@ -115,8 +124,33 @@ function renderKeys(keys) {
   }
 
   keys.forEach((key) => {
-    const row = document.createElement('div');
-    row.className = 'admin-key-row';
+    const row = document.createElement('details');
+    row.className = 'admin-key-row admin-team-section';
+    row.dataset.teamName = key.name;
+    row.open = openTeamNames.has(key.name);
+
+    const summary = document.createElement('summary');
+    summary.className = 'admin-team-summary';
+
+    const summaryText = document.createElement('span');
+    summaryText.className = 'admin-team-summary-text';
+
+    const summaryName = document.createElement('span');
+    summaryName.className = 'admin-team-name';
+    summaryName.textContent = key.name;
+
+    const summaryMeta = document.createElement('span');
+    summaryMeta.className = 'admin-team-meta';
+    summaryMeta.textContent = `${getInviteRole()} invite`;
+
+    const summaryIndicator = document.createElement('span');
+    summaryIndicator.className = 'admin-team-indicator';
+    summaryIndicator.setAttribute('aria-hidden', 'true');
+
+    summaryText.appendChild(summaryName);
+    summaryText.appendChild(summaryMeta);
+    summary.appendChild(summaryText);
+    summary.appendChild(summaryIndicator);
 
     const details = document.createElement('div');
     details.className = 'admin-key-details';
@@ -180,8 +214,13 @@ function renderKeys(keys) {
     actions.appendChild(copyKeyButton);
     actions.appendChild(removeButton);
 
-    row.appendChild(details);
-    row.appendChild(actions);
+    const body = document.createElement('div');
+    body.className = 'admin-team-body';
+    body.appendChild(details);
+    body.appendChild(actions);
+
+    row.appendChild(summary);
+    row.appendChild(body);
     keysList.appendChild(row);
   });
 }

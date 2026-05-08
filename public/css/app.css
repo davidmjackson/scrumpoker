@@ -1057,14 +1057,96 @@ img {
 }
 
 .admin-key-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.admin-team-summary {
+  list-style: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   padding: 0.8rem;
-  background: var(--surface-soft);
+  cursor: pointer;
+}
+
+.admin-team-summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-team-summary-text {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.admin-team-name {
+  color: var(--ink);
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.admin-team-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.admin-team-indicator {
+  width: 1.8rem;
+  height: 1.8rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  position: relative;
+}
+
+.admin-team-indicator::before,
+.admin-team-indicator::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.78rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--muted);
+  transform: translate(-50%, -50%);
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.admin-team-indicator::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.admin-key-row[open] .admin-team-indicator::after {
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.admin-team-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+  padding: 0 0.8rem 0.8rem;
+  animation: adminTeamPanelIn 180ms ease-out;
+}
+
+@keyframes adminTeamPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .admin-key-details {
@@ -1129,9 +1211,9 @@ img {
   }
 
   .admin-panel-header,
-  .admin-key-row {
+  .admin-team-body {
     align-items: stretch;
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .admin-panel-actions {
