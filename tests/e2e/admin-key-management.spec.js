@@ -35,6 +35,7 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(page.locator('#keys-list')).toContainText('browser');
 
     await page.locator('#key-name-input').fill('Gamma Team');
+    await page.locator('#invite-room-input').fill('Sprint Planning');
     await page.locator('#create-key-form button[type="submit"]').click();
 
     const gammaRow = page.locator('.admin-key-row').filter({ hasText: 'Gamma Team' });
@@ -49,8 +50,15 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     expect(copiedInvite).toContain('Scrum Poker team access');
     expect(copiedInvite).toContain('Team: Gamma Team');
     expect(copiedInvite).toContain(`Access key: ${gammaKey}`);
-    expect(copiedInvite).toContain(`App: ${server.baseUrl}`);
+    expect(copiedInvite).toContain('Room: Sprint Planning');
     expect(copiedInvite).toContain('Role: Facilitator');
+    const inviteUrl = copiedInvite.match(/^App: (.+)$/m)?.[1];
+    expect(inviteUrl).toBeTruthy();
+    const parsedInviteUrl = new URL(inviteUrl);
+    expect(parsedInviteUrl.origin).toBe(server.baseUrl);
+    expect(parsedInviteUrl.searchParams.get('accessKey')).toBe(gammaKey);
+    expect(parsedInviteUrl.searchParams.get('room')).toBe('Sprint Planning');
+    expect(parsedInviteUrl.searchParams.get('role')).toBe('Facilitator');
 
     await gammaRow.getByRole('button', { name: 'Copy key' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Copied key for Gamma Team.');
@@ -63,6 +71,12 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(page.locator('#admin-status')).toHaveText('Removed Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('2 teams');
     await expect(gammaRow).toHaveCount(0);
+
+    await page.goto(inviteUrl);
+    await expect(page.locator('#access-key-input')).toHaveValue(gammaKey);
+    await expect(page.locator('#room-input')).toHaveValue('Sprint Planning');
+    await expect(page.locator('#role-select')).toHaveValue('Facilitator');
+    expect(page.url()).not.toContain('accessKey=');
   } finally {
     await server.stop();
   }
