@@ -33,13 +33,12 @@
 
 
  let animateVotingCards = true; // Controls whether cards animate in
- let flipAnimationTimers = [];
  let voteErrorTimer = null;
  let resetFaceDownBeforeStateUpdate = false;
- const cardFlipTransitionMs = 600;
- const cardFlipStaggerDelayMs = 150;
- const cardIntroDelayMs = 300;
- const resetTurnaroundDelayMs = 240;
+ const cardDeck = window.ScrumPokerCardDeck;
+ const cardAnimator = cardDeck.createCardAnimator({
+     getCards: () => votingCardsContainer.querySelectorAll('.vote-card .card-inner')
+ });
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
@@ -151,62 +150,6 @@ function showVoteError(message) {
     }, 3000);
 }
 
-function clearFlipAnimationTimers() {
-    flipAnimationTimers.forEach(clearTimeout);
-    flipAnimationTimers = [];
-}
-
-function getVotingCardInners() {
-    const cards = Array.from(document.querySelectorAll('.vote-card .card-inner'));
-    return cards;
-}
-
-function flipCardsInOrder(cards, { faceDown, reverse = false, startDelayMs = 0 }) {
-    const orderedCards = reverse ? [...cards].reverse() : cards;
-
-    orderedCards.forEach((card, index) => {
-        const timer = setTimeout(() => {
-            card.classList.toggle('is-face-down', faceDown);
-        }, startDelayMs + index * cardFlipStaggerDelayMs);
-        flipAnimationTimers.push(timer);
-    });
-
-    return startDelayMs + Math.max(0, orderedCards.length - 1) * cardFlipStaggerDelayMs + cardFlipTransitionMs;
-}
-
-function animateCardsIntoView() {
-    clearFlipAnimationTimers();
-
-    const cards = getVotingCardInners();
-    if (cards.length === 0) return;
-
-    cards.forEach((card) => {
-        card.classList.add('is-face-down');
-    });
-
-    const firstTimer = setTimeout(() => {
-        flipCardsInOrder(cards, { faceDown: false });
-    }, cardIntroDelayMs);
-
-    flipAnimationTimers.push(firstTimer);
-}
-
-function animateCardsFaceDownBeforeReset(onComplete) {
-    clearFlipAnimationTimers();
-
-    const cards = getVotingCardInners();
-    if (cards.length === 0) {
-        onComplete();
-        return;
-    }
-
-    const faceDownDurationMs = flipCardsInOrder(cards, { faceDown: true, reverse: true });
-    const completeTimer = setTimeout(() => {
-        onComplete();
-    }, faceDownDurationMs + resetTurnaroundDelayMs);
-    flipAnimationTimers.push(completeTimer);
-}
-
  // --- Server Message Handler ---
  function handleServerMessage(message) {
      const { type, payload } = message;
@@ -264,7 +207,7 @@ function animateCardsFaceDownBeforeReset(onComplete) {
 
                      showPokerRoom(); // Ensure poker room is visible
                      if (shouldAnimateResetDeck) {
-                         animateCardsFaceDownBeforeReset(() => {
+                         cardAnimator.animateCardsFaceDownBeforeReset(() => {
                              animateVotingCards = true;
                              updateUI();
                          });
@@ -489,65 +432,31 @@ function animateCardsFaceDownBeforeReset(onComplete) {
 }
 
 
- function renderVotingCards() {
-     clearFlipAnimationTimers();
+function renderVotingCards() {
+    cardAnimator.clear();
 
-     votingCardsContainer.innerHTML = ''; // Clear existing cards
-      // Add observer message placeholder back if needed
-     votingCardsContainer.appendChild(observerMessage);
+    votingCardsContainer.innerHTML = '';
+    votingCardsContainer.appendChild(observerMessage);
 
-     fibonacciVotes.forEach(value => {
-         const cardButton = document.createElement('button');
-            cardButton.dataset.value = value;
-            cardButton.classList.add('vote-card');
+    fibonacciVotes.forEach(value => {
+        const canVote = currentUser && currentUser.role !== 'Observer';
+        const cardButton = cardDeck.createVotingCard({
+            document,
+            value,
+            selected: currentUser?.vote === value,
+            disabled: currentUser?.role === 'Observer' || votesRevealed,
+            onClick: canVote ? handleVote : null
+        });
 
-            // Card inner for the 3D flip
-            const cardInner = document.createElement('div');
-            cardInner.classList.add('card-inner');
+        votingCardsContainer.appendChild(cardButton);
+    });
 
-            // Card back (what you see first)
-            const cardBack = document.createElement('div');
-            cardBack.classList.add('card-face', 'card-back');
-            
-            const cardBackImg = document.createElement('img');
-            cardBackImg.src = '/images/cardback.jpg'; // or your actual image path
-            cardBackImg.alt = 'Playing card back';
-            cardBackImg.classList.add('vote-card-image');
-            cardBack.appendChild(cardBackImg);
-
-            // Card front (the vote value)
-            const cardFront = document.createElement('div');
-            cardFront.classList.add('card-face', 'card-front');
-            cardFront.textContent = value;
-
-            // Stack them
-            cardInner.appendChild(cardBack);
-            cardInner.appendChild(cardFront);
-            cardButton.appendChild(cardInner);
-
-            // Highlight selected card
-            if (currentUser && currentUser.vote === value) {
-            cardButton.classList.add('selected');
-            }
-
-            // Disable if observer or votes revealed
-            cardButton.disabled = (currentUser?.role === 'Observer' || votesRevealed);
-
-            // Add click listener if can vote
-            if (currentUser && currentUser.role !== 'Observer') {
-            cardButton.addEventListener('click', handleVote);
-            }
-
-            votingCardsContainer.appendChild(cardButton);
-     });
-
-        // Only animate if votes are not revealed
-        if (!votesRevealed && animateVotingCards) {
-        animateCardsIntoView();
+    // Only animate if votes are not revealed
+    if (!votesRevealed && animateVotingCards) {
+        cardAnimator.animateCardsIntoView();
         animateVotingCards = false;
-        }
-
- }
+    }
+}
 
  function renderParticipantsList() {
      participantsListContainer.innerHTML = ''; // Clear list
@@ -700,7 +609,7 @@ function animateCardsFaceDownBeforeReset(onComplete) {
       if (currentUser?.role === 'Facilitator') {
          resetVotesButton.disabled = true;
          resetFaceDownBeforeStateUpdate = true;
-         animateCardsFaceDownBeforeReset(() => {
+         cardAnimator.animateCardsFaceDownBeforeReset(() => {
              sendMessage('resetVotes', {});
              resetAllCards();
          });

@@ -812,3 +812,45 @@ Result:
 - Focused reset animation browser test passed.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Client Card Deck Module
+
+Branch: `feature/client-card-deck-module`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `949efec Make reset animation visible immediately`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+- User confirmed the reset animation fix was working.
+
+Work planned:
+- Start reducing the size of `public/js/app.js` with a low-risk browser-side extraction.
+- Move voting-card DOM creation and card flip animation timing into a focused helper.
+- Keep existing script loading CSP-friendly and avoid changing runtime behavior.
+
+Work completed:
+- Added `public/js/cardDeck.js` with a `ScrumPokerCardDeck` browser namespace.
+- Moved voting card creation into `createVotingCard`.
+- Moved card flip timer management and reset/entry animation sequencing into `createCardAnimator`.
+- Updated `public/index.html` to load `cardDeck.js` before `app.js`.
+- Updated `public/js/app.js` to call the card deck helper for rendering and animation while preserving existing room state behavior.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- Focused browser smoke test passed.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
