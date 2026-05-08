@@ -51,7 +51,9 @@ const { v4: uuidv4 } = require('uuid');
 
 //console.log('✅ Required modules loaded');
 
-const KEYS_FILE = path.join(__dirname, 'keys.json');
+const KEYS_FILE = process.env.SCRUM_POKER_KEYS_FILE
+  ? path.resolve(process.env.SCRUM_POKER_KEYS_FILE)
+  : path.join(__dirname, 'keys.json');
 
 
 function loadKeys() {
@@ -169,6 +171,14 @@ app.use(
       lastModified: false,
       cacheControl: false,
       acceptRanges: false
+    });
+  });
+
+  app.get('/health', (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      uptime: process.uptime(),
+      rooms: rooms.size
     });
   });
 

@@ -25,3 +25,25 @@ Recommended next steps:
 - Add a `/health` endpoint.
 - Review dependency audit findings and remove unused dependencies where practical.
 - Use the Retrospective design and structure patterns for later UI and architecture work.
+
+Work completed:
+- Created and committed kickoff docs in `b68973f Add Scrum Poker kickoff docs`.
+- Added `SCRUM_POKER_KEYS_FILE` so tests and future deployments can point at an explicit keys file without exposing local secrets.
+- Added `/health`, returning status, uptime, and active room count.
+- Added `npm test` using Node's built-in test runner.
+- Added WebSocket baseline tests for health, login, facilitator/voter/observer behavior, voting, reveal, reset, role restrictions, and invalid access keys.
+- Removed unused `animejs` and ran `npm audit fix`, updating vulnerable production transitive dependencies.
+
+Verification:
+- `node --check server.js`
+- `node --check public/js/app.js`
+- `node --check tests/ws-operations.test.js`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+
+Result:
+- All checks passed.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Test server processes were started by the test suite and stopped during cleanup.
+- No project `node server.js` process was left running.
