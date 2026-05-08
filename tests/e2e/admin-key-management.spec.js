@@ -34,10 +34,25 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(page.locator('#keys-list')).toContainText('alpha');
     await expect(page.locator('#keys-list')).toContainText('browser');
 
+    const alphaRow = page.locator('.admin-key-row').filter({ hasText: 'alpha' });
+    const browserRow = page.locator('.admin-key-row').filter({ hasText: 'browser' });
+    await expect(alphaRow.locator('.admin-team-body')).toBeHidden();
+    await expect(browserRow.locator('.admin-team-body')).toBeHidden();
+
+    await page.locator('#expand-teams-button').click();
+    await expect(alphaRow.locator('.admin-team-body')).toBeVisible();
+    await expect(browserRow.locator('.admin-team-body')).toBeVisible();
+
+    await page.locator('#collapse-teams-button').click();
+    await expect(alphaRow.locator('.admin-team-body')).toBeHidden();
+    await expect(browserRow.locator('.admin-team-body')).toBeHidden();
+
     await page.locator('#team-search-input').fill('alp');
     await expect(page.locator('#key-count')).toHaveText('1 team of 2');
     await expect(page.locator('#keys-list')).toContainText('alpha');
     await expect(page.locator('#keys-list')).not.toContainText('browser');
+    await page.locator('#expand-teams-button').click();
+    await expect(alphaRow.locator('.admin-team-body')).toBeVisible();
 
     await page.locator('#team-search-input').fill('missing');
     await expect(page.locator('#key-count')).toHaveText('0 teams of 2');
@@ -46,6 +61,8 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await page.locator('#team-search-input').fill('');
     await expect(page.locator('#key-count')).toHaveText('2 teams');
     await expect(page.locator('#keys-list')).toContainText('browser');
+    await expect(alphaRow.locator('.admin-team-body')).toBeVisible();
+    await expect(browserRow.locator('.admin-team-body')).toBeHidden();
 
     await page.locator('#key-name-input').fill('Gamma Team');
     await page.locator('#invite-room-input').fill('Sprint Planning');

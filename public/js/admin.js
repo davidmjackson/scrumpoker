@@ -10,11 +10,14 @@ const keyNameInput = document.getElementById('key-name-input');
 const inviteRoomInput = document.getElementById('invite-room-input');
 const inviteRoleSelect = document.getElementById('invite-role-select');
 const teamSearchInput = document.getElementById('team-search-input');
+const expandTeamsButton = document.getElementById('expand-teams-button');
+const collapseTeamsButton = document.getElementById('collapse-teams-button');
 const refreshKeysButton = document.getElementById('refresh-keys-button');
 const keyCount = document.getElementById('key-count');
 
 const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
 let currentKeys = [];
+let openTeamNames = new Set();
 
 function getAppUrl() {
   return window.location.origin || `${window.location.protocol}//${window.location.host}`;
@@ -108,11 +111,30 @@ function createTeamInvite(key) {
 }
 
 function getOpenTeamNames() {
-  return new Set(
-    Array.from(keysList.querySelectorAll('.admin-key-row[open]'))
-      .map((row) => row.dataset.teamName)
-      .filter(Boolean)
-  );
+  const names = new Set(openTeamNames);
+  keysList.querySelectorAll('.admin-key-row[open]').forEach((row) => {
+    if (row.dataset.teamName) {
+      names.add(row.dataset.teamName);
+    }
+  });
+  return names;
+}
+
+function getRenderedTeamRows() {
+  return Array.from(keysList.querySelectorAll('.admin-key-row'));
+}
+
+function setRenderedTeamsOpen(open) {
+  getRenderedTeamRows().forEach((row) => {
+    if (row.dataset.teamName) {
+      if (open) {
+        openTeamNames.add(row.dataset.teamName);
+      } else {
+        openTeamNames.delete(row.dataset.teamName);
+      }
+    }
+    row.open = open;
+  });
 }
 
 function renderKeys(keys) {
@@ -147,6 +169,13 @@ function renderKeys(keys) {
     row.className = 'admin-key-row admin-team-section';
     row.dataset.teamName = key.name;
     row.open = openTeamNames.has(key.name);
+    row.addEventListener('toggle', () => {
+      if (row.open) {
+        openTeamNames.add(key.name);
+      } else {
+        openTeamNames.delete(key.name);
+      }
+    });
 
     const summary = document.createElement('summary');
     summary.className = 'admin-team-summary';
@@ -284,6 +313,7 @@ async function removeKey(name) {
   const data = await requestAdmin(`/api/admin/keys/${encodedName}`, {
     method: 'DELETE'
   });
+  openTeamNames.delete(data.removed.name);
   await loadKeys();
   setStatus(`Removed ${data.removed.name}.`, 'success');
 }
@@ -332,6 +362,14 @@ inviteRoleSelect.addEventListener('change', () => {
 
 teamSearchInput.addEventListener('input', () => {
   renderKeys(currentKeys);
+});
+
+expandTeamsButton.addEventListener('click', () => {
+  setRenderedTeamsOpen(true);
+});
+
+collapseTeamsButton.addEventListener('click', () => {
+  setRenderedTeamsOpen(false);
 });
 
 const savedAdminKey = sessionStorage.getItem(ADMIN_KEY_STORAGE);

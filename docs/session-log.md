@@ -1141,3 +1141,43 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Admin Accordion Controls
+
+Branch: `feature/admin-accordion-controls`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `7743c39 Add admin team search`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+
+Work planned:
+- Add bulk controls for the admin team accordion.
+- Keep controls scoped to the currently shown, filtered team sections.
+- Preserve manually opened sections across search and invite option re-renders.
+
+Work completed:
+- Added `Expand shown` and `Collapse shown` buttons above the team list.
+- Wired the controls to only affect currently rendered team sections.
+- Promoted open-section tracking to explicit state so open teams survive filtering and no-match search states.
+- Cleaned removed teams out of the open-section state.
+- Extended admin browser coverage for expand all, collapse all, filtered expand, and open-state preservation.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
