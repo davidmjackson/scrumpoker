@@ -41,7 +41,21 @@ test('facilitator can enter a room, vote, reveal, and reset', async ({ page }) =
     await expect(page.locator('#ordered-votes-list')).toContainText('5');
 
     await page.locator('#reset-votes-button').click();
+    await page.waitForFunction(() => {
+      const cards = Array.from(document.querySelectorAll('.vote-card .card-inner'));
+      const firstCard = cards[0];
+      const lastCard = cards[cards.length - 1];
+
+      return cards.length > 0 &&
+        lastCard.classList.contains('is-face-down') &&
+        !firstCard.classList.contains('is-face-down');
+    });
+    await page.waitForFunction(() => {
+      const cards = Array.from(document.querySelectorAll('.vote-card .card-inner'));
+      return cards.length > 0 && cards.every((card) => card.classList.contains('is-face-down'));
+    });
     await expect(page.locator('#vote-summary')).toBeHidden();
+    await expect(page.locator('.vote-card .card-inner').first()).not.toHaveClass(/is-face-down/, { timeout: 6000 });
     await expect(page.locator('button.vote-card[data-value="5"]')).not.toHaveClass(/selected/);
   } finally {
     await server.stop();

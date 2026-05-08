@@ -727,3 +727,47 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Reset Card Flip Animation
+
+Branch: `feature/reset-card-flip-animation`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `25afd37 Extract WebSocket server setup`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+- GitHub PR #12 was merged, main CI passed, and `feature/ws-server-extraction` was deleted remotely.
+
+Work planned:
+- Add the missing first half of the reset animation.
+- When votes are reset after reveal, flip the voting deck face-down from right to left first.
+- After all cards are face-down, keep the existing left-to-right face-up animation.
+- Keep reset behavior and vote state unchanged.
+
+Work completed:
+- Added reusable card flip timing helpers in `public/js/app.js`.
+- Detect the revealed-to-hidden reset state transition before re-rendering the room UI.
+- Delay the reset UI refresh until the existing deck has flipped face-down right-to-left.
+- Reuse the existing face-up animation after the reset state renders.
+- Disabled the reset button immediately after a facilitator clicks it to prevent repeated reset clicks during the animation.
+- Extended the browser smoke test to verify the right-to-left face-down phase and the final face-up state.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js` passed with 1 browser test.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
