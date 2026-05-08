@@ -1084,6 +1084,18 @@ img {
   font-size: 0.9rem;
 }
 
+.admin-invite-preview {
+  margin: 0.55rem 0 0;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.65rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 0.82rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 .admin-key-actions {
   display: flex;
   gap: 0.5rem;

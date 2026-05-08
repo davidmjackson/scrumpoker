@@ -983,3 +983,42 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Admin Invite Preview
+
+Branch: `feature/admin-invite-preview`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `afa2089 Add role-specific team invites`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+
+Work planned:
+- Show admins the exact invite text before using `Copy invite`.
+- Keep preview generation tied to the same helper as the clipboard action.
+- Update previews when invite room or role changes.
+
+Work completed:
+- Added an invite preview block to each team key row.
+- Rendered preview text from the same `createTeamInvite` helper used by `Copy invite`.
+- Re-rendered previews when the invite room or invite role control changes.
+- Updated admin browser coverage to confirm the preview updates and exactly matches copied clipboard text.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.

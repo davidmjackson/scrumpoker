@@ -45,21 +45,32 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(page.locator('#key-count')).toHaveText('3 teams');
     const gammaKey = await gammaRow.locator('code').innerText();
 
+    await page.locator('#invite-room-input').fill('Release Planning');
+    await page.locator('#invite-role-select').selectOption('Observer');
+
+    const invitePreview = gammaRow.locator('.admin-invite-preview');
+    await expect(invitePreview).toContainText('Team: Gamma Team');
+    await expect(invitePreview).toContainText(`Access key: ${gammaKey}`);
+    await expect(invitePreview).toContainText('Room: Release Planning');
+    await expect(invitePreview).toContainText('Role: Observer');
+    const previewText = await invitePreview.evaluate((node) => node.textContent);
+
     await gammaRow.getByRole('button', { name: 'Copy invite' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Copied invite for Gamma Team.');
     const copiedInvite = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copiedInvite).toBe(previewText);
     expect(copiedInvite).toContain('Scrum Poker team access');
     expect(copiedInvite).toContain('Team: Gamma Team');
     expect(copiedInvite).toContain(`Access key: ${gammaKey}`);
-    expect(copiedInvite).toContain('Room: Sprint Planning');
-    expect(copiedInvite).toContain('Role: Voter');
+    expect(copiedInvite).toContain('Room: Release Planning');
+    expect(copiedInvite).toContain('Role: Observer');
     const inviteUrl = copiedInvite.match(/^App: (.+)$/m)?.[1];
     expect(inviteUrl).toBeTruthy();
     const parsedInviteUrl = new URL(inviteUrl);
     expect(parsedInviteUrl.origin).toBe(server.baseUrl);
     expect(parsedInviteUrl.searchParams.get('accessKey')).toBe(gammaKey);
-    expect(parsedInviteUrl.searchParams.get('room')).toBe('Sprint Planning');
-    expect(parsedInviteUrl.searchParams.get('role')).toBe('Voter');
+    expect(parsedInviteUrl.searchParams.get('room')).toBe('Release Planning');
+    expect(parsedInviteUrl.searchParams.get('role')).toBe('Observer');
 
     await gammaRow.getByRole('button', { name: 'Copy key' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Copied key for Gamma Team.');
@@ -75,8 +86,8 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
 
     await page.goto(inviteUrl);
     await expect(page.locator('#access-key-input')).toHaveValue(gammaKey);
-    await expect(page.locator('#room-input')).toHaveValue('Sprint Planning');
-    await expect(page.locator('#role-select')).toHaveValue('Voter');
+    await expect(page.locator('#room-input')).toHaveValue('Release Planning');
+    await expect(page.locator('#role-select')).toHaveValue('Observer');
     expect(page.url()).not.toContain('accessKey=');
   } finally {
     await server.stop();
