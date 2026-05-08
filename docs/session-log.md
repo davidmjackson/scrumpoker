@@ -194,3 +194,42 @@ Result:
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Test server processes were started by the test suite and stopped during cleanup.
 - No project `node server.js` process was left running.
+
+## 2026-05-08 - Role Helper Extraction
+
+Branch: `feature/extract-room-state`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `feature/extract-room-state`
+- Latest baseline commit: `5763c84 Extract access key helpers`
+- Working tree: clean
+- Server status: no `node server.js` process was running
+
+Work planned:
+- Centralize server-side role names and role permission checks.
+- Preserve current role behavior and existing user-facing error messages.
+- Add direct unit coverage for role helpers.
+
+Work completed:
+- Added `lib/roles.js`.
+- Updated `server.js` to use role helpers for role validation, voting permission, facilitator-only actions, role change permission, and duplicate facilitator login handling.
+- Updated `lib/roomState.js` to use the shared facilitator role constant.
+- Added `tests/roles.test.js`.
+
+Verification:
+- `npm ci`
+- `node --check server.js`
+- `for file in lib/*.js; do node --check "$file"; done`
+- `node --check public/js/app.js`
+- `for file in tests/*.test.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+
+Result:
+- All checks passed.
+- `npm test` ran 25 tests successfully.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Test server processes were started by the test suite and stopped during cleanup.
+- No project `node server.js` process was left running.

@@ -15,6 +15,16 @@ const {
   isValidAccessKey,
   loadKeys
 } = require('./lib/accessKeys');
+const {
+  ROLES,
+  canChangeRole,
+  canResetVotes,
+  canRevealVotes,
+  canVote,
+  getAssignedLoginRole,
+  isFacilitator,
+  isValidRole
+} = require('./lib/roles');
 
 console.log('⏳ server.js is starting');
 
@@ -249,8 +259,7 @@ wss.on('connection', (ws) => {
         }
 
         const { name, role, room, accessKey } = payload;
-        const allowedRoles = ['Voter', 'Observer', 'Facilitator'];
-        if (!allowedRoles.includes(role)) {
+        if (!isValidRole(role)) {
           return sendToClient(ws, {
             type: 'error',
             payload: { message: 'Invalid role.' }
@@ -278,14 +287,10 @@ wss.on('connection', (ws) => {
         ws.roomName = internalRoom;
         joinRoom(rooms, internalRoom, userId);
 
-        let assignedRole = role;
         const roomForLogin = rooms.get(internalRoom);
-        if (assignedRole === 'Facilitator') {
-          if (!roomForLogin.facilitatorId) {
-            roomForLogin.facilitatorId = userId;
-          } else {
-            assignedRole = 'Voter';
-          }
+        const assignedRole = getAssignedLoginRole(role, roomForLogin.facilitatorId);
+        if (isFacilitator(assignedRole)) {
+          roomForLogin.facilitatorId = userId;
         }
 
         participants[userId] = {
@@ -323,7 +328,7 @@ wss.on('connection', (ws) => {
           if (!currentUser) {
             return sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } });
           }
-          if (currentUser.role === 'Observer') {
+          if (!canVote(currentUser.role)) {
             return sendToClient(ws, { type: 'error', payload: { message: 'Observers cannot vote.' } });
           }
 
@@ -351,7 +356,7 @@ wss.on('connection', (ws) => {
           if (!currentUser) {
             return sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } });
           }
-          if (currentUser.role !== 'Facilitator') {
+          if (!canRevealVotes(currentUser.role)) {
             return sendToClient(ws, { type: 'error', payload: { message: 'Only Facilitator can reveal votes.' } });
           }
 
@@ -374,7 +379,7 @@ wss.on('connection', (ws) => {
         if (!currentUser) {
           return sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } });
         }
-        if (currentUser.role !== 'Facilitator') {
+        if (!canResetVotes(currentUser.role)) {
           return sendToClient(ws, { type: 'error', payload: { message: 'Only Facilitator can reset votes.' } });
         }
 
@@ -410,8 +415,7 @@ wss.on('connection', (ws) => {
         if (!newRole) {
           return sendToClient(ws, { type: 'error', payload: { message: 'Missing new role.' } });
         }
-        const allowed = ['Voter', 'Observer', 'Facilitator'];
-        if (!allowed.includes(newRole)) {
+        if (!isValidRole(newRole)) {
           return sendToClient(ws, { type: 'error', payload: { message: 'Invalid role.' } });
         }
         const uid = targetUserId || currentUser.id;
@@ -419,7 +423,7 @@ wss.on('connection', (ws) => {
         if (!target) {
           return sendToClient(ws, { type: 'error', payload: { message: 'User not found.' } });
         }
-        if (uid !== currentUser.id && currentUser.role !== 'Facilitator') {
+        if (!canChangeRole(currentUser.role, currentUser.id, uid)) {
           return sendToClient(ws, {
             type: 'error',
             payload: { message: 'Only Facilitator can change others’ roles.' }
@@ -440,12 +444,12 @@ wss.on('connection', (ws) => {
         }
 
         // 10.2) Update facilitatorId for this room only
-        if (newRole === 'Facilitator') {
+        if (isFacilitator(newRole)) {
           if (roomObjCR.facilitatorId && roomObjCR.facilitatorId !== uid) {
-            participants[roomObjCR.facilitatorId].role = 'Voter';
+            participants[roomObjCR.facilitatorId].role = ROLES.VOTER;
           }
           roomObjCR.facilitatorId = uid;
-        } else if (uid === roomObjCR.facilitatorId && newRole !== 'Facilitator') {
+        } else if (uid === roomObjCR.facilitatorId) {
           roomObjCR.facilitatorId = null;
         }
 
