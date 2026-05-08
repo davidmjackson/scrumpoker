@@ -138,8 +138,26 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
 
     await gammaRow.getByRole('button', { name: 'Rotate key' }).click();
     await expect(keyActionModal).toBeVisible();
+    let releaseRotateRequest;
+    const rotateRequestPaused = new Promise((resolve) => {
+      page.route('**/api/admin/keys/Gamma%20Team/rotate', async (route) => {
+        await new Promise((release) => {
+          releaseRotateRequest = release;
+          resolve();
+        });
+        const response = await route.fetch();
+        await route.fulfill({ response });
+      });
+    });
+
     await keyActionModal.getByRole('button', { name: 'Rotate key' }).click();
+    await rotateRequestPaused;
+    await expect(keyActionModal).toHaveAttribute('aria-busy', 'true');
+    await expect(keyActionModal.getByRole('button', { name: 'Rotating...' })).toBeDisabled();
+    await expect(keyActionModal.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    releaseRotateRequest();
     await expect(keyActionModal).toBeHidden();
+    await page.unroute('**/api/admin/keys/Gamma%20Team/rotate');
     await expect(page.locator('#admin-status')).toHaveText('Rotated key for Gamma Team.');
     await expect(page.locator('#activity-count')).toHaveText('2 events');
     await expect(page.locator('.admin-activity-item').first()).toContainText('Rotated');

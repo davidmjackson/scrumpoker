@@ -877,6 +877,14 @@ img {
   font-weight: 800;
 }
 
+.modal-overlay.is-busy .admin-warning-modal {
+  cursor: wait;
+}
+
+.modal-overlay.is-busy .admin-warning-note {
+  background: #fffaf0;
+}
+
 @keyframes modalIn {
   from {
     opacity: 0;

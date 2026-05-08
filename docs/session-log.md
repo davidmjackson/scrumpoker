@@ -1427,6 +1427,46 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 
+## 2026-05-08 - Admin Modal Loading State
+
+Branch: `feature/admin-modal-loading-state`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `ea8ab7c Add admin action modals`
+- Working tree: clean before branch changes
+- Server status: local `node server.js` process was running on PID `209446`
+
+Work planned:
+- Make admin action modals visibly show work in progress after confirmation.
+- Prevent repeated action submissions while rotate, suspend, or remove requests are running.
+- Preserve existing modal cancel and confirmation behavior.
+
+Work completed:
+- Added reusable busy-state handling to the admin action modal.
+- Added `aria-busy` and an `is-busy` class while a modal action is running.
+- Disabled Cancel and the confirm button during in-flight requests.
+- Added action-specific button labels: `Rotating...`, `Suspending...`, and `Removing...`.
+- Added browser coverage that pauses a rotate request and asserts the visible busy state.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `find . -path ./node_modules -prune -o -name '*.js' -print | xargs -r -n1 node --check`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 48 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
 ## 2026-05-08 - Admin Action Confirmation Modals
 
 Branch: `feature/admin-action-modals`
