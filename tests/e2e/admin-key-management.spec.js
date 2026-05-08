@@ -36,6 +36,7 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
 
     await page.locator('#key-name-input').fill('Gamma Team');
     await page.locator('#invite-room-input').fill('Sprint Planning');
+    await page.locator('#invite-role-select').selectOption('Voter');
     await page.locator('#create-key-form button[type="submit"]').click();
 
     const gammaRow = page.locator('.admin-key-row').filter({ hasText: 'Gamma Team' });
@@ -51,14 +52,14 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     expect(copiedInvite).toContain('Team: Gamma Team');
     expect(copiedInvite).toContain(`Access key: ${gammaKey}`);
     expect(copiedInvite).toContain('Room: Sprint Planning');
-    expect(copiedInvite).toContain('Role: Facilitator');
+    expect(copiedInvite).toContain('Role: Voter');
     const inviteUrl = copiedInvite.match(/^App: (.+)$/m)?.[1];
     expect(inviteUrl).toBeTruthy();
     const parsedInviteUrl = new URL(inviteUrl);
     expect(parsedInviteUrl.origin).toBe(server.baseUrl);
     expect(parsedInviteUrl.searchParams.get('accessKey')).toBe(gammaKey);
     expect(parsedInviteUrl.searchParams.get('room')).toBe('Sprint Planning');
-    expect(parsedInviteUrl.searchParams.get('role')).toBe('Facilitator');
+    expect(parsedInviteUrl.searchParams.get('role')).toBe('Voter');
 
     await gammaRow.getByRole('button', { name: 'Copy key' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Copied key for Gamma Team.');
@@ -75,7 +76,7 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await page.goto(inviteUrl);
     await expect(page.locator('#access-key-input')).toHaveValue(gammaKey);
     await expect(page.locator('#room-input')).toHaveValue('Sprint Planning');
-    await expect(page.locator('#role-select')).toHaveValue('Facilitator');
+    await expect(page.locator('#role-select')).toHaveValue('Voter');
     expect(page.url()).not.toContain('accessKey=');
   } finally {
     await server.stop();

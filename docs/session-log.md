@@ -944,3 +944,42 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Role Specific Invites
+
+Branch: `feature/role-specific-invites`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `900566d Add invite prefill links`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+
+Work planned:
+- Let admins choose the role included in copied team invites.
+- Keep facilitator as the default role.
+- Preserve the existing prefilled login link behavior.
+
+Work completed:
+- Added an `Invite role` selector to `/admin` with Facilitator, Voter, and Observer options.
+- Updated copied invite links and invite text to use the selected role.
+- Renamed the admin invite helper from facilitator-specific wording to team-invite wording.
+- Updated admin browser coverage to verify a Voter invite link and login prefill.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
