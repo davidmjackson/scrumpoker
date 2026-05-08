@@ -10,6 +10,7 @@ const {
   handleParticipantExit,
   handleResetVotes,
   handleRevealVotes,
+  handleSetRoundItem,
   handleVote
 } = require('../lib/wsHandlers');
 const { joinRoom } = require('../lib/roomState');
@@ -162,6 +163,7 @@ test('handleRevealVotes and handleResetVotes update room state', (t) => {
   const harness = createHarness(t);
   const roomName = 'planning-key';
   const room = joinRoom(harness.rooms, roomName, 'alice', 100);
+  room.currentItem = 'Checkout flow';
   const facilitator = participant('alice', roomName, { role: ROLES.FACILITATOR });
   const voter = participant('bob', roomName, { vote: '8' });
   harness.participants.alice = facilitator;
@@ -174,6 +176,9 @@ test('handleRevealVotes and handleResetVotes update room state', (t) => {
   });
 
   assert.equal(room.votesRevealed, true);
+  assert.equal(room.roundHistory.length, 1);
+  assert.equal(room.roundHistory[0].title, 'Checkout flow');
+  assert.equal(room.roundHistory[0].average, '8.0');
 
   handleResetVotes({
     ...harness,
@@ -184,6 +189,45 @@ test('handleRevealVotes and handleResetVotes update room state', (t) => {
   assert.equal(room.votesRevealed, false);
   assert.equal(voter.vote, null);
   assert.deepEqual(harness.roomStates, [roomName, roomName]);
+});
+
+test('handleSetRoundItem enforces facilitator ownership and reveal lock', (t) => {
+  const harness = createHarness(t);
+  const roomName = 'planning-key';
+  const room = joinRoom(harness.rooms, roomName, 'alice', 100);
+  const facilitator = participant('alice', roomName, { role: ROLES.FACILITATOR });
+  const voter = participant('bob', roomName);
+  harness.participants.alice = facilitator;
+  harness.participants.bob = voter;
+
+  handleSetRoundItem({
+    ...harness,
+    ws: voter.ws,
+    currentUser: voter,
+    payload: { itemTitle: 'Checkout flow' }
+  });
+
+  handleSetRoundItem({
+    ...harness,
+    ws: facilitator.ws,
+    currentUser: facilitator,
+    payload: { itemTitle: '  Checkout flow  ' }
+  });
+
+  room.votesRevealed = true;
+  handleSetRoundItem({
+    ...harness,
+    ws: facilitator.ws,
+    currentUser: facilitator,
+    payload: { itemTitle: 'Next item' }
+  });
+
+  assert.deepEqual(harness.clientMessages.map(({ message }) => message.payload.message), [
+    'Only Facilitator can set the current item.',
+    'Reset votes before changing the current item.'
+  ]);
+  assert.equal(room.currentItem, 'Checkout flow');
+  assert.deepEqual(harness.roomStates, [roomName]);
 });
 
 test('handleChangeRole enforces facilitator-only changes to other users', (t) => {

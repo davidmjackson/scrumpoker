@@ -369,6 +369,20 @@ test('WebSocket workflow covers login, voting, reveal, reset, and role limits', 
     room: 'baseline'
   });
 
+  const voterSetItemError = waitForMessage(
+    bob.ws,
+    (message) => message.type === 'error' && message.payload?.message === 'Only Facilitator can set the current item.'
+  );
+  send(bob.ws, 'setRoundItem', { itemTitle: 'Checkout flow' });
+  await voterSetItemError;
+
+  const bobSeesCurrentItem = waitForState(
+    bob.ws,
+    (state) => state.currentItem === 'Checkout flow' && state.roundHistory.length === 0
+  );
+  send(alice.ws, 'setRoundItem', { itemTitle: 'Checkout flow' });
+  await bobSeesCurrentItem;
+
   const observerVoteError = waitForMessage(
     oscar.ws,
     (message) => message.type === 'error' && message.payload?.message === 'Observers cannot vote.'
@@ -392,14 +406,24 @@ test('WebSocket workflow covers login, voting, reveal, reset, and role limits', 
 
   const bobSeesReveal = waitForState(
     bob.ws,
-    (state) => state.votesRevealed === true && findParticipant(state, 'Bob')?.vote === '5'
+    (state) =>
+      state.votesRevealed === true &&
+      findParticipant(state, 'Bob')?.vote === '5' &&
+      state.roundHistory.length === 1
   );
   send(alice.ws, 'revealVotes', {});
-  await bobSeesReveal;
+  const revealState = await bobSeesReveal;
+  assert.equal(revealState.roundHistory[0].title, 'Checkout flow');
+  assert.equal(revealState.roundHistory[0].average, '5.0');
+  assert.deepEqual(revealState.roundHistory[0].groups, [{ vote: '5', names: ['Bob'] }]);
 
   const bobSeesReset = waitForState(
     bob.ws,
-    (state) => state.votesRevealed === false && state.participants.every((participant) => participant.vote === null)
+    (state) =>
+      state.votesRevealed === false &&
+      state.currentItem === 'Checkout flow' &&
+      state.roundHistory.length === 1 &&
+      state.participants.every((participant) => participant.vote === null)
   );
   send(alice.ws, 'resetVotes', {});
   await bobSeesReset;

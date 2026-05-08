@@ -20,6 +20,15 @@
  const resetVotesButton = document.getElementById('reset-votes-button');
  const voteSummary = document.getElementById('vote-summary');
  const averageVoteSpan = document.getElementById('average-vote');
+ const resultItemName = document.getElementById('result-item-name');
+ const roundStatus = document.getElementById('round-status');
+ const currentItemDisplay = document.getElementById('current-item-display');
+ const roundItemForm = document.getElementById('round-item-form');
+ const roundItemInput = document.getElementById('round-item-input');
+ const roundItemSaveButton = document.getElementById('round-item-save-button');
+ const roundItemError = document.getElementById('round-item-error');
+ const roundHistorySection = document.getElementById('round-history-section');
+ const roundHistoryList = document.getElementById('round-history-list');
  const adminRoomLink = document.getElementById('admin-room-link');
  const logoutButton = document.getElementById('logout-button');
 
@@ -50,6 +59,8 @@
  let participants = []; // Array of user objects received from server
  let votesRevealed = false; // Status received from server
  let facilitatorId = null; // ID received from server
+ let currentItem = '';
+ let roundHistory = [];
  let pendingLoginContext = null;
  let allowStoredRoomRestore = true;
  let attemptedStoredRoomRestore = false;
@@ -180,6 +191,8 @@ function showVoteError(message) {
                  participants = payload.participants || [];
                  votesRevealed = payload.votesRevealed || false;
                  facilitatorId = payload.facilitatorId || null;
+                 currentItem = payload.currentItem || '';
+                 roundHistory = Array.isArray(payload.roundHistory) ? payload.roundHistory : [];
 
                  // Find the current user in the updated participant list
                 const myTempId    = sessionStorage.getItem('scrumPokerUserId_temp');
@@ -398,6 +411,8 @@ function markRoomReturnFromAdmin() {
      });
      showVotesButton.addEventListener('click', handleShowVotes);
      resetVotesButton.addEventListener('click', handleResetVotes);
+     roundItemForm.addEventListener('submit', handleSetRoundItem);
+     roundHistoryList.addEventListener('click', handleRoundHistoryAction);
 
      adminRoomLink.addEventListener('click', markRoomReturnFromAdmin);
      logoutButton.addEventListener('click', logout);
@@ -473,6 +488,9 @@ function markRoomReturnFromAdmin() {
 
     // Update greeting
     userGreeting.textContent = `Hello, ${currentUser.name} (${currentUser.role})`;
+
+    renderCurrentItemPanel();
+    renderRoundHistory();
 
     // Generate/Update Voting Cards
     renderVotingCards();
@@ -556,6 +574,153 @@ function markRoomReturnFromAdmin() {
         // Hide ordered results when votes are reset or hidden
         document.getElementById('ordered-votes').classList.add('hidden');
     }
+}
+
+function renderCurrentItemPanel() {
+    const displayTitle = currentItem || 'No item set';
+    currentItemDisplay.textContent = displayTitle;
+    currentItemDisplay.classList.toggle('is-empty', !currentItem);
+    resultItemName.textContent = currentItem || 'Untitled item';
+
+    roundStatus.textContent = votesRevealed ? 'Revealed' : 'Open';
+    roundStatus.classList.toggle('is-locked', votesRevealed);
+
+    if (currentUser?.role === 'Facilitator') {
+        roundItemForm.classList.remove('hidden');
+        roundItemInput.disabled = votesRevealed;
+        roundItemSaveButton.disabled = votesRevealed;
+        if (document.activeElement !== roundItemInput) {
+            roundItemInput.value = currentItem;
+        }
+    } else {
+        roundItemForm.classList.add('hidden');
+    }
+
+    roundItemError.classList.add('hidden');
+}
+
+function renderRoundHistory() {
+    roundHistoryList.innerHTML = '';
+
+    if (!roundHistory.length) {
+        roundHistorySection.classList.add('hidden');
+        return;
+    }
+
+    roundHistorySection.classList.remove('hidden');
+    roundHistory.forEach((round) => {
+        const article = document.createElement('article');
+        article.className = 'round-history-item';
+
+        const header = document.createElement('div');
+        header.className = 'round-history-header';
+
+        const title = document.createElement('h3');
+        title.className = 'round-history-title';
+        title.textContent = getRoundTitle(round);
+
+        const copyButton = document.createElement('button');
+        copyButton.type = 'button';
+        copyButton.className = 'text-action round-copy-action';
+        copyButton.dataset.roundId = round.id;
+        copyButton.textContent = 'Copy summary';
+
+        header.appendChild(title);
+        header.appendChild(copyButton);
+        article.appendChild(header);
+
+        const meta = document.createElement('div');
+        meta.className = 'round-history-meta';
+        meta.appendChild(createMetaText(`Average ${round.average || '--'}`));
+        meta.appendChild(createMetaText(`${round.voteCount || 0} vote${round.voteCount === 1 ? '' : 's'}`));
+        meta.appendChild(createMetaText(formatRoundRevealedAt(round.revealedAt)));
+        article.appendChild(meta);
+
+        const groups = document.createElement('div');
+        groups.className = 'round-history-groups';
+        const roundGroups = Array.isArray(round.groups) ? round.groups : [];
+
+        if (roundGroups.length) {
+            roundGroups.forEach((group) => {
+                const row = document.createElement('div');
+                row.className = 'round-history-group';
+
+                const vote = document.createElement('span');
+                vote.textContent = group.vote;
+
+                const names = document.createElement('span');
+                names.textContent = Array.isArray(group.names) ? group.names.join(', ') : '';
+
+                row.appendChild(vote);
+                row.appendChild(names);
+                groups.appendChild(row);
+            });
+        } else {
+            const empty = document.createElement('p');
+            empty.className = 'admin-empty';
+            empty.textContent = 'No votes recorded.';
+            groups.appendChild(empty);
+        }
+
+        article.appendChild(groups);
+        roundHistoryList.appendChild(article);
+    });
+}
+
+function createMetaText(text) {
+    const span = document.createElement('span');
+    span.textContent = text;
+    return span;
+}
+
+function getRoundTitle(round) {
+    return round?.title || 'Untitled item';
+}
+
+function formatRoundRevealedAt(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Revealed';
+
+    return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function createRoundSummaryText(round) {
+    const lines = [
+        `Sprint Poker estimate: ${getRoundTitle(round)}`,
+        `Average: ${round.average || '--'}`,
+        `Votes: ${round.voteCount || 0}`
+    ];
+
+    const groups = Array.isArray(round.groups) ? round.groups : [];
+    if (groups.length) {
+        lines.push('Spread:');
+        groups.forEach((group) => {
+            const names = Array.isArray(group.names) ? group.names.join(', ') : '';
+            lines.push(`- ${group.vote}: ${names}`);
+        });
+    }
+
+    return lines.join('\n');
+}
+
+async function copyText(text) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
 }
 
 
@@ -691,6 +856,49 @@ function renderVotingCards() {
  }
 
  // --- Event Handlers (Send messages to server) ---
+ function showRoundItemError(message) {
+  roundItemError.textContent = message;
+  roundItemError.classList.remove('hidden');
+ }
+
+ function handleSetRoundItem(event) {
+  event.preventDefault();
+
+  if (currentUser?.role !== 'Facilitator') return;
+
+  const itemTitle = roundItemInput.value.trim();
+  if (!itemTitle) {
+    showRoundItemError('Enter an item name.');
+    return;
+  }
+
+  roundItemError.classList.add('hidden');
+  sendMessage('setRoundItem', { itemTitle });
+ }
+
+ async function handleRoundHistoryAction(event) {
+  const copyButton = event.target.closest('.round-copy-action');
+  if (!copyButton) return;
+
+  const round = roundHistory.find((entry) => entry.id === copyButton.dataset.roundId);
+  if (!round) return;
+
+  const originalText = copyButton.textContent;
+  copyButton.disabled = true;
+
+  try {
+    await copyText(createRoundSummaryText(round));
+    copyButton.textContent = 'Copied';
+  } catch (_err) {
+    copyButton.textContent = 'Copy failed';
+  } finally {
+    setTimeout(() => {
+      copyButton.disabled = false;
+      copyButton.textContent = originalText;
+    }, 1600);
+  }
+ }
+
  function handleLogin() {
   const key = accessKeyInput.value.trim();
   const name = nameInput.value.trim();
@@ -759,6 +967,8 @@ function renderVotingCards() {
      participants = [];
      votesRevealed = false;
      facilitatorId = null;
+     currentItem = '';
+     roundHistory = [];
      currentRoom = null;
      pendingLoginContext = null;
 
