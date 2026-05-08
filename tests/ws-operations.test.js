@@ -237,7 +237,7 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
   const initialBody = await initial.json();
 
   assert.equal(initial.status, 200);
-  assert.deepEqual(initialBody.keys, [{ name: 'baseline', value: testAccessKey }]);
+  assert.deepEqual(initialBody.keys, [{ name: 'baseline', value: testAccessKey, active: true }]);
 
   const created = await fetch(baseUrl, {
     method: 'POST',
@@ -248,11 +248,40 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
 
   assert.equal(created.status, 201);
   assert.equal(createdBody.key.name, 'Gamma Team');
+  assert.equal(createdBody.key.active, true);
   assert.match(createdBody.key.value, /^[A-Za-z0-9]{12}$/);
 
   const afterCreate = await fetch(baseUrl, { headers });
   const afterCreateBody = await afterCreate.json();
   assert.equal(afterCreateBody.keys.length, 2);
+
+  const suspended = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ active: false })
+  });
+  const suspendedBody = await suspended.json();
+
+  assert.equal(suspended.status, 200);
+  assert.deepEqual(suspendedBody.key, {
+    name: 'Gamma Team',
+    value: createdBody.key.value,
+    active: false
+  });
+
+  const restored = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ active: true })
+  });
+  const restoredBody = await restored.json();
+
+  assert.equal(restored.status, 200);
+  assert.deepEqual(restoredBody.key, {
+    name: 'Gamma Team',
+    value: createdBody.key.value,
+    active: true
+  });
 
   const removed = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
     method: 'DELETE',
@@ -262,10 +291,11 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
 
   assert.equal(removed.status, 200);
   assert.equal(removedBody.removed.name, 'Gamma Team');
+  assert.equal(removedBody.removed.active, true);
 
   const afterRemove = await fetch(baseUrl, { headers });
   const afterRemoveBody = await afterRemove.json();
-  assert.deepEqual(afterRemoveBody.keys, [{ name: 'baseline', value: testAccessKey }]);
+  assert.deepEqual(afterRemoveBody.keys, [{ name: 'baseline', value: testAccessKey, active: true }]);
 });
 
 test('WebSocket workflow covers login, voting, reveal, reset, and role limits', async (t) => {
@@ -360,6 +390,29 @@ test('invalid access keys are rejected', async (t) => {
   );
   send(client.ws, 'login', {
     accessKey: 'not-valid',
+    name: 'Mallory',
+    role: 'Voter',
+    room: 'baseline'
+  });
+
+  await errorPromise;
+});
+
+test('suspended access keys are rejected', async (t) => {
+  const { keysFile, port } = await startServer(t);
+  fs.writeFileSync(
+    keysFile,
+    JSON.stringify({ baseline: { value: testAccessKey, active: false } }),
+    'utf8'
+  );
+  const client = await connectClient(t, port);
+
+  const errorPromise = waitForMessage(
+    client.ws,
+    (message) => message.type === 'error' && message.payload?.message === 'Invalid access key.'
+  );
+  send(client.ws, 'login', {
+    accessKey: testAccessKey,
     name: 'Mallory',
     role: 'Voter',
     room: 'baseline'

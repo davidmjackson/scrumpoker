@@ -48,8 +48,9 @@ try {
         console.log('No keys found in keys.json.');
       } else {
         console.log('Existing keys:');
-        for (const { name, value } of keys) {
-          console.log(`  ${name}: ${value}`);
+        for (const { name, value, active } of keys) {
+          const status = active ? 'active' : 'suspended';
+          console.log(`  ${name}: ${value} (${status})`);
         }
       }
       break;

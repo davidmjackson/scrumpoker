@@ -1076,6 +1076,11 @@ img {
   overflow: hidden;
 }
 
+.admin-key-row.is-suspended {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
 .admin-team-summary {
   list-style: none;
   display: flex;
@@ -1106,6 +1111,27 @@ img {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 900;
+}
+
+.admin-team-status {
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.admin-team-status.is-active {
+  border-color: #bbf7d0;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.admin-team-status.is-suspended {
+  border-color: #fed7aa;
+  background: #ffedd5;
+  color: #9a3412;
 }
 
 .admin-team-indicator {
@@ -1177,6 +1203,20 @@ img {
   color: var(--muted);
   overflow-wrap: anywhere;
   font-size: 0.9rem;
+}
+
+.admin-key-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.admin-key-status.is-active {
+  color: #166534;
+}
+
+.admin-key-status.is-suspended {
+  color: #9a3412;
 }
 
 .admin-invite-preview {

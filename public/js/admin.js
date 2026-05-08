@@ -110,6 +110,23 @@ function createTeamInvite(key) {
   return inviteLines.join('\n');
 }
 
+function isKeyActive(key) {
+  return key.active !== false;
+}
+
+function getKeyStatusLabel(key) {
+  return isKeyActive(key) ? 'Active' : 'Suspended';
+}
+
+function createSuspendedTeamNotice(key) {
+  return [
+    'Scrum Poker team access',
+    `Team: ${key.name}`,
+    'Status: Suspended',
+    'Restore this team key before sharing an invite.'
+  ].join('\n');
+}
+
 function getOpenTeamNames() {
   const names = new Set(openTeamNames);
   keysList.querySelectorAll('.admin-key-row[open]').forEach((row) => {
@@ -137,16 +154,23 @@ function setRenderedTeamsOpen(open) {
   });
 }
 
+function getTeamCountText(keys, visibleKeys, search) {
+  const visibleLabel = `${visibleKeys.length} ${visibleKeys.length === 1 ? 'team' : 'teams'}`;
+  const suspendedCount = visibleKeys.filter((key) => !isKeyActive(key)).length;
+  const suspendedLabel = suspendedCount ? ` - ${suspendedCount} suspended` : '';
+
+  return search ? `${visibleLabel} of ${keys.length}${suspendedLabel}` : `${visibleLabel}${suspendedLabel}`;
+}
+
 function renderKeys(keys) {
-  const openTeamNames = getOpenTeamNames();
+  const previouslyOpenTeamNames = getOpenTeamNames();
   const search = getTeamSearch();
   const visibleKeys = search
     ? keys.filter((key) => key.name.toLowerCase().includes(search))
     : keys;
 
   keysList.innerHTML = '';
-  const visibleLabel = `${visibleKeys.length} ${visibleKeys.length === 1 ? 'team' : 'teams'}`;
-  keyCount.textContent = search ? `${visibleLabel} of ${keys.length}` : visibleLabel;
+  keyCount.textContent = getTeamCountText(keys, visibleKeys, search);
 
   if (keys.length === 0) {
     const empty = document.createElement('p');
@@ -165,10 +189,14 @@ function renderKeys(keys) {
   }
 
   visibleKeys.forEach((key) => {
+    const keyActive = isKeyActive(key);
     const row = document.createElement('details');
     row.className = 'admin-key-row admin-team-section';
+    if (!keyActive) {
+      row.classList.add('is-suspended');
+    }
     row.dataset.teamName = key.name;
-    row.open = openTeamNames.has(key.name);
+    row.open = previouslyOpenTeamNames.has(key.name);
     row.addEventListener('toggle', () => {
       if (row.open) {
         openTeamNames.add(key.name);
@@ -189,7 +217,11 @@ function renderKeys(keys) {
 
     const summaryMeta = document.createElement('span');
     summaryMeta.className = 'admin-team-meta';
-    summaryMeta.textContent = `${getInviteRole()} invite`;
+    summaryMeta.textContent = `${getInviteRole()} invite - ${getKeyStatusLabel(key)}`;
+
+    const summaryStatus = document.createElement('span');
+    summaryStatus.className = `admin-team-status ${keyActive ? 'is-active' : 'is-suspended'}`;
+    summaryStatus.textContent = getKeyStatusLabel(key);
 
     const summaryIndicator = document.createElement('span');
     summaryIndicator.className = 'admin-team-indicator';
@@ -197,6 +229,7 @@ function renderKeys(keys) {
 
     summaryText.appendChild(summaryName);
     summaryText.appendChild(summaryMeta);
+    summaryText.appendChild(summaryStatus);
     summary.appendChild(summaryText);
     summary.appendChild(summaryIndicator);
 
@@ -209,13 +242,20 @@ function renderKeys(keys) {
     const value = document.createElement('code');
     value.textContent = key.value;
 
+    const status = document.createElement('span');
+    status.className = `admin-key-status ${keyActive ? 'is-active' : 'is-suspended'}`;
+    status.textContent = keyActive
+      ? 'Active - team members can use this key to join rooms.'
+      : 'Suspended - this key cannot be used to join rooms.';
+
     const preview = document.createElement('pre');
     preview.className = 'admin-invite-preview';
     preview.setAttribute('aria-label', `Invite preview for ${key.name}`);
-    preview.textContent = createTeamInvite(key);
+    preview.textContent = keyActive ? createTeamInvite(key) : createSuspendedTeamNotice(key);
 
     details.appendChild(name);
     details.appendChild(value);
+    details.appendChild(status);
     details.appendChild(preview);
 
     const actions = document.createElement('div');
@@ -225,6 +265,10 @@ function renderKeys(keys) {
     copyInviteButton.type = 'button';
     copyInviteButton.className = 'primary-action compact-action';
     copyInviteButton.textContent = 'Copy invite';
+    if (!keyActive) {
+      copyInviteButton.disabled = true;
+      copyInviteButton.title = 'Restore this team key before copying an invite.';
+    }
     copyInviteButton.addEventListener('click', async () => {
       await copyText(createTeamInvite(key));
       setStatus(`Copied invite for ${key.name}.`, 'success');
@@ -234,6 +278,10 @@ function renderKeys(keys) {
     copyLinkButton.type = 'button';
     copyLinkButton.className = 'secondary-action compact-action';
     copyLinkButton.textContent = 'Copy link';
+    if (!keyActive) {
+      copyLinkButton.disabled = true;
+      copyLinkButton.title = 'Restore this team key before copying an invite link.';
+    }
     copyLinkButton.addEventListener('click', async () => {
       await copyText(createInviteUrl(key));
       setStatus(`Copied link for ${key.name}.`, 'success');
@@ -243,9 +291,22 @@ function renderKeys(keys) {
     copyKeyButton.type = 'button';
     copyKeyButton.className = 'secondary-action compact-action';
     copyKeyButton.textContent = 'Copy key';
+    if (!keyActive) {
+      copyKeyButton.disabled = true;
+      copyKeyButton.title = 'Restore this team key before copying the key.';
+    }
     copyKeyButton.addEventListener('click', async () => {
       await copyText(key.value);
       setStatus(`Copied key for ${key.name}.`, 'success');
+    });
+
+    const statusButton = document.createElement('button');
+    statusButton.type = 'button';
+    statusButton.className = keyActive ? 'secondary-action compact-action' : 'success-action compact-action';
+    statusButton.textContent = keyActive ? 'Suspend' : 'Restore';
+    statusButton.addEventListener('click', async () => {
+      if (keyActive && !window.confirm(`Suspend key "${key.name}"? Current invite links will stop working.`)) return;
+      await updateKeyStatus(key.name, !keyActive);
     });
 
     const removeButton = document.createElement('button');
@@ -260,6 +321,7 @@ function renderKeys(keys) {
     actions.appendChild(copyInviteButton);
     actions.appendChild(copyLinkButton);
     actions.appendChild(copyKeyButton);
+    actions.appendChild(statusButton);
     actions.appendChild(removeButton);
 
     const body = document.createElement('div');
@@ -316,6 +378,16 @@ async function removeKey(name) {
   openTeamNames.delete(data.removed.name);
   await loadKeys();
   setStatus(`Removed ${data.removed.name}.`, 'success');
+}
+
+async function updateKeyStatus(name, active) {
+  const encodedName = encodeURIComponent(name);
+  const data = await requestAdmin(`/api/admin/keys/${encodedName}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ active })
+  });
+  await loadKeys();
+  setStatus(`${data.key.active ? 'Restored' : 'Suspended'} ${data.key.name}.`, 'success');
 }
 
 authForm.addEventListener('submit', async (event) => {
