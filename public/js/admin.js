@@ -202,6 +202,7 @@ function getTeamCountText(keys, visibleKeys, search) {
 }
 
 function openKeyActionModal(action) {
+  keyActionInFlight = false;
   pendingKeyAction = action;
   keyActionKicker.textContent = action.kicker;
   keyActionTitle.textContent = action.title;
@@ -209,6 +210,10 @@ function openKeyActionModal(action) {
   keyActionNote.textContent = action.note;
   confirmKeyActionButton.textContent = action.confirmLabel;
   confirmKeyActionButton.className = action.confirmClassName || 'danger-action';
+  confirmKeyActionButton.disabled = false;
+  cancelKeyActionButton.disabled = false;
+  keyActionModal.classList.remove('is-busy');
+  keyActionModal.setAttribute('aria-busy', 'false');
   keyActionModal.classList.remove('hidden');
   confirmKeyActionButton.focus();
 }
@@ -220,24 +225,34 @@ function closeKeyActionModal() {
   keyActionModal.classList.add('hidden');
 }
 
+function setKeyActionBusy(busy) {
+  keyActionInFlight = busy;
+  keyActionModal.classList.toggle('is-busy', busy);
+  keyActionModal.setAttribute('aria-busy', busy ? 'true' : 'false');
+  confirmKeyActionButton.disabled = busy;
+  cancelKeyActionButton.disabled = busy;
+
+  if (pendingKeyAction) {
+    confirmKeyActionButton.textContent = busy
+      ? pendingKeyAction.busyLabel || 'Working...'
+      : pendingKeyAction.confirmLabel;
+  }
+}
+
 async function confirmKeyAction() {
   if (!pendingKeyAction) return;
 
   const action = pendingKeyAction;
-  keyActionInFlight = true;
-  confirmKeyActionButton.disabled = true;
-  cancelKeyActionButton.disabled = true;
+  setKeyActionBusy(true);
 
   try {
     await action.onConfirm();
-    keyActionInFlight = false;
+    setKeyActionBusy(false);
     closeKeyActionModal();
   } catch (err) {
     setStatus(err.message, 'error');
   } finally {
-    keyActionInFlight = false;
-    confirmKeyActionButton.disabled = false;
-    cancelKeyActionButton.disabled = false;
+    setKeyActionBusy(false);
   }
 }
 
@@ -248,6 +263,7 @@ function openRotateKeyModal(teamName) {
     message: `This will generate a new access key for ${teamName}.`,
     note: 'Existing invite links for this team will stop working immediately.',
     confirmLabel: 'Rotate key',
+    busyLabel: 'Rotating...',
     onConfirm: () => rotateKey(teamName)
   });
 }
@@ -259,6 +275,7 @@ function openSuspendKeyModal(teamName) {
     message: `This will block team access for ${teamName}.`,
     note: 'Current invite links for this team will stop working until the key is restored.',
     confirmLabel: 'Suspend key',
+    busyLabel: 'Suspending...',
     onConfirm: () => updateKeyStatus(teamName, false)
   });
 }
@@ -270,6 +287,7 @@ function openRemoveKeyModal(teamName) {
     message: `This will permanently remove the team key for ${teamName}.`,
     note: 'Team members will no longer be able to join with this key. This cannot be undone from the admin page.',
     confirmLabel: 'Remove key',
+    busyLabel: 'Removing...',
     onConfirm: () => removeKey(teamName)
   });
 }
