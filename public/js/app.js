@@ -35,10 +35,11 @@
  let animateVotingCards = true; // Controls whether cards animate in
  let flipAnimationTimers = [];
  let voteErrorTimer = null;
+ let resetFaceDownBeforeStateUpdate = false;
  const cardFlipTransitionMs = 600;
- const cardFlipStaggerDelayMs = 120;
+ const cardFlipStaggerDelayMs = 150;
  const cardIntroDelayMs = 300;
- const resetTurnaroundDelayMs = 180;
+ const resetTurnaroundDelayMs = 240;
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
@@ -248,7 +249,11 @@ function animateCardsFaceDownBeforeReset(onComplete) {
                      sessionStorage.setItem('scrumPokerUserName', currentUser.name);
 
                     const isEnteringRoom = !pokerRoomSection || pokerRoomSection.classList.contains('hidden');
-                    const shouldAnimateResetDeck = wasVotesRevealed && !votesRevealed && wasRoomVisible && !isEnteringRoom;
+                    const didResetVotes = wasVotesRevealed &&
+                        !votesRevealed &&
+                        wasRoomVisible &&
+                        !isEnteringRoom;
+                    const shouldAnimateResetDeck = didResetVotes && !resetFaceDownBeforeStateUpdate;
 
                     if (isEnteringRoom) {
                         // Only entering the room for the first time!
@@ -264,6 +269,9 @@ function animateCardsFaceDownBeforeReset(onComplete) {
                              updateUI();
                          });
                      } else {
+                         if (didResetVotes) {
+                             resetFaceDownBeforeStateUpdate = false;
+                         }
                          updateUI(); // Update the UI with the new state
                      }
                  } else if (!loginSection.classList.contains('hidden')) {
@@ -691,8 +699,11 @@ function animateCardsFaceDownBeforeReset(onComplete) {
      animateVotingCards = true;
       if (currentUser?.role === 'Facilitator') {
          resetVotesButton.disabled = true;
-         sendMessage('resetVotes', {});
-         resetAllCards();
+         resetFaceDownBeforeStateUpdate = true;
+         animateCardsFaceDownBeforeReset(() => {
+             sendMessage('resetVotes', {});
+             resetAllCards();
+         });
      }
  }
 
