@@ -650,3 +650,40 @@ Result:
 - `npx playwright test tests/e2e/scrum-poker-smoke.spec.js` passed with 1 browser test.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - HTTP App Extraction
+
+Branch: `feature/http-app-extraction`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `797e05a Clean up client error handling`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+- GitHub PR #10 was merged, main CI passed, and `feature/client-error-cleanup` was deleted remotely.
+
+Work planned:
+- Continue reducing monolith risk with a structural server cleanup.
+- Move Express, static file, security header, admin API, and health route setup out of `server.js`.
+- Keep WebSocket room behavior and existing route responses unchanged.
+
+Work completed:
+- Added `lib/httpApp.js` with `createHttpApp`.
+- Moved CSP/security headers, no-cache headers, static file serving, licence routes, admin key routes, admin-key authorization, access-key API error mapping, and `/health` into the HTTP app helper.
+- Updated `server.js` to create the HTTP app with `publicDir`, `keysFile`, `adminKey`, and a `getRoomCount` callback.
+- Reduced `server.js` from 347 lines to 179 lines while keeping WebSocket setup in place.
+
+Verification:
+- `node --check server.js`
+- `node --check lib/httpApp.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
