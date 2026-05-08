@@ -5,6 +5,8 @@ const adminKeyInput = document.getElementById('admin-key-input');
 const statusMessage = document.getElementById('admin-status');
 const keysPanel = document.getElementById('keys-panel');
 const keysList = document.getElementById('keys-list');
+const activityPanel = document.getElementById('activity-panel');
+const activityList = document.getElementById('activity-list');
 const createKeyForm = document.getElementById('create-key-form');
 const keyNameInput = document.getElementById('key-name-input');
 const inviteRoomInput = document.getElementById('invite-room-input');
@@ -13,10 +15,13 @@ const teamSearchInput = document.getElementById('team-search-input');
 const expandTeamsButton = document.getElementById('expand-teams-button');
 const collapseTeamsButton = document.getElementById('collapse-teams-button');
 const refreshKeysButton = document.getElementById('refresh-keys-button');
+const refreshActivityButton = document.getElementById('refresh-activity-button');
 const keyCount = document.getElementById('key-count');
+const activityCount = document.getElementById('activity-count');
 
 const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
 let currentKeys = [];
+let currentActivity = [];
 let openTeamNames = new Set();
 
 function getAppUrl() {
@@ -127,6 +132,30 @@ function createSuspendedTeamNotice(key) {
   ].join('\n');
 }
 
+function getActivityActionLabel(action) {
+  const labels = {
+    created: 'Created',
+    suspended: 'Suspended',
+    restored: 'Restored',
+    removed: 'Removed'
+  };
+
+  return labels[action] || action;
+}
+
+function formatActivityTime(createdAt) {
+  const date = new Date(createdAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return createdAt;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(date);
+}
+
 function getOpenTeamNames() {
   const names = new Set(openTeamNames);
   keysList.querySelectorAll('.admin-key-row[open]').forEach((row) => {
@@ -160,6 +189,56 @@ function getTeamCountText(keys, visibleKeys, search) {
   const suspendedLabel = suspendedCount ? ` - ${suspendedCount} suspended` : '';
 
   return search ? `${visibleLabel} of ${keys.length}${suspendedLabel}` : `${visibleLabel}${suspendedLabel}`;
+}
+
+function renderActivity(activity) {
+  activityList.innerHTML = '';
+  activityCount.textContent = `${activity.length} ${activity.length === 1 ? 'event' : 'events'}`;
+
+  if (activity.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'admin-empty';
+    empty.textContent = 'No admin activity yet.';
+    activityList.appendChild(empty);
+    return;
+  }
+
+  activity.forEach((event) => {
+    const item = document.createElement('article');
+    item.className = 'admin-activity-item';
+
+    const badge = document.createElement('span');
+    badge.className = `admin-activity-badge is-${event.action}`;
+    badge.textContent = getActivityActionLabel(event.action);
+
+    const body = document.createElement('div');
+    body.className = 'admin-activity-body';
+
+    const summary = document.createElement('p');
+    summary.className = 'admin-activity-summary';
+    summary.textContent = event.teamName;
+
+    const meta = document.createElement('p');
+    meta.className = 'admin-activity-meta';
+
+    const time = document.createElement('time');
+    time.dateTime = event.createdAt;
+    time.textContent = formatActivityTime(event.createdAt);
+
+    meta.appendChild(time);
+    if (event.keyFingerprint) {
+      const fingerprint = document.createElement('code');
+      fingerprint.textContent = `key ${event.keyFingerprint}`;
+      meta.append(' - ');
+      meta.appendChild(fingerprint);
+    }
+
+    body.appendChild(summary);
+    body.appendChild(meta);
+    item.appendChild(badge);
+    item.appendChild(body);
+    activityList.appendChild(item);
+  });
 }
 
 function renderKeys(keys) {
@@ -360,13 +439,25 @@ async function loadKeys() {
   setStatus('Team keys loaded.', 'success');
 }
 
+async function loadActivity() {
+  const data = await requestAdmin('/api/admin/activity?limit=20');
+  currentActivity = data.activity || [];
+  activityPanel.classList.remove('hidden');
+  renderActivity(currentActivity);
+}
+
+async function loadAdminData() {
+  await loadKeys();
+  await loadActivity();
+}
+
 async function createKey(name) {
   const data = await requestAdmin('/api/admin/keys', {
     method: 'POST',
     body: JSON.stringify({ name })
   });
   keyNameInput.value = '';
-  await loadKeys();
+  await loadAdminData();
   setStatus(`Created team key for ${data.key.name}.`, 'success');
 }
 
@@ -376,7 +467,7 @@ async function removeKey(name) {
     method: 'DELETE'
   });
   openTeamNames.delete(data.removed.name);
-  await loadKeys();
+  await loadAdminData();
   setStatus(`Removed ${data.removed.name}.`, 'success');
 }
 
@@ -386,7 +477,7 @@ async function updateKeyStatus(name, active) {
     method: 'PATCH',
     body: JSON.stringify({ active })
   });
-  await loadKeys();
+  await loadAdminData();
   setStatus(`${data.key.active ? 'Restored' : 'Suspended'} ${data.key.name}.`, 'success');
 }
 
@@ -395,9 +486,10 @@ authForm.addEventListener('submit', async (event) => {
   setStatus('Checking key...');
 
   try {
-    await loadKeys();
+    await loadAdminData();
   } catch (err) {
     keysPanel.classList.add('hidden');
+    activityPanel.classList.add('hidden');
     setStatus(err.message, 'error');
   }
 });
@@ -418,7 +510,18 @@ refreshKeysButton.addEventListener('click', async () => {
   setStatus('Refreshing keys...');
 
   try {
-    await loadKeys();
+    await loadAdminData();
+  } catch (err) {
+    setStatus(err.message, 'error');
+  }
+});
+
+refreshActivityButton.addEventListener('click', async () => {
+  setStatus('Refreshing activity...');
+
+  try {
+    await loadActivity();
+    setStatus('Admin activity loaded.', 'success');
   } catch (err) {
     setStatus(err.message, 'error');
   }
@@ -447,8 +550,9 @@ collapseTeamsButton.addEventListener('click', () => {
 const savedAdminKey = sessionStorage.getItem(ADMIN_KEY_STORAGE);
 if (savedAdminKey) {
   adminKeyInput.value = savedAdminKey;
-  loadKeys().catch((err) => {
+  loadAdminData().catch((err) => {
     keysPanel.classList.add('hidden');
+    activityPanel.classList.add('hidden');
     setStatus(err.message, 'error');
   });
 }

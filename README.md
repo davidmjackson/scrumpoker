@@ -71,6 +71,7 @@ server {
 - Bind Node to localhost only when behind Nginx (`127.0.0.1`) unless you need direct LAN access.
 - Use firewall rules to expose only `80/443` publicly.
 - Set `SCRUM_POKER_ADMIN_KEY` before using `/admin` for team access and invite management.
+- Set `SCRUM_POKER_ACTIVITY_FILE` to a persistent private path if you want the admin audit trail stored outside the app directory.
 - Keep dependencies updated (`npm audit` + planned patch windows).
 - Re-run the scanner after deployment and keep exceptions documented.
 - Deployment runbook: `docs/deployment.md`.

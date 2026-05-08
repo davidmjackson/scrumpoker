@@ -55,6 +55,7 @@ async function stopProcess(child) {
 async function startServer(options = {}) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scrumpoker-e2e-'));
   const keysFile = path.join(tempDir, 'keys.json');
+  const activityFile = path.join(tempDir, 'admin-activity.jsonl');
   fs.writeFileSync(keysFile, JSON.stringify(options.keys || {}, null, 2), 'utf8');
 
   const port = await getFreePort();
@@ -65,6 +66,7 @@ async function startServer(options = {}) {
       NODE_ENV: 'test',
       PORT: String(port),
       SCRUM_POKER_KEYS_FILE: keysFile,
+      SCRUM_POKER_ACTIVITY_FILE: activityFile,
       ...(options.adminKey ? { SCRUM_POKER_ADMIN_KEY: options.adminKey } : {})
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -82,6 +84,7 @@ async function startServer(options = {}) {
 
   return {
     baseUrl: `http://127.0.0.1:${port}`,
+    activityFile,
     async stop() {
       await stopProcess(child);
       fs.rmSync(tempDir, { recursive: true, force: true });

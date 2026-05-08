@@ -1227,3 +1227,55 @@ Result:
 - `npm test` ran 42 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Admin Activity Log
+
+Branch: `feature/admin-activity-log`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `264c7ad Add admin key lifecycle controls`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+
+Work planned:
+- Add an append-only admin audit trail for team key lifecycle actions.
+- Avoid storing or displaying full access keys in the audit trail.
+- Show recent activity in `/admin` after unlock.
+- Keep activity storage configurable for production.
+
+Work completed:
+- Added `lib/adminActivity.js` for JSONL activity logging, key fingerprints, and recent activity reads.
+- Added `SCRUM_POKER_ACTIVITY_FILE` support with a default `admin-activity.jsonl` path.
+- Logged admin API actions for key creation, suspension, restoration, and removal.
+- Added authenticated `GET /api/admin/activity` for recent activity.
+- Added a Recent activity panel in `/admin`, including event counts, action badges, timestamps, team names, and short key fingerprints.
+- Updated `.gitignore` and README production notes for the activity file.
+- Extended isolated test server setup to use temporary activity log files.
+- Added unit/API/browser coverage for activity logging, display, newest-first ordering, and secret avoidance.
+
+Verification:
+- `node --check lib/adminActivity.js`
+- `node --check lib/httpApp.js`
+- `node --check server.js`
+- `node --check public/js/admin.js`
+- `node --check tests/admin-activity.test.js`
+- `node --check tests/ws-operations.test.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `node --test tests/admin-activity.test.js`
+- `node --test tests/ws-operations.test.js`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin activity and API tests passed.
+- Focused admin browser test passed.
+- `npm test` ran 47 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.

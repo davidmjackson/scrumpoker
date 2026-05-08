@@ -62,6 +62,7 @@ async function stopProcess(child) {
 async function startServer(t, options = {}) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scrumpoker-test-'));
   const keysFile = path.join(tempDir, 'keys.json');
+  const activityFile = path.join(tempDir, 'admin-activity.jsonl');
   fs.writeFileSync(keysFile, JSON.stringify({ baseline: testAccessKey }), 'utf8');
 
   const port = await getFreePort();
@@ -72,6 +73,7 @@ async function startServer(t, options = {}) {
       NODE_ENV: 'test',
       PORT: String(port),
       SCRUM_POKER_KEYS_FILE: keysFile,
+      SCRUM_POKER_ACTIVITY_FILE: activityFile,
       ...(options.adminKey ? { SCRUM_POKER_ADMIN_KEY: options.adminKey } : {})
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -91,7 +93,7 @@ async function startServer(t, options = {}) {
   });
 
   await waitForHealth(port, () => output);
-  return { keysFile, port };
+  return { activityFile, keysFile, port };
 }
 
 function waitForMessage(ws, predicate, timeoutMs = 3000) {
@@ -239,6 +241,11 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
   assert.equal(initial.status, 200);
   assert.deepEqual(initialBody.keys, [{ name: 'baseline', value: testAccessKey, active: true }]);
 
+  const initialActivity = await fetch(`http://127.0.0.1:${port}/api/admin/activity`, { headers });
+  const initialActivityBody = await initialActivity.json();
+  assert.equal(initialActivity.status, 200);
+  assert.deepEqual(initialActivityBody.activity, []);
+
   const created = await fetch(baseUrl, {
     method: 'POST',
     headers,
@@ -296,6 +303,18 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
   const afterRemove = await fetch(baseUrl, { headers });
   const afterRemoveBody = await afterRemove.json();
   assert.deepEqual(afterRemoveBody.keys, [{ name: 'baseline', value: testAccessKey, active: true }]);
+
+  const activity = await fetch(`http://127.0.0.1:${port}/api/admin/activity`, { headers });
+  const activityBody = await activity.json();
+
+  assert.equal(activity.status, 200);
+  assert.deepEqual(
+    activityBody.activity.map((event) => event.action),
+    ['removed', 'restored', 'suspended', 'created']
+  );
+  assert.equal(activityBody.activity.every((event) => event.teamName === 'Gamma Team'), true);
+  assert.equal(activityBody.activity.every((event) => event.keyFingerprint.length === 12), true);
+  assert.doesNotMatch(JSON.stringify(activityBody), new RegExp(createdBody.key.value));
 });
 
 test('WebSocket workflow covers login, voting, reveal, reset, and role limits', async (t) => {
