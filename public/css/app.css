@@ -1011,6 +1011,11 @@ img {
   max-width: 560px;
 }
 
+.admin-invite-room {
+  max-width: 560px;
+  margin-top: 0.75rem;
+}
+
 .compact-action {
   min-height: 2.2rem;
   padding: 0.45rem 0.7rem;

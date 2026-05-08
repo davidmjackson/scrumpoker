@@ -7,6 +7,7 @@ const keysPanel = document.getElementById('keys-panel');
 const keysList = document.getElementById('keys-list');
 const createKeyForm = document.getElementById('create-key-form');
 const keyNameInput = document.getElementById('key-name-input');
+const inviteRoomInput = document.getElementById('invite-room-input');
 const refreshKeysButton = document.getElementById('refresh-keys-button');
 const keyCount = document.getElementById('key-count');
 
@@ -14,6 +15,10 @@ const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
 
 function getAppUrl() {
   return window.location.origin || `${window.location.protocol}//${window.location.host}`;
+}
+
+function getInviteRoom() {
+  return inviteRoomInput.value.trim();
 }
 
 function setStatus(message, tone = '') {
@@ -55,14 +60,37 @@ async function requestAdmin(path, options = {}) {
   return body;
 }
 
+function createInviteUrl(key) {
+  const inviteUrl = new URL('/', getAppUrl());
+  inviteUrl.searchParams.set('accessKey', key.value);
+  inviteUrl.searchParams.set('role', 'Facilitator');
+
+  const room = getInviteRoom();
+  if (room) {
+    inviteUrl.searchParams.set('room', room);
+  }
+
+  return inviteUrl.toString();
+}
+
 function createFacilitatorInvite(key) {
-  return [
+  const room = getInviteRoom();
+  const inviteLines = [
     'Scrum Poker team access',
     `Team: ${key.name}`,
-    `Access key: ${key.value}`,
-    `App: ${getAppUrl()}`,
+    `Access key: ${key.value}`
+  ];
+
+  if (room) {
+    inviteLines.push(`Room: ${room}`);
+  }
+
+  inviteLines.push(
+    `App: ${createInviteUrl(key)}`,
     'Role: Facilitator'
-  ].join('\n');
+  );
+
+  return inviteLines.join('\n');
 }
 
 function renderKeys(keys) {

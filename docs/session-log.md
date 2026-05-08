@@ -902,3 +902,45 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Invite Prefill Links
+
+Branch: `feature/invite-prefill-links`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `3160bc7 Add admin team invite copy flow`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+
+Work planned:
+- Add an optional room name to the admin invite workflow.
+- Include a prefilled app link in copied facilitator invites.
+- Prefill the login screen from invite URL parameters for access key, room, and role.
+- Avoid leaving the access key in the browser address bar after prefill.
+
+Work completed:
+- Added an optional `Invite room` field to `/admin`.
+- Updated copied facilitator invites to include the room when provided and an app URL with `accessKey`, `room`, and `role` parameters.
+- Added login prefill handling for invite links, including a legacy `key` parameter alias.
+- Removed the invite query string from the address bar after applying prefill.
+- Extended admin browser coverage to parse the copied invite URL and verify login prefill behavior.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check public/js/app.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.

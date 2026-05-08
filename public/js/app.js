@@ -4,8 +4,10 @@
  const loginSection = document.getElementById('login-section');
  const roomDisplay = document.getElementById('room-display');
  const pokerRoomSection = document.getElementById('poker-room-section');
+ const accessKeyInput = document.getElementById('access-key-input');
  const nameInput = document.getElementById('name-input');
  const roomInput = document.getElementById('room-input');
+ const roleSelect = document.getElementById('role-select');
  const loginButton = document.getElementById('login-button');
  const loginError = document.getElementById('login-error');
  const userGreeting = document.getElementById('user-greeting');
@@ -262,8 +264,36 @@ function showVoteError(message) {
 
  // --- Initialization ---
  function init() {
+     applyInvitePrefill();
      setupEventListeners();
      connectWebSocket(); // Start WebSocket connection attempt
+ }
+
+ function applyInvitePrefill() {
+     const params = new URLSearchParams(window.location.search);
+     const invitedAccessKey = params.get('accessKey') || params.get('key');
+     const invitedRoom = params.get('room');
+     const invitedRole = params.get('role');
+     let appliedPrefill = false;
+
+     if (invitedAccessKey) {
+         accessKeyInput.value = invitedAccessKey;
+         appliedPrefill = true;
+     }
+
+     if (invitedRoom) {
+         roomInput.value = invitedRoom;
+         appliedPrefill = true;
+     }
+
+     if (invitedRole && Array.from(roleSelect.options).some((option) => option.value === invitedRole)) {
+         roleSelect.value = invitedRole;
+         appliedPrefill = true;
+     }
+
+     if (appliedPrefill && window.history.replaceState) {
+         window.history.replaceState(null, document.title, window.location.pathname);
+     }
  }
 
  // --- Event Listeners ---
@@ -565,9 +595,9 @@ function renderVotingCards() {
 
  // --- Event Handlers (Send messages to server) ---
  function handleLogin() {
-  const key = document.getElementById('access-key-input').value.trim();
+  const key = accessKeyInput.value.trim();
   const name = nameInput.value.trim();
-  const role = document.getElementById('role-select').value;
+  const role = roleSelect.value;
   const room = roomInput.value.trim();
 
   if (key && name && role && room) {
