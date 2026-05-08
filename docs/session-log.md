@@ -1101,3 +1101,43 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Admin Team Search
+
+Branch: `feature/admin-team-search`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `856350d Add admin team accordion`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+
+Work planned:
+- Add a search/filter control to `/admin` for growing team lists.
+- Filter collapsed team sections by team name.
+- Keep visible counts and empty states clear while filtering.
+
+Work completed:
+- Added a `Find team` search field above the team list.
+- Filtered rendered team sections by case-insensitive team-name matching.
+- Updated the team count to show filtered count and total count when search is active.
+- Added a no-match empty state.
+- Extended admin browser coverage for matching search, no-match search, and clearing the search.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
