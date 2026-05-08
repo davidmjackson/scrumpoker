@@ -91,6 +91,8 @@ It runs:
 - `npm test`
 - `npm audit --omit=dev`
 
+CI uses Node.js 24 and opts JavaScript actions into the Node 24 runtime with `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`.
+
 GitHub repository settings should make `main` the default branch and require CI to pass before merging.
 
 ## Production Pull

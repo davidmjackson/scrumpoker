@@ -311,7 +311,45 @@ Verification:
 
 Result:
 - All checks passed.
- - `npm test` ran 39 tests successfully.
+- `npm test` ran 39 tests successfully.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Test server processes were started by the test suite and stopped during cleanup.
+- No project `node server.js` process was left running.
+
+## 2026-05-08 - GitHub Actions Node 24 Update
+
+Branch: `feature/update-ci-node24`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `be5aa8b Add admin access key management`
+- Working tree: clean
+- Server status: no `node server.js` process was running
+- GitHub PR #2 was merged, main CI passed, and `feature/admin-key-management` was deleted locally and remotely.
+
+Work planned:
+- Remove the GitHub Actions Node 20 deprecation warning.
+- Test the project on the upcoming Node 24 runtime before GitHub changes the default action runtime.
+
+Work completed:
+- Updated CI to use `actions/checkout@v6`.
+- Updated CI to use `actions/setup-node@v6`.
+- Updated CI's Node runtime from `20` to `24`.
+- Added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` to the CI job environment.
+- Documented the Node 24 CI runtime in the deployment runbook.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `for file in lib/*.js; do node --check "$file"; done`
+- `for file in public/js/*.js; do node --check "$file"; done`
+- `for file in tests/*.test.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+
+Result:
+- Local checks passed on Node.js `v20.19.6`.
+- GitHub Actions CI passed on Node.js 24 for PR #3.
 - No project `node server.js` process was left running.
