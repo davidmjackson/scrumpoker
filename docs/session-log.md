@@ -687,3 +687,43 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - WebSocket Server Extraction
+
+Branch: `feature/ws-server-extraction`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `d13426f Extract HTTP app setup`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+- GitHub PR #11 was merged, main CI passed, and `feature/http-app-extraction` was deleted remotely.
+
+Work planned:
+- Continue reducing `server.js` to startup wiring only.
+- Move WebSocket server creation, client messaging helpers, participant state, and message dispatch into a focused helper.
+- Keep existing realtime room behavior unchanged.
+
+Work completed:
+- Added `lib/wsServer.js` with `createWsServer`.
+- Moved WebSocket setup, `sendToClient`, `sendToRoom`, `sendRoomState`, participant storage, connection handling, message parsing, dispatch, close cleanup, and error cleanup out of `server.js`.
+- Updated `server.js` to call `createWsServer({ server, rooms, keysFile })`.
+- Reduced `server.js` from 179 lines to 56 lines.
+
+Verification:
+- `node --check server.js`
+- `node --check lib/wsServer.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
