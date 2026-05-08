@@ -14,10 +14,16 @@ test('facilitator can enter a room, vote, reveal, and reset', async ({ page }) =
     await expect(page.locator('#connection-status')).toHaveText('Connected');
     await expect(page.locator('#login-button')).toBeEnabled();
 
-    await page.locator('#access-key-input').fill(testAccessKey);
     await page.locator('#room-input').fill('browser-room');
     await page.locator('#name-input').fill('Alice');
     await page.locator('#role-select').selectOption('Facilitator');
+
+    await page.locator('#access-key-input').fill('wrong-browser-key');
+    await page.locator('#login-button').click();
+    await expect(page.locator('#login-section')).toBeVisible();
+    await expect(page.locator('#login-error')).toHaveText('Invalid access key.');
+
+    await page.locator('#access-key-input').fill(testAccessKey);
     await page.locator('#login-button').click();
 
     await expect(page.locator('#poker-room-section')).toBeVisible();

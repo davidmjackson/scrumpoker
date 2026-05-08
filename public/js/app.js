@@ -34,6 +34,7 @@
 
  let animateVotingCards = true; // Controls whether cards animate in
  let flipAnimationTimers = [];
+ let voteErrorTimer = null;
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
@@ -45,9 +46,6 @@
 
  // --- WebSocket Setup ---
  let ws = null;
-
-const hostname = location.hostname.trim().toLowerCase();
-console.log('Detected hostname:', hostname);
 
 // Dynamically determine WebSocket URL from the current page origin.
 
@@ -75,21 +73,8 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
          loginButton.disabled = false;
          loginButton.textContent = 'Enter Room';
 
-         // Check if user was previously logged in (e.g., page refresh)
-         const savedUserId = sessionStorage.getItem('scrumPokerUserId');
-         const savedUserName = sessionStorage.getItem('scrumPokerUserName');
-
          showLogin(); // Show login screen for first time connection
-         
      };
-
-     ws.addEventListener('close', (event) => {
-         console.log('WebSocket closed:', event);
-     });
-
-     ws.addEventListener('error', (event) => {
-         console.error('WebSocket error:', event);
-     });
 
      ws.onmessage = (event) => {
          try {
@@ -106,10 +91,8 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
          updateConnectionStatus('disconnected', 'Connection Error');
          loginButton.disabled = true;
          loginButton.textContent = 'Enter Room (Error)';
-         // Show appropriate error to user, maybe on login screen
-         loginError.textContent = 'Cannot connect to the server. Please try again later.';
-         loginError.classList.remove('hidden');
-         showLogin(); // Force back to login on connection error
+         showLogin({ clearError: false }); // Force back to login on connection error
+         showLoginError('Cannot connect to the server. Please try again later.');
      };
 
      ws.onclose = (event) => {
@@ -119,7 +102,8 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
          loginButton.textContent = 'Enter Room (Disconnected)';
          currentUser = null; // Clear user state
          participants = [];
-         showLogin(); // Go back to login screen
+         showLogin({ clearError: false }); // Go back to login screen
+         showLoginError('Connection lost. Reconnecting...');
          // Optional: Attempt to reconnect after a delay
          setTimeout(connectWebSocket, 5000); // Reconnect after 5 seconds
 
@@ -130,6 +114,37 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
      connectionStatus.className = status; // 'connected', 'disconnected', 'connecting'
      connectionStatus.textContent = text;
  }
+
+function isLoginVisible() {
+    return !loginSection.classList.contains('hidden');
+}
+
+function isRoomVisible() {
+    return !pokerRoomSection.classList.contains('hidden');
+}
+
+function showLoginError(message) {
+    loginError.textContent = message;
+    loginError.classList.remove('hidden');
+}
+
+function hideLoginError() {
+    loginError.classList.add('hidden');
+}
+
+function showVoteError(message) {
+    voteError.textContent = message;
+    voteError.classList.remove('hidden');
+
+    if (voteErrorTimer) {
+        clearTimeout(voteErrorTimer);
+    }
+
+    voteErrorTimer = setTimeout(() => {
+        voteError.classList.add('hidden');
+        voteErrorTimer = null;
+    }, 3000);
+}
 
 function clearFlipAnimationTimers() {
     flipAnimationTimers.forEach(clearTimeout);
@@ -219,17 +234,15 @@ function animateCardsIntoView() {
              break;
 
          case 'error':
-             console.error('Server Error:', payload.message);
-             // Display error messages appropriately (e.g., for voting, name change)
-         if (document.getElementById('vote-error') && !voteError.classList.contains('hidden')) {
-              voteError.textContent = payload.message;
-              voteError.classList.remove('hidden');
-              setTimeout(() => voteError.classList.add('hidden'), 3000); // Hide after 3s
-             } else if (document.getElementById('login-error') && !loginSection.classList.contains('hidden')) {
-                  loginError.textContent = payload.message;
-                  loginError.classList.remove('hidden');
+             const errorMessage = payload?.message || 'Something went wrong.';
+             console.error('Server Error:', errorMessage);
+             if (isRoomVisible()) {
+                 showVoteError(errorMessage);
+             } else if (isLoginVisible()) {
+                 showLoginError(errorMessage);
              } else {
-                 alert(`Server error: ${payload.message}`); // Fallback
+                 showLogin({ clearError: false });
+                 showLoginError(errorMessage);
              }
              break;
 
@@ -246,10 +259,9 @@ function animateCardsIntoView() {
          ws.send(message);
      } else {
          console.error('WebSocket is not connected. Cannot send message.');
-         // Handle disconnected state appropriately (e.g., show error)
           updateConnectionStatus('disconnected', 'Disconnected');
-          alert('Connection lost. Please refresh the page.');
-          showLogin();
+          showLogin({ clearError: false });
+          showLoginError('Connection lost. Please wait while the app reconnects.');
      }
  }
 
@@ -301,27 +313,13 @@ function animateCardsIntoView() {
  closeEditRoleModal();
  }
 
-
- function setHiddenValue(newValue) {
-     const hiddenField = document.getElementById('reloadCounter');
-     hiddenField.value = newValue; // Set the new value
- }
-
- // Function to get the value from the hidden field
- function getHiddenValue() {
-     const hiddenField = document.getElementById('reloadCounter');
-     return hiddenField.value; // Read and return the value
- }
-
- function reloadPage() {
-     location.reload();
- }
-
  // --- View Management ---
- function showLogin() {
+ function showLogin({ clearError = true } = {}) {
      loginSection.classList.remove('hidden');
      pokerRoomSection.classList.add('hidden');
-     loginError.classList.add('hidden');
+     if (clearError) {
+         hideLoginError();
+     }
      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
 
      if (ws && ws.readyState === WebSocket.OPEN) {
@@ -613,7 +611,7 @@ function animateCardsIntoView() {
   const room = roomInput.value.trim();
 
   if (key && name && role && room) {
-    loginError.classList.add('hidden');
+    hideLoginError();
     currentRoom = room;
     sendMessage('login', {
       accessKey: key,
@@ -622,8 +620,7 @@ function animateCardsIntoView() {
       room: room
     });
   } else {
-    loginError.textContent = 'Please enter your key, room name, name, and role.';
-    loginError.classList.remove('hidden');
+    showLoginError('Please enter your key, room name, name, and role.');
   }
 }
 
