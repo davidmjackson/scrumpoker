@@ -83,6 +83,21 @@
 
       <div id="keys-list" class="admin-key-list"></div>
     </section>
+
+    <section id="activity-panel" class="admin-panel admin-activity-panel hidden" aria-labelledby="activity-title">
+      <div class="admin-panel-header">
+        <div>
+          <span class="section-kicker">Audit</span>
+          <h2 id="activity-title">Recent activity</h2>
+        </div>
+        <div class="admin-panel-actions">
+          <span id="activity-count" class="admin-count">0 events</span>
+          <button id="refresh-activity-button" type="button" class="secondary-action compact-action">Refresh</button>
+        </div>
+      </div>
+
+      <div id="activity-list" class="admin-activity-list"></div>
+    </section>
   </main>
 </body>
 </html>

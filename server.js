@@ -5,6 +5,7 @@ const {
   expireRooms
 } = require('./lib/roomState');
 const { getKeysFilePath } = require('./lib/accessKeys');
+const { getActivityFilePath } = require('./lib/adminActivity');
 const { createHttpApp } = require('./lib/httpApp');
 const { createWsServer } = require('./lib/wsServer');
 
@@ -23,6 +24,7 @@ const path = require('path');
 //console.log('✅ Required modules loaded');
 
 const KEYS_FILE = getKeysFilePath(__dirname);
+const ACTIVITY_FILE = getActivityFilePath(__dirname);
 
 
 // Use PORT from env or default to 3000
@@ -31,6 +33,7 @@ const ADMIN_KEY = process.env.SCRUM_POKER_ADMIN_KEY || '';
 const app = createHttpApp({
   publicDir: path.join(__dirname, 'public'),
   keysFile: KEYS_FILE,
+  activityFile: ACTIVITY_FILE,
   adminKey: ADMIN_KEY,
   getRoomCount: () => rooms.size
 });

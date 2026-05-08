@@ -19,18 +19,23 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
 
     await expect(page.getByRole('heading', { name: 'Team access' })).toBeVisible();
     await expect(page.locator('#keys-panel')).toBeHidden();
+    await expect(page.locator('#activity-panel')).toBeHidden();
 
     await page.locator('#admin-key-input').fill('wrong-admin-key');
     await page.locator('#auth-form button[type="submit"]').click();
     await expect(page.locator('#admin-status')).toHaveText('Unauthorized.');
     await expect(page.locator('#keys-panel')).toBeHidden();
+    await expect(page.locator('#activity-panel')).toBeHidden();
 
     await page.locator('#admin-key-input').fill(adminKey);
     await page.locator('#auth-form button[type="submit"]').click();
 
     await expect(page.locator('#keys-panel')).toBeVisible();
+    await expect(page.locator('#activity-panel')).toBeVisible();
     await expect(page.locator('#admin-status')).toHaveText('Team keys loaded.');
     await expect(page.locator('#key-count')).toHaveText('2 teams');
+    await expect(page.locator('#activity-count')).toHaveText('0 events');
+    await expect(page.locator('#activity-list')).toHaveText('No admin activity yet.');
     await expect(page.locator('#keys-list')).toContainText('alpha');
     await expect(page.locator('#keys-list')).toContainText('browser');
 
@@ -73,6 +78,9 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(gammaRow).toBeVisible();
     await expect(page.locator('#admin-status')).toHaveText('Created team key for Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('3 teams');
+    await expect(page.locator('#activity-count')).toHaveText('1 event');
+    await expect(page.locator('.admin-activity-item').first()).toContainText('Created');
+    await expect(page.locator('.admin-activity-item').first()).toContainText('Gamma Team');
     await expect(gammaRow.locator('.admin-team-body')).toBeHidden();
     await gammaRow.locator('summary').click();
     await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
@@ -121,6 +129,8 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await gammaRow.getByRole('button', { name: 'Suspend' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Suspended Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('3 teams - 1 suspended');
+    await expect(page.locator('#activity-count')).toHaveText('2 events');
+    await expect(page.locator('.admin-activity-item').first()).toContainText('Suspended');
     await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
     await expect(gammaRow.locator('.admin-team-status')).toHaveText('Suspended');
     await expect(gammaRow.locator('.admin-key-status')).toHaveText('Suspended - this key cannot be used to join rooms.');
@@ -132,6 +142,8 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await gammaRow.getByRole('button', { name: 'Restore' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Restored Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('3 teams');
+    await expect(page.locator('#activity-count')).toHaveText('3 events');
+    await expect(page.locator('.admin-activity-item').first()).toContainText('Restored');
     await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
     await expect(gammaRow.locator('.admin-team-status')).toHaveText('Active');
     await expect(gammaRow.getByRole('button', { name: 'Copy invite' })).toBeEnabled();
@@ -141,6 +153,9 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
 
     await expect(page.locator('#admin-status')).toHaveText('Removed Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('2 teams');
+    await expect(page.locator('#activity-count')).toHaveText('4 events');
+    await expect(page.locator('.admin-activity-item').first()).toContainText('Removed');
+    await expect(page.locator('#activity-list')).not.toContainText(gammaKey);
     await expect(gammaRow).toHaveCount(0);
 
     await page.goto(inviteUrl);
