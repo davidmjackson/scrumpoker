@@ -1024,6 +1024,14 @@ img {
   margin-top: 0.75rem;
 }
 
+.admin-list-actions {
+  max-width: 720px;
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .compact-action {
   min-height: 2.2rem;
   padding: 0.45rem 0.7rem;
