@@ -184,6 +184,18 @@ img {
   overflow: hidden;
 }
 
+@media (min-width: 821px) {
+  .entry-shell {
+    align-content: center;
+    align-items: stretch;
+  }
+
+  .entry-card,
+  .entry-preview {
+    min-height: 100%;
+  }
+}
+
 .preview-header {
   display: flex;
   align-items: center;

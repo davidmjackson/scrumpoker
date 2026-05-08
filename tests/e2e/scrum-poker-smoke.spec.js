@@ -13,6 +13,15 @@ test('facilitator can enter a room, vote, reveal, and reset', async ({ page }) =
 
     await expect(page.locator('#connection-status')).toHaveText('Connected');
     await expect(page.locator('#login-button')).toBeEnabled();
+    const entryPanelHeights = await page.evaluate(() => {
+      const loginPanel = document.querySelector('.entry-card').getBoundingClientRect();
+      const previewPanel = document.querySelector('.entry-preview').getBoundingClientRect();
+      return {
+        login: loginPanel.height,
+        preview: previewPanel.height
+      };
+    });
+    expect(Math.abs(entryPanelHeights.login - entryPanelHeights.preview)).toBeLessThanOrEqual(1);
 
     await page.locator('#room-input').fill('browser-room');
     await page.locator('#name-input').fill('Alice');
