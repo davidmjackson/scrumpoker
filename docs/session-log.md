@@ -1181,3 +1181,49 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Admin Key Lifecycle
+
+Branch: `feature/admin-key-lifecycle`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `07a5f47 Add admin accordion controls`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+
+Work planned:
+- Add a reversible admin action for deactivating a team key without deleting it.
+- Preserve compatibility with existing `keys.json` files that store team names as plain string values.
+- Reject suspended keys during WebSocket login while keeping them visible in the admin list.
+- Keep copy/share actions unavailable for suspended teams until restored.
+
+Work completed:
+- Extended key storage to read legacy string entries and metadata entries with an `active` flag.
+- Added `PATCH /api/admin/keys/:name` for suspend/restore status changes.
+- Updated `/admin` team sections with active/suspended status badges, suspend/restore controls, and disabled copy actions for suspended keys.
+- Kept suspended keys in the admin list and included suspended counts when relevant.
+- Updated the command-line list output to show each key status.
+- Fixed accordion open-state tracking so manually closed rows stay closed after re-renders.
+- Added unit/API/browser coverage for suspended key storage, admin status updates, rejected suspended logins, and admin suspend/restore UI.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `node --test tests/access-keys.test.js`
+- `node --test tests/ws-operations.test.js`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused key-storage and API tests passed.
+- Focused admin browser test passed.
+- `npm test` ran 42 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.

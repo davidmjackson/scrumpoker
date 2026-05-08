@@ -76,6 +76,7 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(gammaRow.locator('.admin-team-body')).toBeHidden();
     await gammaRow.locator('summary').click();
     await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
+    await expect(gammaRow.locator('.admin-key-status')).toHaveText('Active - team members can use this key to join rooms.');
     const gammaKey = await gammaRow.locator('code').innerText();
 
     await page.locator('#invite-room-input').fill('Release Planning');
@@ -115,6 +116,25 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(page.locator('#admin-status')).toHaveText('Copied key for Gamma Team.');
     const copiedKey = await page.evaluate(() => navigator.clipboard.readText());
     expect(copiedKey).toBe(gammaKey);
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await gammaRow.getByRole('button', { name: 'Suspend' }).click();
+    await expect(page.locator('#admin-status')).toHaveText('Suspended Gamma Team.');
+    await expect(page.locator('#key-count')).toHaveText('3 teams - 1 suspended');
+    await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
+    await expect(gammaRow.locator('.admin-team-status')).toHaveText('Suspended');
+    await expect(gammaRow.locator('.admin-key-status')).toHaveText('Suspended - this key cannot be used to join rooms.');
+    await expect(gammaRow.locator('.admin-invite-preview')).toContainText('Status: Suspended');
+    await expect(gammaRow.getByRole('button', { name: 'Copy invite' })).toBeDisabled();
+    await expect(gammaRow.getByRole('button', { name: 'Copy link' })).toBeDisabled();
+    await expect(gammaRow.getByRole('button', { name: 'Copy key' })).toBeDisabled();
+
+    await gammaRow.getByRole('button', { name: 'Restore' }).click();
+    await expect(page.locator('#admin-status')).toHaveText('Restored Gamma Team.');
+    await expect(page.locator('#key-count')).toHaveText('3 teams');
+    await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
+    await expect(gammaRow.locator('.admin-team-status')).toHaveText('Active');
+    await expect(gammaRow.getByRole('button', { name: 'Copy invite' })).toBeEnabled();
 
     page.once('dialog', (dialog) => dialog.accept());
     await gammaRow.getByRole('button', { name: 'Remove' }).click();

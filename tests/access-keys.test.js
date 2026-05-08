@@ -13,7 +13,8 @@ const {
   isValidAccessKey,
   listAccessKeys,
   loadKeys,
-  removeAccessKey
+  removeAccessKey,
+  updateAccessKeyStatus
 } = require('../lib/accessKeys');
 
 function withTempDir(t) {
@@ -77,6 +78,23 @@ test('isValidAccessKey checks saved key values', () => {
   assert.equal(isValidAccessKey(keys, 'missing-key'), false);
 });
 
+test('loadKeys filters suspended metadata keys', (t) => {
+  const tempDir = withTempDir(t);
+  const keysFile = path.join(tempDir, 'keys.json');
+  fs.writeFileSync(
+    keysFile,
+    JSON.stringify({
+      alpha: 'alpha-key',
+      beta: { value: 'beta-key', active: false }
+    }),
+    'utf8'
+  );
+
+  assert.deepEqual(loadKeys(keysFile), { alpha: 'alpha-key' });
+  assert.equal(isValidAccessKey(loadKeys(keysFile), 'alpha-key'), true);
+  assert.equal(isValidAccessKey(loadKeys(keysFile), 'beta-key'), false);
+});
+
 test('getInternalRoomName combines public room and access key', () => {
   assert.equal(getInternalRoomName('planning', 'alpha-key'), 'planning-alpha-key');
 });
@@ -109,8 +127,8 @@ test('listAccessKeys returns keys sorted by name', (t) => {
   fs.writeFileSync(keysFile, JSON.stringify({ beta: 'two', alpha: 'one' }), 'utf8');
 
   assert.deepEqual(listAccessKeys(keysFile), [
-    { name: 'alpha', value: 'one' },
-    { name: 'beta', value: 'two' }
+    { name: 'alpha', value: 'one', active: true },
+    { name: 'beta', value: 'two', active: true }
   ]);
 });
 
@@ -121,8 +139,28 @@ test('removeAccessKey deletes one stored key', (t) => {
 
   const removed = removeAccessKey(keysFile, 'alpha');
 
-  assert.deepEqual(removed, { name: 'alpha', value: 'one' });
+  assert.deepEqual(removed, { name: 'alpha', value: 'one', active: true });
   assert.deepEqual(loadKeys(keysFile), { beta: 'two' });
+});
+
+test('updateAccessKeyStatus suspends and restores a stored key', (t) => {
+  const tempDir = withTempDir(t);
+  const keysFile = path.join(tempDir, 'keys.json');
+  fs.writeFileSync(keysFile, JSON.stringify({ alpha: 'one', beta: 'two' }), 'utf8');
+
+  const suspended = updateAccessKeyStatus(keysFile, 'alpha', false);
+
+  assert.deepEqual(suspended, { name: 'alpha', value: 'one', active: false });
+  assert.deepEqual(loadKeys(keysFile), { beta: 'two' });
+  assert.deepEqual(listAccessKeys(keysFile), [
+    { name: 'alpha', value: 'one', active: false },
+    { name: 'beta', value: 'two', active: true }
+  ]);
+
+  const restored = updateAccessKeyStatus(keysFile, 'alpha', true);
+
+  assert.deepEqual(restored, { name: 'alpha', value: 'one', active: true });
+  assert.deepEqual(loadKeys(keysFile), { alpha: 'one', beta: 'two' });
 });
 
 test('isAdminKeyAuthorized validates admin keys without accepting blanks', () => {
