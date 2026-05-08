@@ -527,3 +527,42 @@ Result:
 - `npm run test:e2e` passed with 1 browser smoke test.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Temporary admin screenshot server used `SCRUM_POKER_ADMIN_KEY` and a temporary keys file only.
+
+## 2026-05-08 - Admin Browser Coverage
+
+Branch: `feature/admin-browser-coverage`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `c07e312 Add admin UI foundation (#7)`
+- Working tree: clean before the browser coverage branch changes
+- Server status: `node server.js` was already running on port `3001`
+- GitHub PR #7 was merged, main CI passed, and `feature/admin-ui-foundation` was deleted remotely.
+
+Work planned:
+- Add dedicated browser coverage for the refreshed `/admin` workflow.
+- Keep the existing Scrum Poker browser smoke test intact.
+- Avoid duplicating temporary server setup across Playwright specs.
+
+Work completed:
+- Added `tests/e2e/helpers/test-server.js` for shared temporary server setup with disposable key files and optional admin key configuration.
+- Updated `tests/e2e/scrum-poker-smoke.spec.js` to use the shared server helper.
+- Added `tests/e2e/admin-key-management.spec.js` covering unauthorized unlock, valid unlock, key listing, key generation, copy action, and key removal.
+- Granted Chromium clipboard permissions in the admin spec so the copy path is deterministic.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 2 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
