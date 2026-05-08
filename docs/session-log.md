@@ -1386,3 +1386,43 @@ Result:
 - `npm test` ran 48 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Admin Rotate Key Modal
+
+Branch: `feature/admin-rotate-modal`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `6f3c637 Add admin key rotation`
+- Working tree: clean before branch changes
+- Server status: local `node server.js` process was running on PID `209446`
+
+Work planned:
+- Replace the native browser confirmation for key rotation with an app-styled admin warning modal.
+- Keep the warning clear that rotating a team key invalidates existing invite links.
+- Preserve the existing rotate-key API behavior and admin activity logging.
+
+Work completed:
+- Added a `rotate-key-modal` confirmation dialog to the admin page.
+- Updated the `Rotate key` action to open the modal with team-specific copy.
+- Added Cancel, backdrop click, and Escape dismissal support.
+- Added warning modal styling that matches the app's existing modal patterns.
+- Updated the admin browser test to verify cancel and confirm flows through the modal.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `find . -path ./node_modules -prune -o -name '*.js' -print | xargs -r -n1 node --check`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 48 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.

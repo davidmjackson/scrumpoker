@@ -839,6 +839,56 @@ img {
   font-size: 1.2rem;
 }
 
+.admin-warning-modal {
+  display: grid;
+  gap: 0.85rem;
+  animation: modalIn 180ms ease-out;
+}
+
+.admin-warning-modal h2 {
+  margin: 0;
+}
+
+.admin-warning-kicker {
+  width: fit-content;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.admin-warning-message {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.admin-warning-note {
+  margin: 0;
+  border: 1px solid #fed7aa;
+  border-radius: var(--radius);
+  background: #fff7ed;
+  color: #9a3412;
+  padding: 0.75rem;
+  font-weight: 800;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
