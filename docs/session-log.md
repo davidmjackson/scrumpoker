@@ -566,3 +566,46 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 2 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Multi-User Browser Coverage
+
+Branch: `feature/multi-user-browser-coverage`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `c98e858 Add admin browser coverage (#8)`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+- GitHub PR #8 was merged, main CI passed, and `feature/admin-browser-coverage` was deleted remotely.
+
+Work planned:
+- Add browser coverage for multiple users sharing one room.
+- Cover facilitator, voter, and observer behavior in the same realtime room.
+- Verify reveal/reset synchronization, role changes, logout, and disconnect behavior.
+
+Work completed:
+- Added `tests/e2e/multi-user-room.spec.js`.
+- The spec starts a temporary server with a disposable access key.
+- It logs in Alice as facilitator, Bob as voter, and Carol as observer.
+- It verifies participant lists sync across clients.
+- It verifies observer vote restrictions.
+- It verifies facilitator/voter voting, reveal average `6.5`, grouped results, reset, facilitator role change, logout removal, and disconnect removal.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npx playwright test tests/e2e/multi-user-room.spec.js` passed with 1 browser test.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
