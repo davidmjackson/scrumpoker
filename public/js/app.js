@@ -42,12 +42,17 @@
  const cardAnimator = cardDeck.createCardAnimator({
      getCards: () => votingCardsContainer.querySelectorAll('.vote-card .card-inner')
  });
+ const ROOM_SESSION_STORAGE = 'scrumPokerRoomSession';
+ const ROOM_RETURN_STORAGE = 'scrumPokerReturnToRoom';
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
  let participants = []; // Array of user objects received from server
  let votesRevealed = false; // Status received from server
  let facilitatorId = null; // ID received from server
+ let pendingLoginContext = null;
+ let allowStoredRoomRestore = true;
+ let attemptedStoredRoomRestore = false;
  const fibonacciVotes = ['0', '1', '2', '3', '5', '8', '13', '?']; // Voting options
 
 
@@ -81,6 +86,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
          loginButton.textContent = 'Enter Room';
 
          showLogin(); // Show login screen for first time connection
+         restoreStoredRoomSession();
      };
 
      ws.onmessage = (event) => {
@@ -193,6 +199,8 @@ function showVoteError(message) {
                      // Update session storage with potentially changed details (like role)
                      sessionStorage.setItem('scrumPokerUserId', currentUser.id);
                      sessionStorage.setItem('scrumPokerUserName', currentUser.name);
+                     persistRoomSession();
+                     pendingLoginContext = null;
 
                     const isEnteringRoom = !pokerRoomSection || pokerRoomSection.classList.contains('hidden');
                     const didResetVotes = wasVotesRevealed &&
@@ -233,6 +241,12 @@ function showVoteError(message) {
          case 'error':
              const errorMessage = payload?.message || 'Something went wrong.';
              console.error('Server Error:', errorMessage);
+             if (pendingLoginContext) {
+                 if (attemptedStoredRoomRestore) {
+                     clearRoomSession();
+                 }
+                 pendingLoginContext = null;
+             }
              if (isRoomVisible()) {
                  showVoteError(errorMessage);
              } else if (isLoginVisible()) {
@@ -262,10 +276,87 @@ function showVoteError(message) {
      }
  }
 
+function getValidRole(value) {
+    return Array.from(roleSelect.options).some((option) => option.value === value) ? value : '';
+}
+
+function clearRoomSession() {
+    sessionStorage.removeItem(ROOM_SESSION_STORAGE);
+    sessionStorage.removeItem(ROOM_RETURN_STORAGE);
+}
+
+function getStoredRoomSession() {
+    try {
+        const stored = JSON.parse(sessionStorage.getItem(ROOM_SESSION_STORAGE) || 'null');
+        if (
+            stored &&
+            typeof stored.accessKey === 'string' &&
+            typeof stored.room === 'string' &&
+            typeof stored.name === 'string' &&
+            getValidRole(stored.role)
+        ) {
+            return stored;
+        }
+    } catch (_err) {
+        // Ignore malformed session data and fall back to the login screen.
+    }
+
+    clearRoomSession();
+    return null;
+}
+
+function saveRoomSession(session) {
+    sessionStorage.setItem(ROOM_SESSION_STORAGE, JSON.stringify({
+        accessKey: session.accessKey,
+        room: session.room,
+        name: session.name,
+        role: session.role
+    }));
+}
+
+function persistRoomSession() {
+    const storedSession = getStoredRoomSession();
+    const session = pendingLoginContext || storedSession;
+    if (!session || !currentUser || !currentRoom) return;
+
+    saveRoomSession({
+        ...session,
+        room: currentRoom,
+        name: currentUser.name,
+        role: currentUser.role
+    });
+}
+
+function restoreStoredRoomSession() {
+    if (!allowStoredRoomRestore || attemptedStoredRoomRestore) return;
+    if (sessionStorage.getItem(ROOM_RETURN_STORAGE) !== '1') return;
+
+    const storedSession = getStoredRoomSession();
+    if (!storedSession) return;
+
+    attemptedStoredRoomRestore = true;
+    sessionStorage.removeItem(ROOM_RETURN_STORAGE);
+    accessKeyInput.value = storedSession.accessKey;
+    roomInput.value = storedSession.room;
+    nameInput.value = storedSession.name;
+    roleSelect.value = storedSession.role;
+    currentRoom = storedSession.room;
+    pendingLoginContext = storedSession;
+    sendMessage('login', storedSession);
+}
+
+function markRoomReturnFromAdmin() {
+    if (currentUser?.role !== 'Facilitator') return;
+
+    persistRoomSession();
+    sessionStorage.setItem(ROOM_RETURN_STORAGE, '1');
+}
+
 
  // --- Initialization ---
  function init() {
-     applyInvitePrefill();
+     const appliedInvitePrefill = applyInvitePrefill();
+     allowStoredRoomRestore = !appliedInvitePrefill;
      setupEventListeners();
      connectWebSocket(); // Start WebSocket connection attempt
  }
@@ -295,6 +386,8 @@ function showVoteError(message) {
      if (appliedPrefill && window.history.replaceState) {
          window.history.replaceState(null, document.title, window.location.pathname);
      }
+
+     return appliedPrefill;
  }
 
  // --- Event Listeners ---
@@ -305,8 +398,9 @@ function showVoteError(message) {
      });
      showVotesButton.addEventListener('click', handleShowVotes);
      resetVotesButton.addEventListener('click', handleResetVotes);
-  
-      logoutButton.addEventListener('click', logout);
+
+     adminRoomLink.addEventListener('click', markRoomReturnFromAdmin);
+     logoutButton.addEventListener('click', logout);
 
      // Replace the old event binding:
      editRoleButton.addEventListener('click', openEditRoleModal);
@@ -606,6 +700,7 @@ function renderVotingCards() {
   if (key && name && role && room) {
     hideLoginError();
     currentRoom = room;
+    pendingLoginContext = { accessKey: key, name, role, room };
     sendMessage('login', {
       accessKey: key,
       name: name,
@@ -664,10 +759,13 @@ function renderVotingCards() {
      participants = [];
      votesRevealed = false;
      facilitatorId = null;
+     currentRoom = null;
+     pendingLoginContext = null;
 
      // Clear session
      sessionStorage.removeItem('scrumPokerUserId');
      sessionStorage.removeItem('scrumPokerUserName');
+     clearRoomSession();
 
 
      // Send logout to server

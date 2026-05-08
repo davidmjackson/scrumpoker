@@ -33,6 +33,18 @@ test('facilitator can enter a room, vote, reveal, and reset', async ({ page }) =
     await expect(page.locator('#admin-room-link')).toHaveAttribute('href', '/admin');
     await expect(page.locator('#participants-list')).toContainText('Alice (You)');
 
+    await page.locator('#admin-room-link').click();
+    await expect(page).toHaveURL(`${server.baseUrl}/admin`);
+    await expect(page.getByRole('heading', { name: 'Team access' })).toBeVisible();
+    await expect(page.locator('.admin-room-link')).toHaveClass(/text-action/);
+    await expect(page.locator('.admin-room-link')).not.toHaveClass(/secondary-action/);
+
+    await page.locator('.admin-room-link').click();
+    await expect(page.locator('#poker-room-section')).toBeVisible();
+    await expect(page.locator('#room-display')).toHaveText('Room: browser-room');
+    await expect(page.locator('#user-greeting')).toHaveText('Hello, Alice (Facilitator)');
+    await expect(page.locator('#admin-room-link')).toBeVisible();
+
     await page.locator('button.vote-card[data-value="5"]').click();
     await expect(page.locator('button.vote-card[data-value="5"]')).toHaveClass(/selected/);
 

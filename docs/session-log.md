@@ -1427,6 +1427,46 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 
+## 2026-05-08 - Return To Room From Admin
+
+Branch: `feature/return-to-room-from-admin`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `053454a Add facilitator admin link`
+- Working tree: clean before branch changes
+- Server status: local `node server.js` process was running on PID `209446`
+
+Work planned:
+- Make the Admin page's room navigation match the text-link style used in the room action bar.
+- Allow facilitators to return from `/admin` to the active room instead of landing on an empty login screen.
+- Keep return-to-room behavior scoped to users who navigated to Admin from the room page.
+
+Work completed:
+- Changed the Admin page `Room app` control from a button-styled link to the shared `text-action` link style.
+- Persisted the current room login context in tab-scoped `sessionStorage` after successful room joins.
+- Marked room-to-admin navigation so returning to `/` auto-rejoins the saved room only for that flow.
+- Cleared saved room context on explicit logout or invalid stored restore attempts.
+- Extended the smoke e2e test to cover Room -> Admin -> Room navigation and the Admin page link style.
+
+Verification:
+- `node --check public/js/app.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `find . -path ./node_modules -prune -o -name '*.js' -print | xargs -r -n1 node --check`
+- `git diff --check`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused smoke browser test passed.
+- `npm test` ran 48 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
 ## 2026-05-08 - Facilitator Admin Link
 
 Branch: `feature/facilitator-admin-link`
