@@ -155,7 +155,7 @@ SCRUM_POKER_KEYS_FILE=/path/to/keys.json
 
 Keep `keys.json` out of git. Treat access keys as secrets.
 
-The in-app admin key manager is available at `/admin` only when this environment variable is set:
+The in-app team access and invite manager is available at `/admin` only when this environment variable is set:
 
 ```bash
 SCRUM_POKER_ADMIN_KEY=replace-with-a-long-random-secret

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Access Keys | Scrum Poker Tool</title>
+  <title>Team Access | Scrum Poker Tool</title>
   <link rel="stylesheet" href="css/app.css">
   <script src="js/admin.js" defer></script>
 </head>
@@ -11,8 +11,8 @@
   <header class="admin-header">
     <div class="admin-heading">
       <span class="entry-kicker">Admin</span>
-      <h1>Access keys</h1>
-      <p>Scrum Poker key management</p>
+      <h1>Team access</h1>
+      <p>Scrum Poker administration</p>
     </div>
     <a href="/" class="secondary-action admin-room-link">Room app</a>
   </header>
@@ -38,21 +38,21 @@
     <section id="keys-panel" class="admin-panel keys-panel hidden" aria-labelledby="keys-title">
       <div class="admin-panel-header">
         <div>
-          <span class="section-kicker">Keys</span>
-          <h2 id="keys-title">Access keys</h2>
+          <span class="section-kicker">Teams</span>
+          <h2 id="keys-title">Team keys</h2>
         </div>
         <div class="admin-panel-actions">
-          <span id="key-count" class="admin-count">0 keys</span>
+          <span id="key-count" class="admin-count">0 teams</span>
           <button id="refresh-keys-button" type="button" class="secondary-action compact-action">Refresh</button>
         </div>
       </div>
 
       <form id="create-key-form" class="admin-form">
         <label class="field" for="key-name-input">
-          <span>Name</span>
+          <span>Team name</span>
           <input id="key-name-input" name="keyName" type="text" maxlength="64" autocomplete="off">
         </label>
-        <button type="submit" class="primary-action">Generate</button>
+        <button type="submit" class="primary-action">Create key</button>
       </form>
 
       <div id="keys-list" class="admin-key-list"></div>

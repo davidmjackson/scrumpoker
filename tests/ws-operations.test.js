@@ -207,7 +207,7 @@ test('admin page is served without exposing key data', async (t) => {
 
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-security-policy'), /default-src 'self'/);
-  assert.match(body, /Access keys/);
+  assert.match(body, /Team access/);
   assert.doesNotMatch(body, /test-access-key/);
 });
 
