@@ -125,21 +125,21 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     const copiedKey = await page.evaluate(() => navigator.clipboard.readText());
     expect(copiedKey).toBe(originalGammaKey);
 
-    const rotateModal = page.locator('#rotate-key-modal');
-    await expect(rotateModal).toBeHidden();
+    const keyActionModal = page.locator('#key-action-modal');
+    await expect(keyActionModal).toBeHidden();
     await gammaRow.getByRole('button', { name: 'Rotate key' }).click();
-    await expect(rotateModal).toBeVisible();
-    await expect(rotateModal).toContainText('Rotate team key?');
-    await expect(rotateModal).toContainText('This will generate a new access key for Gamma Team.');
-    await expect(rotateModal).toContainText('Existing invite links for this team will stop working immediately.');
-    await rotateModal.getByRole('button', { name: 'Cancel' }).click();
-    await expect(rotateModal).toBeHidden();
+    await expect(keyActionModal).toBeVisible();
+    await expect(keyActionModal).toContainText('Rotate team key?');
+    await expect(keyActionModal).toContainText('This will generate a new access key for Gamma Team.');
+    await expect(keyActionModal).toContainText('Existing invite links for this team will stop working immediately.');
+    await keyActionModal.getByRole('button', { name: 'Cancel' }).click();
+    await expect(keyActionModal).toBeHidden();
     await expect(gammaRow.locator('code')).toHaveText(originalGammaKey);
 
     await gammaRow.getByRole('button', { name: 'Rotate key' }).click();
-    await expect(rotateModal).toBeVisible();
-    await rotateModal.getByRole('button', { name: 'Rotate key' }).click();
-    await expect(rotateModal).toBeHidden();
+    await expect(keyActionModal).toBeVisible();
+    await keyActionModal.getByRole('button', { name: 'Rotate key' }).click();
+    await expect(keyActionModal).toBeHidden();
     await expect(page.locator('#admin-status')).toHaveText('Rotated key for Gamma Team.');
     await expect(page.locator('#activity-count')).toHaveText('2 events');
     await expect(page.locator('.admin-activity-item').first()).toContainText('Rotated');
@@ -149,8 +149,20 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(gammaRow.locator('.admin-invite-preview')).toContainText(`Access key: ${rotatedGammaKey}`);
     await expect(gammaRow.locator('.admin-invite-preview')).not.toContainText(originalGammaKey);
 
-    page.once('dialog', (dialog) => dialog.accept());
     await gammaRow.getByRole('button', { name: 'Suspend' }).click();
+    await expect(keyActionModal).toBeVisible();
+    await expect(keyActionModal).toContainText('Suspend team key?');
+    await expect(keyActionModal).toContainText('This will block team access for Gamma Team.');
+    await expect(keyActionModal).toContainText('Current invite links for this team will stop working until the key is restored.');
+    await keyActionModal.getByRole('button', { name: 'Cancel' }).click();
+    await expect(keyActionModal).toBeHidden();
+    await expect(gammaRow.locator('.admin-team-status')).toHaveText('Active');
+    await expect(page.locator('#key-count')).toHaveText('3 teams');
+
+    await gammaRow.getByRole('button', { name: 'Suspend' }).click();
+    await expect(keyActionModal).toBeVisible();
+    await keyActionModal.getByRole('button', { name: 'Suspend key' }).click();
+    await expect(keyActionModal).toBeHidden();
     await expect(page.locator('#admin-status')).toHaveText('Suspended Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('3 teams - 1 suspended');
     await expect(page.locator('#activity-count')).toHaveText('3 events');
@@ -172,8 +184,19 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(gammaRow.locator('.admin-team-status')).toHaveText('Active');
     await expect(gammaRow.getByRole('button', { name: 'Copy invite' })).toBeEnabled();
 
-    page.once('dialog', (dialog) => dialog.accept());
     await gammaRow.getByRole('button', { name: 'Remove' }).click();
+    await expect(keyActionModal).toBeVisible();
+    await expect(keyActionModal).toContainText('Remove team key?');
+    await expect(keyActionModal).toContainText('This will permanently remove the team key for Gamma Team.');
+    await expect(keyActionModal).toContainText('Team members will no longer be able to join with this key.');
+    await keyActionModal.getByRole('button', { name: 'Cancel' }).click();
+    await expect(keyActionModal).toBeHidden();
+    await expect(gammaRow).toHaveCount(1);
+
+    await gammaRow.getByRole('button', { name: 'Remove' }).click();
+    await expect(keyActionModal).toBeVisible();
+    await keyActionModal.getByRole('button', { name: 'Remove key' }).click();
+    await expect(keyActionModal).toBeHidden();
 
     await expect(page.locator('#admin-status')).toHaveText('Removed Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('2 teams');

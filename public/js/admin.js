@@ -18,16 +18,20 @@ const refreshKeysButton = document.getElementById('refresh-keys-button');
 const refreshActivityButton = document.getElementById('refresh-activity-button');
 const keyCount = document.getElementById('key-count');
 const activityCount = document.getElementById('activity-count');
-const rotateKeyModal = document.getElementById('rotate-key-modal');
-const rotateKeyMessage = document.getElementById('rotate-key-message');
-const cancelRotateKeyButton = document.getElementById('cancel-rotate-key-button');
-const confirmRotateKeyButton = document.getElementById('confirm-rotate-key-button');
+const keyActionModal = document.getElementById('key-action-modal');
+const keyActionKicker = document.getElementById('key-action-kicker');
+const keyActionTitle = document.getElementById('key-action-title');
+const keyActionMessage = document.getElementById('key-action-message');
+const keyActionNote = document.getElementById('key-action-note');
+const cancelKeyActionButton = document.getElementById('cancel-key-action-button');
+const confirmKeyActionButton = document.getElementById('confirm-key-action-button');
 
 const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
 let currentKeys = [];
 let currentActivity = [];
 let openTeamNames = new Set();
-let pendingRotateKeyName = '';
+let pendingKeyAction = null;
+let keyActionInFlight = false;
 
 function getAppUrl() {
   return window.location.origin || `${window.location.protocol}//${window.location.host}`;
@@ -197,34 +201,77 @@ function getTeamCountText(keys, visibleKeys, search) {
   return search ? `${visibleLabel} of ${keys.length}${suspendedLabel}` : `${visibleLabel}${suspendedLabel}`;
 }
 
-function openRotateKeyModal(teamName) {
-  pendingRotateKeyName = teamName;
-  rotateKeyMessage.textContent = `This will generate a new access key for ${teamName}.`;
-  rotateKeyModal.classList.remove('hidden');
-  confirmRotateKeyButton.focus();
+function openKeyActionModal(action) {
+  pendingKeyAction = action;
+  keyActionKicker.textContent = action.kicker;
+  keyActionTitle.textContent = action.title;
+  keyActionMessage.textContent = action.message;
+  keyActionNote.textContent = action.note;
+  confirmKeyActionButton.textContent = action.confirmLabel;
+  confirmKeyActionButton.className = action.confirmClassName || 'danger-action';
+  keyActionModal.classList.remove('hidden');
+  confirmKeyActionButton.focus();
 }
 
-function closeRotateKeyModal() {
-  pendingRotateKeyName = '';
-  rotateKeyModal.classList.add('hidden');
+function closeKeyActionModal() {
+  if (keyActionInFlight) return;
+
+  pendingKeyAction = null;
+  keyActionModal.classList.add('hidden');
 }
 
-async function confirmRotateKey() {
-  const teamName = pendingRotateKeyName;
-  if (!teamName) return;
+async function confirmKeyAction() {
+  if (!pendingKeyAction) return;
 
-  confirmRotateKeyButton.disabled = true;
-  cancelRotateKeyButton.disabled = true;
+  const action = pendingKeyAction;
+  keyActionInFlight = true;
+  confirmKeyActionButton.disabled = true;
+  cancelKeyActionButton.disabled = true;
 
   try {
-    await rotateKey(teamName);
-    closeRotateKeyModal();
+    await action.onConfirm();
+    keyActionInFlight = false;
+    closeKeyActionModal();
   } catch (err) {
     setStatus(err.message, 'error');
   } finally {
-    confirmRotateKeyButton.disabled = false;
-    cancelRotateKeyButton.disabled = false;
+    keyActionInFlight = false;
+    confirmKeyActionButton.disabled = false;
+    cancelKeyActionButton.disabled = false;
   }
+}
+
+function openRotateKeyModal(teamName) {
+  openKeyActionModal({
+    kicker: 'Key rotation',
+    title: 'Rotate team key?',
+    message: `This will generate a new access key for ${teamName}.`,
+    note: 'Existing invite links for this team will stop working immediately.',
+    confirmLabel: 'Rotate key',
+    onConfirm: () => rotateKey(teamName)
+  });
+}
+
+function openSuspendKeyModal(teamName) {
+  openKeyActionModal({
+    kicker: 'Key suspension',
+    title: 'Suspend team key?',
+    message: `This will block team access for ${teamName}.`,
+    note: 'Current invite links for this team will stop working until the key is restored.',
+    confirmLabel: 'Suspend key',
+    onConfirm: () => updateKeyStatus(teamName, false)
+  });
+}
+
+function openRemoveKeyModal(teamName) {
+  openKeyActionModal({
+    kicker: 'Key removal',
+    title: 'Remove team key?',
+    message: `This will permanently remove the team key for ${teamName}.`,
+    note: 'Team members will no longer be able to join with this key. This cannot be undone from the admin page.',
+    confirmLabel: 'Remove key',
+    onConfirm: () => removeKey(teamName)
+  });
 }
 
 function renderActivity(activity) {
@@ -428,7 +475,10 @@ function renderKeys(keys) {
     statusButton.className = keyActive ? 'secondary-action compact-action' : 'success-action compact-action';
     statusButton.textContent = keyActive ? 'Suspend' : 'Restore';
     statusButton.addEventListener('click', async () => {
-      if (keyActive && !window.confirm(`Suspend key "${key.name}"? Current invite links will stop working.`)) return;
+      if (keyActive) {
+        openSuspendKeyModal(key.name);
+        return;
+      }
       await updateKeyStatus(key.name, !keyActive);
     });
 
@@ -436,9 +486,8 @@ function renderKeys(keys) {
     removeButton.type = 'button';
     removeButton.className = 'danger-action compact-action';
     removeButton.textContent = 'Remove';
-    removeButton.addEventListener('click', async () => {
-      if (!window.confirm(`Remove key "${key.name}"?`)) return;
-      await removeKey(key.name);
+    removeButton.addEventListener('click', () => {
+      openRemoveKeyModal(key.name);
     });
 
     actions.appendChild(copyInviteButton);
@@ -601,18 +650,18 @@ collapseTeamsButton.addEventListener('click', () => {
   setRenderedTeamsOpen(false);
 });
 
-cancelRotateKeyButton.addEventListener('click', closeRotateKeyModal);
-confirmRotateKeyButton.addEventListener('click', confirmRotateKey);
+cancelKeyActionButton.addEventListener('click', closeKeyActionModal);
+confirmKeyActionButton.addEventListener('click', confirmKeyAction);
 
-rotateKeyModal.addEventListener('click', (event) => {
-  if (event.target === rotateKeyModal) {
-    closeRotateKeyModal();
+keyActionModal.addEventListener('click', (event) => {
+  if (event.target === keyActionModal) {
+    closeKeyActionModal();
   }
 });
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !rotateKeyModal.classList.contains('hidden')) {
-    closeRotateKeyModal();
+  if (event.key === 'Escape' && !keyActionModal.classList.contains('hidden')) {
+    closeKeyActionModal();
   }
 });
 
