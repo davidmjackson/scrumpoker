@@ -82,3 +82,37 @@ Result:
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Test server processes were started by the test suite and stopped during cleanup.
 - No project `node server.js` process was left running.
+
+## 2026-05-08 - GitHub Deployment Documentation
+
+Branch: `feature/github-deployment-docs`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `4f574c6 Add GitHub Actions CI`
+- Working tree: clean
+- Server status: no `node server.js` process was running
+
+Work planned:
+- Document GitHub as the primary deployment source.
+- Keep the old Bitbucket remote documented as a temporary backup.
+- Capture production pull, verification, runtime, and health-check steps.
+
+Work completed:
+- Added `docs/deployment.md`.
+- Linked the deployment runbook from `README.md`.
+
+Verification:
+- `node --check server.js`
+- `node --check public/js/app.js`
+- `node --check tests/ws-operations.test.js`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+
+Result:
+- All checks passed.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Test server processes were started by the test suite and stopped during cleanup.
+- No project `node server.js` process was left running.

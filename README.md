@@ -72,6 +72,7 @@ server {
 - Use firewall rules to expose only `80/443` publicly.
 - Keep dependencies updated (`npm audit` + planned patch windows).
 - Re-run the scanner after deployment and keep exceptions documented.
+- Deployment runbook: `docs/deployment.md`.
 
 ## Remaining accepted risks
 
