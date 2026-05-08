@@ -2,29 +2,20 @@
 
 const {
   DEFAULT_ROOM_EXPIRY_MS,
-  assignFacilitator,
   expireRooms,
-  getRoomState,
-  joinRoom,
-  leaveRoom,
-  reassignFacilitatorIfLeaving
+  getRoomState
 } = require('./lib/roomState');
 const {
-  getInternalRoomName,
-  getKeysFilePath,
-  isValidAccessKey,
-  loadKeys
+  getKeysFilePath
 } = require('./lib/accessKeys');
 const {
-  ROLES,
-  canChangeRole,
-  canResetVotes,
-  canRevealVotes,
-  canVote,
-  getAssignedLoginRole,
-  isFacilitator,
-  isValidRole
-} = require('./lib/roles');
+  handleChangeRole,
+  handleLogin,
+  handleParticipantExit,
+  handleResetVotes,
+  handleRevealVotes,
+  handleVote
+} = require('./lib/wsHandlers');
 
 console.log('⏳ server.js is starting');
 
@@ -184,17 +175,6 @@ const wss = new WebSocketServer({
 let participants = {};     // { userId: { id, ws, name, role, vote } }
 
 
-function broadcast(message) {
-  const data = JSON.stringify(message);
-  //console.log(`Broadcasting: ${data}`);
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
-    }
-  });
-}
-
-
 function sendToClient(ws, message) {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(message));
@@ -242,247 +222,40 @@ wss.on('connection', (ws) => {
     const currentUser = participants[userId];
 
     switch (type) {
-        case 'login':
-
-        // 1) Ensure all fields including accessKey
-        if (
-          !payload ||
-          !payload.name ||
-          !payload.role ||
-          !payload.room ||
-          !payload.accessKey
-        ) {
-          return sendToClient(ws, {
-            type: 'error',
-            payload: { message: 'Login requires key, name, role, and room.' }
-          });
-        }
-
-        const { name, role, room, accessKey } = payload;
-        if (!isValidRole(role)) {
-          return sendToClient(ws, {
-            type: 'error',
-            payload: { message: 'Invalid role.' }
-          });
-        }
-
-        const internalRoom = getInternalRoomName(room, accessKey);
-
-        // 2) Validate accessKey against saved keys
-        const allKeys = loadKeys(KEYS_FILE, (err) => {
-          console.error('Failed to load keys.json:', err);
+      case 'login':
+        handleLogin({
+          ws,
+          userId,
+          payload,
+          rooms,
+          participants,
+          keysFile: KEYS_FILE,
+          sendToClient,
+          sendToRoom,
+          sendRoomState,
+          onKeyLoadError: (err) => console.error('Failed to load keys.json:', err)
         });
-        const valid = isValidAccessKey(allKeys, accessKey);
-
-        if (!valid) {
-          return sendToClient(ws, {
-            type: 'error',
-            payload: { message: 'Invalid access key.' }
-          });
-        }
-
-        // 3) (Existing) Continue with login
-        ws.name = name;
-        ws.role = role;
-        ws.roomName = internalRoom;
-        joinRoom(rooms, internalRoom, userId);
-
-        const roomForLogin = rooms.get(internalRoom);
-        const assignedRole = getAssignedLoginRole(role, roomForLogin.facilitatorId);
-        if (isFacilitator(assignedRole)) {
-          roomForLogin.facilitatorId = userId;
-        }
-
-        participants[userId] = {
-          id: userId,
-          ws: ws,
-          name: name,
-          role: assignedRole,
-          vote: null,
-          roomName: internalRoom
-        };
-
-        assignFacilitator(rooms, participants, internalRoom);
-
-        // Broadcast updated room state…
-        sendRoomState(internalRoom);
-
-        const joinedPayload = {
-          type: 'userJoined',
-          payload: {
-            userId: userId,
-            name: name,
-            role: assignedRole,
-            allUsersInRoom: Array.from(rooms.get(internalRoom).users).map((id) => {
-              const p = participants[id];
-              return { userId: id, name: p.name, role: p.role };
-            })
-          }
-        };
-        sendToRoom(internalRoom, joinedPayload);
-
-        //console.log(`User logged in: ${name} (${userId}), Room: ${room}`);
         break;
 
-        case 'vote': {
-          if (!currentUser) {
-            return sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } });
-          }
-          if (!canVote(currentUser.role)) {
-            return sendToClient(ws, { type: 'error', payload: { message: 'Observers cannot vote.' } });
-          }
-
-          // 7.1) Use per‐room votesRevealed instead of the old global
-          const roomNameVote = currentUser.roomName;
-          const roomObjVote = rooms.get(roomNameVote) || {};
-          if (roomObjVote.votesRevealed) {
-            return sendToClient(ws, { type: 'error', payload: { message: 'Votes already revealed.' } });
-          }
-
-          if (payload && typeof payload.vote !== 'undefined') {
-            // 7.2) Record the vote
-            currentUser.vote = payload.vote;
-            //console.log(`User ${currentUser.name} voted: ${payload.vote}`);
-
-            // 7.3) Send the updated state only to users in this room
-            sendRoomState(roomNameVote);
-          } else {
-            sendToClient(ws, { type: 'error', payload: { message: 'Invalid vote payload.' } });
-          }
-          break;
-      }
-
-        case 'revealVotes': {
-          if (!currentUser) {
-            return sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } });
-          }
-          if (!canRevealVotes(currentUser.role)) {
-            return sendToClient(ws, { type: 'error', payload: { message: 'Only Facilitator can reveal votes.' } });
-          }
-
-          // 8.1) Mark votesRevealed for this room only
-          const roomNameReveal = currentUser.roomName;
-          const roomObjReveal = rooms.get(roomNameReveal);
-          if (roomObjReveal) {
-            roomObjReveal.votesRevealed = true;
-          }
-
-          //console.log(`Votes revealed by ${currentUser.name} in room "${roomNameReveal}"`);
-
-          // 8.2) Send updated state only to sockets in this room
-          sendRoomState(roomNameReveal);
-
-          break;
-        }
-
-      case 'resetVotes': {
-        if (!currentUser) {
-          return sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } });
-        }
-        if (!canResetVotes(currentUser.role)) {
-          return sendToClient(ws, { type: 'error', payload: { message: 'Only Facilitator can reset votes.' } });
-        }
-
-        // 9.1) Get the room name and its object
-        const roomNameReset = currentUser.roomName;
-        const roomObjReset = rooms.get(roomNameReset);
-
-        // 9.2) Mark votesRevealed = false for this room only
-        if (roomObjReset) {
-          roomObjReset.votesRevealed = false;
-        }
-
-        // 9.3) Clear each participant’s vote only in this room
-        Object.values(participants)
-          .filter((p) => p.roomName === roomNameReset)
-          .forEach((p) => {
-            p.vote = null;
-          });
-
-        //console.log(`Votes reset by ${currentUser.name} in room "${roomNameReset}"`);
-
-        // 9.4) Send the updated state only to sockets in this room
-        sendRoomState(roomNameReset);
-
+      case 'vote':
+        handleVote({ ws, currentUser, payload, rooms, sendToClient, sendRoomState });
         break;
-      }
 
-      case 'changeRole': {
-        if (!currentUser) {
-          return sendToClient(ws, { type: 'error', payload: { message: 'Not logged in.' } });
-        }
-        const { targetUserId, newRole } = payload || {};
-        if (!newRole) {
-          return sendToClient(ws, { type: 'error', payload: { message: 'Missing new role.' } });
-        }
-        if (!isValidRole(newRole)) {
-          return sendToClient(ws, { type: 'error', payload: { message: 'Invalid role.' } });
-        }
-        const uid = targetUserId || currentUser.id;
-        const target = participants[uid];
-        if (!target) {
-          return sendToClient(ws, { type: 'error', payload: { message: 'User not found.' } });
-        }
-        if (!canChangeRole(currentUser.role, currentUser.id, uid)) {
-          return sendToClient(ws, {
-            type: 'error',
-            payload: { message: 'Only Facilitator can change others’ roles.' }
-          });
-        }
-
-        // 10.1) Determine which room this change affects
-        const roomNameCR = currentUser.roomName;
-        const roomObjCR = rooms.get(roomNameCR);
-        if (!roomObjCR) {
-          return sendToClient(ws, { type: 'error', payload: { message: 'Room not found.' } });
-        }
-        if (target.roomName !== roomNameCR) {
-          return sendToClient(ws, {
-            type: 'error',
-            payload: { message: 'Target user is not in your room.' }
-          });
-        }
-
-        // 10.2) Update facilitatorId for this room only
-        if (isFacilitator(newRole)) {
-          if (roomObjCR.facilitatorId && roomObjCR.facilitatorId !== uid) {
-            participants[roomObjCR.facilitatorId].role = ROLES.VOTER;
-          }
-          roomObjCR.facilitatorId = uid;
-        } else if (uid === roomObjCR.facilitatorId) {
-          roomObjCR.facilitatorId = null;
-        }
-
-        // 10.3) Set the new role on the target
-        target.role = newRole;
-        //console.log(`Role for ${target.name} changed to ${newRole} by ${currentUser.name} in room "${roomNameCR}"`);
-
-        // 10.4) Send updated state only to that room
-        sendRoomState(roomNameCR);
-
+      case 'revealVotes':
+        handleRevealVotes({ ws, currentUser, rooms, sendToClient, sendRoomState });
         break;
-      }
 
-        case 'logout': {
-          const leavingUser = participants[userId];
-          if (leavingUser) {
-            const roomNameLO = leavingUser.roomName;
-            //console.log(`User logged out: ${leavingUser.name} (${userId}) from room "${roomNameLO}"`);
+      case 'resetVotes':
+        handleResetVotes({ ws, currentUser, participants, rooms, sendToClient, sendRoomState });
+        break;
 
-            // 11.1) Remove user and reassign facilitator within the room if needed
-            leaveRoom(rooms, roomNameLO, userId);
-            const roomObjLO = reassignFacilitatorIfLeaving(rooms, participants, roomNameLO, userId);
+      case 'changeRole':
+        handleChangeRole({ ws, currentUser, payload, participants, rooms, sendToClient, sendRoomState });
+        break;
 
-            // 11.3) Delete from participants
-            delete participants[userId];
-
-            // 11.4) Send updated state only to users still in that room
-            if (roomObjLO) {
-              sendRoomState(roomNameLO);
-            }
-          }
-          break;
-        }
+      case 'logout':
+        handleParticipantExit({ userId, participants, rooms, sendRoomState });
+        break;
 
       default:
         //console.log(`Unknown message type received: ${type}`);
@@ -493,20 +266,7 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     const disc = participants[userId];
     if (disc) {
-      const roomNameDC = disc.roomName;
-      //console.log(`Client disconnected: ${disc.name} (${userId}) from room "${roomNameDC}"`);
-
-      // 12.1) Remove user and reassign facilitator within the room if needed
-      leaveRoom(rooms, roomNameDC, userId);
-      const roomObjDC = reassignFacilitatorIfLeaving(rooms, participants, roomNameDC, userId);
-
-      // 12.3) Delete from participants
-      delete participants[userId];
-
-      // 12.4) Send updated state only to remaining users in that room
-      if (roomObjDC) {
-        sendRoomState(roomNameDC);
-      }
+      handleParticipantExit({ userId, participants, rooms, sendRoomState });
     } else {
       //console.log(`Client disconnected (not logged in): ${userId}`);
     }
@@ -516,20 +276,7 @@ ws.on('error', (error) => {
   console.error(`WebSocket error for user ${userId}:`, error);
   const errUser = participants[userId];
   if (errUser) {
-    const roomNameErr = errUser.roomName;
-    //console.log(`WebSocket error cleanup: ${errUser.name} (${userId}) in room "${roomNameErr}"`);
-
-    // 13.1) Remove user and reassign facilitator within the room if needed
-    leaveRoom(rooms, roomNameErr, userId);
-    const roomObjErr = reassignFacilitatorIfLeaving(rooms, participants, roomNameErr, userId);
-
-    // 13.3) Delete from participants
-    delete participants[userId];
-
-    // 13.4) Send updated state only to remaining users in that room
-    if (roomObjErr) {
-      sendRoomState(roomNameErr);
-    }
+    handleParticipantExit({ userId, participants, rooms, sendRoomState });
   }
 });
 

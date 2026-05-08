@@ -233,3 +233,41 @@ Result:
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Test server processes were started by the test suite and stopped during cleanup.
 - No project `node server.js` process was left running.
+
+## 2026-05-08 - WebSocket Handler Extraction
+
+Branch: `feature/extract-ws-handlers`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `15a8575 Extract role permission helpers`
+- Working tree: clean
+- Server status: no `node server.js` process was running
+
+Work planned:
+- Extract WebSocket message handler logic from `server.js`.
+- Preserve login, voting, reveal/reset, role-change, logout, disconnect, and error cleanup behavior.
+- Add direct unit coverage for the extracted handler module.
+
+Work completed:
+- Added `lib/wsHandlers.js` for login, voting, reveal/reset, role-change, and participant-exit handling.
+- Updated `server.js` so the WebSocket switch delegates to the handler module while retaining transport and broadcast helpers locally.
+- Added `tests/ws-handlers.test.js` with focused coverage for handler decisions and room-state effects.
+
+Verification:
+- `npm ci`
+- `node --check server.js`
+- `for file in lib/*.js; do node --check "$file"; done`
+- `node --check public/js/app.js`
+- `for file in tests/*.test.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+
+Result:
+- All checks passed.
+- `npm test` ran 31 tests successfully.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Test server processes were started by the test suite and stopped during cleanup.
+- No project `node server.js` process was left running.
