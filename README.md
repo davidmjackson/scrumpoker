@@ -70,7 +70,7 @@ server {
 - Run Node with a process manager (systemd or pm2) and automatic restart.
 - Bind Node to localhost only when behind Nginx (`127.0.0.1`) unless you need direct LAN access.
 - Use firewall rules to expose only `80/443` publicly.
-- Set `SCRUM_POKER_ADMIN_KEY` before using `/admin` for access-key management.
+- Set `SCRUM_POKER_ADMIN_KEY` before using `/admin` for team access and invite management.
 - Keep dependencies updated (`npm audit` + planned patch windows).
 - Re-run the scanner after deployment and keep exceptions documented.
 - Deployment runbook: `docs/deployment.md`.

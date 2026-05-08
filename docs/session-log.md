@@ -854,3 +854,51 @@ Result:
 - Focused browser smoke test passed.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Admin Team Invites
+
+Branch: `feature/admin-team-invites`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `1ec3246 Extract client card deck helper`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+- User asked for an admin/facilitator-oriented way to create teams and keys, then copy details into Teams or another communication app.
+
+Work planned:
+- Keep the existing admin-key protected `/admin` flow for this slice.
+- Present saved access keys as team access records.
+- Add a clipboard action that copies a complete facilitator invite, while preserving raw key copying.
+- Update browser coverage for the new admin workflow.
+
+Decision:
+- Full signed user roles for admin access remain a future persistence/authentication task.
+- The current admin role is still represented by possession of `SCRUM_POKER_ADMIN_KEY`.
+
+Work completed:
+- Renamed the admin page around team access and team keys.
+- Added facilitator invite generation in `public/js/admin.js`.
+- Added `Copy invite` and `Copy key` actions for each team row.
+- Updated admin action layout so the extra row action wraps cleanly.
+- Updated README and deployment wording for team access and invite management.
+- Extended admin browser coverage to verify copied invite text, app URL, facilitator role, and raw key copying.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `node --check tests/ws-operations.test.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.

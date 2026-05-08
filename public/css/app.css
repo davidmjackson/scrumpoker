@@ -908,7 +908,7 @@ img {
   line-height: 1.5;
 }
 
-/* Admin key management */
+/* Admin team access */
 .admin-page {
   min-height: 100vh;
   padding: 1rem;
@@ -1080,6 +1080,8 @@ img {
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .admin-copy-buffer {
@@ -1118,6 +1120,7 @@ img {
 
   .admin-key-actions {
     width: 100%;
+    justify-content: stretch;
   }
 
   .admin-key-actions button {

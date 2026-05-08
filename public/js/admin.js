@@ -12,6 +12,10 @@ const keyCount = document.getElementById('key-count');
 
 const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
 
+function getAppUrl() {
+  return window.location.origin || `${window.location.protocol}//${window.location.host}`;
+}
+
 function setStatus(message, tone = '') {
   statusMessage.textContent = message;
   statusMessage.className = `admin-status ${tone}`.trim();
@@ -51,14 +55,24 @@ async function requestAdmin(path, options = {}) {
   return body;
 }
 
+function createFacilitatorInvite(key) {
+  return [
+    'Scrum Poker team access',
+    `Team: ${key.name}`,
+    `Access key: ${key.value}`,
+    `App: ${getAppUrl()}`,
+    'Role: Facilitator'
+  ].join('\n');
+}
+
 function renderKeys(keys) {
   keysList.innerHTML = '';
-  keyCount.textContent = `${keys.length} ${keys.length === 1 ? 'key' : 'keys'}`;
+  keyCount.textContent = `${keys.length} ${keys.length === 1 ? 'team' : 'teams'}`;
 
   if (keys.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'admin-empty';
-    empty.textContent = 'No keys found.';
+    empty.textContent = 'No team keys found.';
     keysList.appendChild(empty);
     return;
   }
@@ -82,13 +96,22 @@ function renderKeys(keys) {
     const actions = document.createElement('div');
     actions.className = 'admin-key-actions';
 
-    const copyButton = document.createElement('button');
-    copyButton.type = 'button';
-    copyButton.className = 'secondary-action compact-action';
-    copyButton.textContent = 'Copy';
-    copyButton.addEventListener('click', async () => {
-      await copyKeyValue(key.value);
-      setStatus(`Copied ${key.name}.`, 'success');
+    const copyInviteButton = document.createElement('button');
+    copyInviteButton.type = 'button';
+    copyInviteButton.className = 'primary-action compact-action';
+    copyInviteButton.textContent = 'Copy invite';
+    copyInviteButton.addEventListener('click', async () => {
+      await copyText(createFacilitatorInvite(key));
+      setStatus(`Copied invite for ${key.name}.`, 'success');
+    });
+
+    const copyKeyButton = document.createElement('button');
+    copyKeyButton.type = 'button';
+    copyKeyButton.className = 'secondary-action compact-action';
+    copyKeyButton.textContent = 'Copy key';
+    copyKeyButton.addEventListener('click', async () => {
+      await copyText(key.value);
+      setStatus(`Copied key for ${key.name}.`, 'success');
     });
 
     const removeButton = document.createElement('button');
@@ -100,7 +123,8 @@ function renderKeys(keys) {
       await removeKey(key.name);
     });
 
-    actions.appendChild(copyButton);
+    actions.appendChild(copyInviteButton);
+    actions.appendChild(copyKeyButton);
     actions.appendChild(removeButton);
 
     row.appendChild(details);
@@ -109,7 +133,7 @@ function renderKeys(keys) {
   });
 }
 
-async function copyKeyValue(value) {
+async function copyText(value) {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(value);
     return;
@@ -130,7 +154,7 @@ async function loadKeys() {
   sessionStorage.setItem(ADMIN_KEY_STORAGE, getAdminKey());
   keysPanel.classList.remove('hidden');
   renderKeys(data.keys || []);
-  setStatus('Keys loaded.', 'success');
+  setStatus('Team keys loaded.', 'success');
 }
 
 async function createKey(name) {
@@ -140,7 +164,7 @@ async function createKey(name) {
   });
   keyNameInput.value = '';
   await loadKeys();
-  setStatus(`Generated ${data.key.name}.`, 'success');
+  setStatus(`Created team key for ${data.key.name}.`, 'success');
 }
 
 async function removeKey(name) {
