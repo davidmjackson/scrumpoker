@@ -77,11 +77,9 @@ server {
 
 ## Remaining accepted risks
 
-- CSP currently keeps:
-  - `script-src 'unsafe-eval'`
-  - `style-src 'unsafe-inline'`
-
-These are currently tolerated because the app uses browser-side Tailwind runtime and inline-style patterns. If you compile Tailwind ahead of time and remove runtime generation, these can be removed for stronger CSP.
+- The frontend now uses local external JavaScript and CSS only.
+- CSP does not allow `unsafe-eval` or `unsafe-inline`.
+- Keep future UI work in external static assets unless there is a documented security exception.
 
 ## License
 

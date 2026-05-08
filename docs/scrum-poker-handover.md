@@ -184,7 +184,7 @@ Current Scrum Poker stack:
 - Express 5
 - `ws`
 - `uuid`
-- Local Tailwind CSS file
+- App-owned CSS in `public/css/app.css`
 - Vanilla browser JS
 - Access keys stored in local ignored `keys.json`
 - `manageKeys.js` for key generation/list/remove
@@ -221,8 +221,8 @@ These are not criticisms of the live tool; they explain why a fresh structured b
 - App state is in memory only. Node restart loses rooms, participants, votes, and reveal state.
 - Access keys are file-based and manually managed. There is no signed session cookie, login rate limiting, team table, or admin UI.
 - `server.js` and `public/js/app.js` are monolithic, which raises regression risk for major UI and behavior changes.
-- Design currently lives mostly in Tailwind utility classes embedded in HTML/JS, making theme alignment harder.
-- README notes about CSP `unsafe-eval` and `unsafe-inline` appear stale against the current server CSP.
+- Earlier design lived mostly in Tailwind utility classes embedded in HTML/JS, making theme alignment harder. The current UI rebuild is moving visible screens to app-owned classes in `public/css/app.css`.
+- README CSP notes now match the current server CSP, which avoids `unsafe-eval` and `unsafe-inline`.
 - `animejs` is declared in `package.json` but was not referenced by source search.
 - There are stale/unused frontend helpers such as `setHiddenValue`, `getHiddenValue`, `reloadPage`, and unused saved-session variables.
 - Room expiry comments are inconsistent with code: comments mention 45 or 30 minutes, while `EXPIRY_MS` is 60 minutes.
@@ -278,8 +278,8 @@ If sessions should stay ephemeral, skip persisted participants/votes but still c
 3. Fix or document dependency audit findings.
 4. Add `/health`.
 5. Split server-side room logic into small helpers before redesigning the screen.
-6. Create a Retrospective-aligned CSS token file and remove reliance on Tailwind utility sprawl.
-7. Rebuild login and room screens with the new design language.
+6. Continue consolidating UI into app-owned CSS tokens and remove any remaining Tailwind utility dependency.
+7. Rebuild remaining visible screens with the new design language.
 8. Add browser tests for voter, observer, facilitator, reveal/reset, role change, reconnect/disconnect.
 9. Add deployment documentation and production environment notes.
 10. Smoke-test the live deployment after release.
