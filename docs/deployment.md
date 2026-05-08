@@ -61,8 +61,9 @@ Run these checks before pushing application changes:
 ```bash
 npm ci
 node --check server.js
+node --check manageKeys.js
 for file in lib/*.js; do node --check "$file"; done
-node --check public/js/app.js
+for file in public/js/*.js; do node --check "$file"; done
 for file in tests/*.test.js; do node --check "$file"; done
 git diff --check
 npm test
@@ -83,8 +84,9 @@ It runs:
 
 - `npm ci`
 - `node --check server.js`
+- `node --check manageKeys.js`
 - syntax checks for `lib/*.js`
-- `node --check public/js/app.js`
+- syntax checks for `public/js/*.js`
 - syntax checks for `tests/*.test.js`
 - `npm test`
 - `npm audit --omit=dev`
@@ -140,6 +142,14 @@ SCRUM_POKER_KEYS_FILE=/path/to/keys.json
 ```
 
 Keep `keys.json` out of git. Treat access keys as secrets.
+
+The in-app admin key manager is available at `/admin` only when this environment variable is set:
+
+```bash
+SCRUM_POKER_ADMIN_KEY=replace-with-a-long-random-secret
+```
+
+Do not reuse a team access key as the admin key.
 
 ## Health Check
 

@@ -35,6 +35,9 @@ jobs:
       - name: Check server syntax
         run: node --check server.js
 
+      - name: Check CLI syntax
+        run: node --check manageKeys.js
+
       - name: Check helper syntax
         run: |
           for file in lib/*.js; do
@@ -42,7 +45,10 @@ jobs:
           done
 
       - name: Check browser script syntax
-        run: node --check public/js/app.js
+        run: |
+          for file in public/js/*.js; do
+            node --check "$file"
+          done
 
       - name: Check test syntax
         run: |

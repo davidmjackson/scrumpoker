@@ -59,7 +59,7 @@ async function stopProcess(child) {
   });
 }
 
-async function startServer(t) {
+async function startServer(t, options = {}) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scrumpoker-test-'));
   const keysFile = path.join(tempDir, 'keys.json');
   fs.writeFileSync(keysFile, JSON.stringify({ baseline: testAccessKey }), 'utf8');
@@ -71,7 +71,8 @@ async function startServer(t) {
       ...process.env,
       NODE_ENV: 'test',
       PORT: String(port),
-      SCRUM_POKER_KEYS_FILE: keysFile
+      SCRUM_POKER_KEYS_FILE: keysFile,
+      ...(options.adminKey ? { SCRUM_POKER_ADMIN_KEY: options.adminKey } : {})
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -90,7 +91,7 @@ async function startServer(t) {
   });
 
   await waitForHealth(port, () => output);
-  return { port };
+  return { keysFile, port };
 }
 
 function waitForMessage(ws, predicate, timeoutMs = 3000) {
@@ -197,6 +198,74 @@ test('health endpoint reports a running app', async (t) => {
   assert.equal(body.status, 'ok');
   assert.equal(typeof body.uptime, 'number');
   assert.equal(body.rooms, 0);
+});
+
+test('admin page is served without exposing key data', async (t) => {
+  const { port } = await startServer(t);
+  const response = await fetch(`http://127.0.0.1:${port}/admin`);
+  const body = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-security-policy'), /default-src 'self'/);
+  assert.match(body, /Access keys/);
+  assert.doesNotMatch(body, /test-access-key/);
+});
+
+test('admin key API requires configured admin authentication', async (t) => {
+  const { port } = await startServer(t);
+  const response = await fetch(`http://127.0.0.1:${port}/api/admin/keys`);
+  const body = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(body.error, 'Admin key management is not configured.');
+});
+
+test('admin key API lists, creates, and removes access keys', async (t) => {
+  const adminKey = 'admin-test-secret';
+  const { port } = await startServer(t, { adminKey });
+  const baseUrl = `http://127.0.0.1:${port}/api/admin/keys`;
+
+  const unauthorized = await fetch(baseUrl);
+  assert.equal(unauthorized.status, 401);
+
+  const headers = {
+    'content-type': 'application/json',
+    'x-scrum-poker-admin-key': adminKey
+  };
+
+  const initial = await fetch(baseUrl, { headers });
+  const initialBody = await initial.json();
+
+  assert.equal(initial.status, 200);
+  assert.deepEqual(initialBody.keys, [{ name: 'baseline', value: testAccessKey }]);
+
+  const created = await fetch(baseUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ name: 'Gamma Team' })
+  });
+  const createdBody = await created.json();
+
+  assert.equal(created.status, 201);
+  assert.equal(createdBody.key.name, 'Gamma Team');
+  assert.match(createdBody.key.value, /^[A-Za-z0-9]{12}$/);
+
+  const afterCreate = await fetch(baseUrl, { headers });
+  const afterCreateBody = await afterCreate.json();
+  assert.equal(afterCreateBody.keys.length, 2);
+
+  const removed = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
+    method: 'DELETE',
+    headers
+  });
+  const removedBody = await removed.json();
+
+  assert.equal(removed.status, 200);
+  assert.equal(removedBody.removed.name, 'Gamma Team');
+
+  const afterRemove = await fetch(baseUrl, { headers });
+  const afterRemoveBody = await afterRemove.json();
+  assert.deepEqual(afterRemoveBody.keys, [{ name: 'baseline', value: testAccessKey }]);
 });
 
 test('WebSocket workflow covers login, voting, reveal, reset, and role limits', async (t) => {

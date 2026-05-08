@@ -6,7 +6,12 @@ const {
   getRoomState
 } = require('./lib/roomState');
 const {
-  getKeysFilePath
+  AccessKeyError,
+  createAccessKey,
+  getKeysFilePath,
+  isAdminKeyAuthorized,
+  listAccessKeys,
+  removeAccessKey
 } = require('./lib/accessKeys');
 const {
   handleChangeRole,
@@ -39,6 +44,7 @@ const KEYS_FILE = getKeysFilePath(__dirname);
 
 // Use PORT from env or default to 3000
 const PORT = process.env.PORT || 3000;
+const ADMIN_KEY = process.env.SCRUM_POKER_ADMIN_KEY || '';
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -98,6 +104,36 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(express.json({ limit: '8kb' }));
+
+function requireAdminKey(req, res, next) {
+  if (!ADMIN_KEY) {
+    return res.status(503).json({ error: 'Admin key management is not configured.' });
+  }
+
+  const providedKey = req.get('x-scrum-poker-admin-key') || '';
+  if (!isAdminKeyAuthorized(providedKey, ADMIN_KEY)) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  next();
+}
+
+function sendAccessKeyError(res, err) {
+  if (!(err instanceof AccessKeyError)) {
+    return res.status(500).json({ error: 'Unable to manage access keys.' });
+  }
+
+  const statusByCode = {
+    DUPLICATE_KEY_NAME: 409,
+    INVALID_ACCESS_KEY: 400,
+    INVALID_KEY_NAME: 400,
+    KEY_NOT_FOUND: 404
+  };
+
+  return res.status(statusByCode[err.code] || 500).json({ error: err.message });
+}
+
 //console.log('✅ Express app created');
 
 // ── 1) Serve static files from public/ ───────────────────────────────────
@@ -144,6 +180,32 @@ app.use(
     });
   });
 
+  app.get('/api/admin/keys', requireAdminKey, (_req, res) => {
+    try {
+      res.status(200).json({ keys: listAccessKeys(KEYS_FILE) });
+    } catch (err) {
+      sendAccessKeyError(res, err);
+    }
+  });
+
+  app.post('/api/admin/keys', requireAdminKey, (req, res) => {
+    try {
+      const key = createAccessKey(KEYS_FILE, req.body?.name);
+      res.status(201).json({ key });
+    } catch (err) {
+      sendAccessKeyError(res, err);
+    }
+  });
+
+  app.delete('/api/admin/keys/:name', requireAdminKey, (req, res) => {
+    try {
+      const removed = removeAccessKey(KEYS_FILE, req.params.name);
+      res.status(200).json({ removed });
+    } catch (err) {
+      sendAccessKeyError(res, err);
+    }
+  });
+
   app.get('/health', (_req, res) => {
     res.status(200).json({
       status: 'ok',
@@ -158,7 +220,9 @@ const server = app.listen(PORT, '0.0.0.0',() => {
   //console.log(`✅ HTTP server listening on port ${PORT}`);
 });
 server.on('request', (_req, res) => {
-  res.removeHeader('Server');
+  if (!res.headersSent) {
+    res.removeHeader('Server');
+  }
 });
 
 // WebSocketServer will only upgrade on the "/ws" path:

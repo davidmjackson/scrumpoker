@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Access Keys | Scrum Poker Tool</title>
+  <link rel="stylesheet" href="css/app.css">
+  <script src="js/admin.js" defer></script>
+</head>
+<body class="admin-page">
+  <header class="admin-header">
+    <div>
+      <p class="admin-kicker">Admin</p>
+      <h1>Access keys</h1>
+    </div>
+    <a href="/" class="admin-link">Room app</a>
+  </header>
+
+  <main class="admin-shell">
+    <section class="admin-panel">
+      <form id="auth-form" class="admin-form">
+        <label for="admin-key-input">Admin key</label>
+        <div class="admin-inline">
+          <input id="admin-key-input" name="adminKey" type="password" autocomplete="current-password">
+          <button type="submit">Unlock</button>
+        </div>
+      </form>
+      <p id="admin-status" class="admin-status" role="status"></p>
+    </section>
+
+    <section id="keys-panel" class="admin-panel hidden">
+      <div class="admin-panel-header">
+        <h2>Keys</h2>
+        <button id="refresh-keys-button" type="button" class="secondary-admin-button">Refresh</button>
+      </div>
+
+      <form id="create-key-form" class="admin-form">
+        <label for="key-name-input">Name</label>
+        <div class="admin-inline">
+          <input id="key-name-input" name="keyName" type="text" maxlength="64" autocomplete="off">
+          <button type="submit">Generate</button>
+        </div>
+      </form>
+
+      <div id="keys-list" class="admin-key-list"></div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,45 +1,14 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+const {
+  AccessKeyError,
+  createAccessKey,
+  getKeysFilePath,
+  listAccessKeys,
+  removeAccessKey
+} = require('./lib/accessKeys');
 
-// Path to keys.json (assumes manageKeys.js is in the same directory)
-const KEYS_FILE = path.join(__dirname, 'keys.json');
-
-// Utility: load existing keys from keys.json (or {} if empty)
-function loadKeys() {
-  try {
-    const raw = fs.readFileSync(KEYS_FILE, 'utf8');
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error('Error reading keys.json:', err.message);
-    process.exit(1);
-  }
-}
-
-// Utility: save the updated keys object back to keys.json
-function saveKeys(obj) {
-  try {
-    fs.writeFileSync(KEYS_FILE, JSON.stringify(obj, null, 2));
-  } catch (err) {
-    console.error('Error writing to keys.json:', err.message);
-    process.exit(1);
-  }
-}
-
-// Generate a secure random key (32 hex characters)
-function generateRandomKey() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let key = '';
-  // Generate 6 random bytes, then map each byte to one of the 62 chars
-  const buf = crypto.randomBytes(6);
-  for (let i = 0; i < buf.length; i++) {
-    // Use the byte value modulo chars.length (62) to pick an index
-    key += chars[buf[i] % chars.length];
-  }
-  return key;
-}
+const KEYS_FILE = getKeysFilePath(__dirname);
 
 // Parse command-line arguments
 const [,, command, nameArg] = process.argv;
@@ -52,46 +21,50 @@ if (!command || !['generate', 'list', 'remove'].includes(command)) {
   process.exit(1);
 }
 
-const keys = loadKeys();
+function fail(err) {
+  if (err instanceof AccessKeyError) {
+    console.error(err.message);
+  } else {
+    console.error(err.message || err);
+  }
+  process.exit(1);
+}
 
-switch (command) {
-  case 'generate':
-    if (!nameArg) {
-      console.error('Please supply a name: node manageKeys.js generate <name>');
-      process.exit(1);
-    }
-    if (keys[nameArg]) {
-      console.error(`A key named "${nameArg}" already exists. Use a different name or remove it first.`);
-      process.exit(1);
-    }
-    const newKey = generateRandomKey();
-    keys[nameArg] = newKey;
-    saveKeys(keys);
-    console.log(`Generated key for "${nameArg}":\n${newKey}`);
-    break;
-
-  case 'list':
-    if (Object.keys(keys).length === 0) {
-      console.log('No keys found in keys.json.');
-    } else {
-      console.log('Existing keys:');
-      for (const [nm, val] of Object.entries(keys)) {
-        console.log(`  ${nm}: ${val}`);
+try {
+  switch (command) {
+    case 'generate': {
+      if (!nameArg) {
+        console.error('Please supply a name: node manageKeys.js generate <name>');
+        process.exit(1);
       }
+      const created = createAccessKey(KEYS_FILE, nameArg);
+      console.log(`Generated key for "${created.name}":\n${created.value}`);
+      break;
     }
-    break;
 
-  case 'remove':
-    if (!nameArg) {
-      console.error('Please supply a name: node manageKeys.js remove <name>');
-      process.exit(1);
+    case 'list': {
+      const keys = listAccessKeys(KEYS_FILE);
+      if (keys.length === 0) {
+        console.log('No keys found in keys.json.');
+      } else {
+        console.log('Existing keys:');
+        for (const { name, value } of keys) {
+          console.log(`  ${name}: ${value}`);
+        }
+      }
+      break;
     }
-    if (!keys[nameArg]) {
-      console.error(`No key found with the name "${nameArg}".`);
-      process.exit(1);
+
+    case 'remove': {
+      if (!nameArg) {
+        console.error('Please supply a name: node manageKeys.js remove <name>');
+        process.exit(1);
+      }
+      const removed = removeAccessKey(KEYS_FILE, nameArg);
+      console.log(`Removed key for "${removed.name}".`);
+      break;
     }
-    delete keys[nameArg];
-    saveKeys(keys);
-    console.log(`Removed key for "${nameArg}".`);
-    break;
+  }
+} catch (err) {
+  fail(err);
 }

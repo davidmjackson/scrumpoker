@@ -271,3 +271,47 @@ Result:
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Test server processes were started by the test suite and stopped during cleanup.
 - No project `node server.js` process was left running.
+
+## 2026-05-08 - Admin Access Key Management
+
+Branch: `feature/admin-key-management`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `925a962 Extract WebSocket handlers`
+- Working tree: clean
+- Server status: no `node server.js` process was running
+- GitHub PR #1 was merged, main CI passed, and `feature/extract-ws-handlers` was deleted locally and remotely.
+
+Work planned:
+- Start moving terminal-only access key management into the app.
+- Keep the existing `keys.json` format and CLI compatible.
+- Guard in-app key management behind an explicit admin secret.
+
+Work completed:
+- Extended `lib/accessKeys.js` with strict key-store reads/writes, generated key creation, sorted listing, deletion, and constant-time admin-key comparison.
+- Updated `manageKeys.js` to use the shared access-key helper module and honor `SCRUM_POKER_KEYS_FILE`.
+- Added authenticated admin API endpoints for listing, generating, and removing access keys.
+- Added `public/admin.html` and `public/js/admin.js` for a small in-app access-key manager at `/admin`.
+- Added admin UI styles to `public/css/app.css`.
+- Updated CI, README, and deployment docs for `SCRUM_POKER_ADMIN_KEY` and the new browser/CLI syntax checks.
+- Added helper and HTTP integration coverage for admin key management.
+
+Verification:
+- `npm ci`
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `for file in lib/*.js; do node --check "$file"; done`
+- `for file in public/js/*.js; do node --check "$file"; done`
+- `for file in tests/*.test.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+
+Result:
+- All checks passed.
+ - `npm test` ran 39 tests successfully.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Test server processes were started by the test suite and stopped during cleanup.
+- No project `node server.js` process was left running.

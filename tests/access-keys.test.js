@@ -5,10 +5,15 @@ const os = require('node:os');
 const path = require('node:path');
 
 const {
+  createAccessKey,
+  generateAccessKey,
   getInternalRoomName,
   getKeysFilePath,
+  isAdminKeyAuthorized,
   isValidAccessKey,
-  loadKeys
+  listAccessKeys,
+  loadKeys,
+  removeAccessKey
 } = require('../lib/accessKeys');
 
 function withTempDir(t) {
@@ -51,7 +56,7 @@ test('loadKeys returns an empty object for missing or invalid key files', (t) =>
   const errors = [];
   assert.deepEqual(loadKeys(path.join(tempDir, 'missing.json'), (err) => errors.push(err)), {});
   assert.deepEqual(loadKeys(invalidFile, (err) => errors.push(err)), {});
-  assert.equal(errors.length, 2);
+  assert.equal(errors.length, 1);
 });
 
 test('loadKeys ignores non-object JSON values', (t) => {
@@ -74,4 +79,55 @@ test('isValidAccessKey checks saved key values', () => {
 
 test('getInternalRoomName combines public room and access key', () => {
   assert.equal(getInternalRoomName('planning', 'alpha-key'), 'planning-alpha-key');
+});
+
+test('generateAccessKey creates alphanumeric key values', () => {
+  const key = generateAccessKey();
+
+  assert.equal(key.length, 12);
+  assert.match(key, /^[A-Za-z0-9]+$/);
+});
+
+test('createAccessKey stores a generated key and prevents duplicates', (t) => {
+  const tempDir = withTempDir(t);
+  const keysFile = path.join(tempDir, 'keys.json');
+
+  const created = createAccessKey(keysFile, 'Alpha Team');
+
+  assert.equal(created.name, 'Alpha Team');
+  assert.equal(created.value.length, 12);
+  assert.deepEqual(loadKeys(keysFile), { 'Alpha Team': created.value });
+  assert.throws(
+    () => createAccessKey(keysFile, 'Alpha Team'),
+    /already exists/
+  );
+});
+
+test('listAccessKeys returns keys sorted by name', (t) => {
+  const tempDir = withTempDir(t);
+  const keysFile = path.join(tempDir, 'keys.json');
+  fs.writeFileSync(keysFile, JSON.stringify({ beta: 'two', alpha: 'one' }), 'utf8');
+
+  assert.deepEqual(listAccessKeys(keysFile), [
+    { name: 'alpha', value: 'one' },
+    { name: 'beta', value: 'two' }
+  ]);
+});
+
+test('removeAccessKey deletes one stored key', (t) => {
+  const tempDir = withTempDir(t);
+  const keysFile = path.join(tempDir, 'keys.json');
+  fs.writeFileSync(keysFile, JSON.stringify({ alpha: 'one', beta: 'two' }), 'utf8');
+
+  const removed = removeAccessKey(keysFile, 'alpha');
+
+  assert.deepEqual(removed, { name: 'alpha', value: 'one' });
+  assert.deepEqual(loadKeys(keysFile), { beta: 'two' });
+});
+
+test('isAdminKeyAuthorized validates admin keys without accepting blanks', () => {
+  assert.equal(isAdminKeyAuthorized('admin-secret', 'admin-secret'), true);
+  assert.equal(isAdminKeyAuthorized('wrong-secret', 'admin-secret'), false);
+  assert.equal(isAdminKeyAuthorized('', 'admin-secret'), false);
+  assert.equal(isAdminKeyAuthorized('admin-secret', ''), false);
 });
