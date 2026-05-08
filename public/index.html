@@ -81,77 +81,98 @@
         </aside>
     </main>
 
-    <div id="poker-room-section" class="hidden w-full max-w-4xl mx-auto">
-       <div id="room-display" class="text-lg font-semibold mb-4 text-center"> </div>
-        <div class="bg-white p-6 rounded-lg shadow-lg">
-            <div class="flex justify-between items-center mb-6 border-b pb-4">
-                <h1 class="text-3xl font-bold text-gray-800">Scrum Poker Room</h1>
-                 
-                <div>
-
-                    <span id="user-greeting" class="text-gray-600 mr-4"></span>
-
-                <button id="edit-role-button" class="text-sm text-blue-600 hover:underline">Change Role</button>
-                <button id="logout-button" class="text-sm text-red-600 hover:underline ml-2">Logout</button>
-
-                </div>
+    <main id="poker-room-section" class="room-shell hidden">
+        <header class="room-header">
+            <div class="room-heading">
+                <span class="entry-kicker">Estimation room</span>
+                <h1>Scrum Poker Room</h1>
+                <p id="room-display" class="room-display"></p>
             </div>
 
-            <div class="mb-8">
-                <h2 class="text-xl font-semibold mb-4 text-gray-700">Cast Your Vote:</h2>
-
-                <div id="voting-cards" class="flex flex-wrap justify-center gap-2">
-                    <span class="text-gray-500 text-sm italic hidden" id="observer-message">Observers cannot vote.</span>
-
-
-
+            <div class="room-userbar">
+                <span id="user-greeting" class="user-greeting"></span>
+                <div class="room-actions" aria-label="Room actions">
+                    <button id="edit-role-button" class="text-action">Change Role</button>
+                    <button id="logout-button" class="text-action danger">Logout</button>
                 </div>
-                 <p id="vote-error" class="text-red-500 text-sm mt-2 text-center hidden"></p>
             </div>
+        </header>
 
-            <div>
-                <h2 class="text-xl font-semibold mb-4 text-gray-700">Participants</h2>
-                <div id="participants-list" class="space-y-3">
+        <div class="room-grid">
+            <section class="room-card vote-panel" aria-labelledby="vote-panel-title">
+                <div class="section-heading">
+                    <div>
+                        <span class="section-kicker">Vote</span>
+                        <h2 id="vote-panel-title">Cast your vote</h2>
                     </div>
-            </div>
+                    <span class="deck-label">Fibonacci</span>
+                </div>
 
-             <div id="vote-summary" class="mt-6 pt-4 border-t hidden">
-                 <h3 class="text-lg font-semibold text-gray-700">Vote Results</h3>
-                 <p class="text-gray-600">Average Vote: <span id="average-vote" class="font-bold">--</span></p>
-            </div>
+                <div id="voting-cards" class="voting-deck" aria-label="Voting cards">
+                    <span class="observer-note hidden" id="observer-message">Observers cannot vote.</span>
+                </div>
+                <p id="vote-error" class="form-error room-error hidden"></p>
+            </section>
 
-            <div id="ordered-votes" class="mt-4 hidden">
-                <h3 class="text-lg font-semibold text-gray-700">Grouped Results</h3>
-                <div id="ordered-votes-list" class="space-y-3"></div>
-            </div>
+            <section class="room-card participants-panel" aria-labelledby="participants-title">
+                <div class="section-heading">
+                    <div>
+                        <span class="section-kicker">Room</span>
+                        <h2 id="participants-title">Participants</h2>
+                    </div>
+                </div>
+                <div id="participants-list" class="participants-list"></div>
+            </section>
 
-            <div id="facilitator-controls" class="mt-8 text-center hidden">
-                <button id="show-votes-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-md transition duration-200 mr-2 disabled:opacity-50">
-                    Show Votes
-                </button>
-                 <button id="reset-votes-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md transition duration-200 disabled:opacity-50">
-                    Reset Votes
-                </button>
-            </div>
+            <section id="vote-summary" class="room-card result-card hidden" aria-labelledby="results-title">
+                <div class="section-heading compact">
+                    <div>
+                        <span class="section-kicker">Results</span>
+                        <h2 id="results-title">Vote Results</h2>
+                    </div>
+                </div>
+                <p>Average Vote: <span id="average-vote">--</span></p>
+            </section>
+
+            <section id="ordered-votes" class="room-card grouped-results hidden" aria-labelledby="grouped-results-title">
+                <div class="section-heading compact">
+                    <div>
+                        <span class="section-kicker">Grouped</span>
+                        <h2 id="grouped-results-title">Grouped Results</h2>
+                    </div>
+                </div>
+                <div id="ordered-votes-list" class="ordered-votes-list"></div>
+            </section>
         </div>
-    </div>
+
+        <div id="facilitator-controls" class="facilitator-controls hidden">
+            <button id="show-votes-button" class="success-action">
+                Show Votes
+            </button>
+            <button id="reset-votes-button" class="danger-action">
+                Reset Votes
+            </button>
+        </div>
+    </main>
 
     <div id="edit-role-modal" class="modal-overlay hidden">
-          <div class="modal-content">
-           <h2 class="text-xl font-semibold mb-4">Change Your Role</h2>
-            <label for="edit-role-select" class="block text-sm font-medium text-gray-700 mb-2">New Role</label>
-            <select id="edit-role-select" class="w-full px-4 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-             <option value="Voter">Voter</option>
-             <option value="Observer">Observer</option>
-              <option value="Facilitator">Facilitator</option>
-            </select>
-                <p id="edit-role-error" class="text-red-500 text-sm mb-2 hidden"></p>
-            <div class="flex justify-end gap-3">
-              <button id="cancel-edit-role-button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md">Cancel</button>
-            <button id="save-role-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Save</button>
-           </div>
-         </div>
-        </div>
+        <section class="modal-content" role="dialog" aria-modal="true" aria-labelledby="edit-role-title">
+            <h2 id="edit-role-title">Change Your Role</h2>
+            <label class="field" for="edit-role-select">
+                <span>New Role</span>
+                <select id="edit-role-select">
+                    <option value="Voter">Voter</option>
+                    <option value="Observer">Observer</option>
+                    <option value="Facilitator">Facilitator</option>
+                </select>
+            </label>
+            <p id="edit-role-error" class="form-error hidden"></p>
+            <div class="modal-actions">
+                <button id="cancel-edit-role-button" class="secondary-action">Cancel</button>
+                <button id="save-role-button" class="primary-action">Save</button>
+            </div>
+        </section>
+    </div>
 
 
     <footer class="app-footer">
