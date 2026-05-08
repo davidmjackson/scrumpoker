@@ -399,3 +399,45 @@ Result:
 - After the host Chromium dependencies were installed, `npm run test:e2e` passed locally with 1 browser smoke test.
 - GitHub Actions CI passed, including `npm run test:e2e` in Chromium after `npx playwright install --with-deps chromium`.
 - No project `node server.js` process was left running.
+
+## 2026-05-08 - Login UI Foundation
+
+Branch: `feature/ui-login-foundation`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `fc389e5 Add browser smoke test`
+- Working tree: clean before the UI branch changes
+- Server status: no `node server.js` process was running
+- GitHub PR #4 was merged, main CI passed, and `feature/browser-smoke-tests` was deleted locally and remotely.
+
+Work planned:
+- Start the UI rebuild with a narrow login-screen-only slice.
+- Preserve existing DOM IDs and app behavior so the current JavaScript and smoke test remain valid.
+- Leave the in-room poker interface untouched for a later UI pass.
+
+Work completed:
+- Rebuilt the login screen markup in `public/index.html` around a two-column entry shell.
+- Added tokenized app shell, form, footer, and planning-card preview styles in `public/css/app.css`.
+- Preserved `connection-status`, login form IDs, `login-button`, `login-error`, and the existing poker room markup IDs.
+- Adjusted the mobile footer and preview-card layout after screenshot review so the footer does not overlap content and sample cards stay inside the preview stage.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+- Browser screenshots reviewed at desktop `1440x900` and mobile `390x844`.
+- Local preview checked at `http://localhost:3001`.
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 1 browser smoke test.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Preview server was started on port `3001` for local review.
