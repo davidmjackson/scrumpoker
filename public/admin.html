@@ -9,37 +9,50 @@
 </head>
 <body class="admin-page">
   <header class="admin-header">
-    <div>
-      <p class="admin-kicker">Admin</p>
+    <div class="admin-heading">
+      <span class="entry-kicker">Admin</span>
       <h1>Access keys</h1>
+      <p>Scrum Poker key management</p>
     </div>
-    <a href="/" class="admin-link">Room app</a>
+    <a href="/" class="secondary-action admin-room-link">Room app</a>
   </header>
 
   <main class="admin-shell">
-    <section class="admin-panel">
-      <form id="auth-form" class="admin-form">
-        <label for="admin-key-input">Admin key</label>
-        <div class="admin-inline">
-          <input id="admin-key-input" name="adminKey" type="password" autocomplete="current-password">
-          <button type="submit">Unlock</button>
+    <section class="admin-panel auth-panel" aria-labelledby="admin-auth-title">
+      <div class="section-heading compact">
+        <div>
+          <span class="section-kicker">Secure</span>
+          <h2 id="admin-auth-title">Unlock admin</h2>
         </div>
+      </div>
+      <form id="auth-form" class="admin-form">
+        <label class="field" for="admin-key-input">
+          <span>Admin key</span>
+          <input id="admin-key-input" name="adminKey" type="password" autocomplete="current-password">
+        </label>
+        <button type="submit" class="primary-action">Unlock</button>
       </form>
       <p id="admin-status" class="admin-status" role="status"></p>
     </section>
 
-    <section id="keys-panel" class="admin-panel hidden">
+    <section id="keys-panel" class="admin-panel keys-panel hidden" aria-labelledby="keys-title">
       <div class="admin-panel-header">
-        <h2>Keys</h2>
-        <button id="refresh-keys-button" type="button" class="secondary-admin-button">Refresh</button>
+        <div>
+          <span class="section-kicker">Keys</span>
+          <h2 id="keys-title">Access keys</h2>
+        </div>
+        <div class="admin-panel-actions">
+          <span id="key-count" class="admin-count">0 keys</span>
+          <button id="refresh-keys-button" type="button" class="secondary-action compact-action">Refresh</button>
+        </div>
       </div>
 
       <form id="create-key-form" class="admin-form">
-        <label for="key-name-input">Name</label>
-        <div class="admin-inline">
+        <label class="field" for="key-name-input">
+          <span>Name</span>
           <input id="key-name-input" name="keyName" type="text" maxlength="64" autocomplete="off">
-          <button type="submit">Generate</button>
-        </div>
+        </label>
+        <button type="submit" class="primary-action">Generate</button>
       </form>
 
       <div id="keys-list" class="admin-key-list"></div>

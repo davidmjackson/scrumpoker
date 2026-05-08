@@ -483,3 +483,47 @@ Result:
 - `npm run test:e2e` passed with 1 browser smoke test.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Preview server remained available on port `3001` for local review.
+
+## 2026-05-08 - Admin UI Foundation
+
+Branch: `feature/admin-ui-foundation`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `6c1a421 Add room UI foundation (#6)`
+- Working tree: clean before the admin UI branch changes
+- Server status: `node server.js` was already running on port `3001`
+- GitHub PR #6 was merged, main CI passed, and `feature/room-ui-foundation` was deleted remotely.
+
+Work planned:
+- Finish the visible UI rebuild by refreshing `/admin`.
+- Preserve the existing admin API and key-management behavior.
+- Remove the now-unused Tailwind stylesheet dependency after confirming login and room screens use app-owned CSS.
+- Refresh stale CSP documentation.
+
+Work completed:
+- Rebuilt `public/admin.html` around the shared app visual language.
+- Updated generated admin key rows and copy fallback behavior in `public/js/admin.js`.
+- Replaced the old admin-specific button/form styling with shared action, field, panel, and token styles in `public/css/app.css`.
+- Removed the unused Tailwind stylesheet link from `public/index.html`.
+- Deleted `public/css/tailwind.min.css`.
+- Updated `README.md` and `docs/scrum-poker-handover.md` so CSP and Tailwind notes match the current code.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+- Browser screenshots reviewed for locked admin, unlocked admin desktop/mobile, and login without Tailwind.
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 1 browser smoke test.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Temporary admin screenshot server used `SCRUM_POKER_ADMIN_KEY` and a temporary keys file only.

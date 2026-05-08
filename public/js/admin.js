@@ -8,6 +8,7 @@ const keysList = document.getElementById('keys-list');
 const createKeyForm = document.getElementById('create-key-form');
 const keyNameInput = document.getElementById('key-name-input');
 const refreshKeysButton = document.getElementById('refresh-keys-button');
+const keyCount = document.getElementById('key-count');
 
 const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
 
@@ -52,6 +53,7 @@ async function requestAdmin(path, options = {}) {
 
 function renderKeys(keys) {
   keysList.innerHTML = '';
+  keyCount.textContent = `${keys.length} ${keys.length === 1 ? 'key' : 'keys'}`;
 
   if (keys.length === 0) {
     const empty = document.createElement('p');
@@ -82,7 +84,7 @@ function renderKeys(keys) {
 
     const copyButton = document.createElement('button');
     copyButton.type = 'button';
-    copyButton.className = 'secondary-admin-button';
+    copyButton.className = 'secondary-action compact-action';
     copyButton.textContent = 'Copy';
     copyButton.addEventListener('click', async () => {
       await copyKeyValue(key.value);
@@ -91,7 +93,7 @@ function renderKeys(keys) {
 
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
-    removeButton.className = 'danger-admin-button';
+    removeButton.className = 'danger-action compact-action';
     removeButton.textContent = 'Remove';
     removeButton.addEventListener('click', async () => {
       if (!window.confirm(`Remove key "${key.name}"?`)) return;
@@ -116,8 +118,7 @@ async function copyKeyValue(value) {
   const textarea = document.createElement('textarea');
   textarea.value = value;
   textarea.setAttribute('readonly', '');
-  textarea.style.position = 'fixed';
-  textarea.style.opacity = '0';
+  textarea.className = 'admin-copy-buffer';
   document.body.appendChild(textarea);
   textarea.select();
   document.execCommand('copy');
