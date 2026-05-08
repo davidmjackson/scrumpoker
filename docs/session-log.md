@@ -1427,6 +1427,47 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 
+## 2026-05-08 - Facilitator Admin Link
+
+Branch: `feature/facilitator-admin-link`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `f47b56d Add admin modal loading state`
+- Working tree: clean before branch changes
+- Server status: local `node server.js` process was running on PID `209446`
+
+Work planned:
+- Add an in-app route to the admin page from the room experience.
+- Show admin navigation only to users whose live role is `Facilitator`.
+- Keep `/admin` protected by the existing admin key unlock.
+
+Work completed:
+- Added an `Admin` link to the room action bar.
+- Hid the Admin link by default and only showed it when `currentUser.role === 'Facilitator'`.
+- Kept the link hidden for Voters and Observers.
+- Added e2e coverage for facilitator visibility and voter/observer hidden states.
+
+Verification:
+- `node --check public/js/app.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `find . -path ./node_modules -prune -o -name '*.js' -print | xargs -r -n1 node --check`
+- `git diff --check`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused facilitator and multi-user browser tests passed.
+- `npm test` ran 48 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
 ## 2026-05-08 - Admin Modal Loading State
 
 Branch: `feature/admin-modal-loading-state`

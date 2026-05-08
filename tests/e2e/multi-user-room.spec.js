@@ -35,6 +35,10 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     await login(voter, server.baseUrl, { name: 'Bob', role: 'Voter' });
     await login(observer, server.baseUrl, { name: 'Carol', role: 'Observer' });
 
+    await expect(facilitator.locator('#admin-room-link')).toBeVisible();
+    await expect(voter.locator('#admin-room-link')).toBeHidden();
+    await expect(observer.locator('#admin-room-link')).toBeHidden();
+
     for (const roomPage of [facilitator, voter, observer]) {
       await expect(roomPage.locator('#participants-list')).toContainText('Alice');
       await expect(roomPage.locator('#participants-list')).toContainText('Bob');
