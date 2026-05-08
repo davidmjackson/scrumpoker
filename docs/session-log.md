@@ -1427,6 +1427,46 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 
+## 2026-05-08 - Equal Entry Panel Heights
+
+Branch: `feature/equal-entry-panel-heights`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `bbc0ea2 Restore room after admin navigation`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running before verification
+
+Work planned:
+- Make the desktop login panel and card preview panel visually match heights.
+- Preserve natural stacked heights on mobile.
+- Add browser coverage so the desktop panel alignment does not regress.
+
+Work completed:
+- Added a desktop-only entry layout rule that stretches the two entry panels to the tallest content while centering the grid row in the viewport.
+- Left the existing mobile stacked layout unchanged under `820px`.
+- Added a smoke e2e assertion that the desktop login and preview panels have matching heights.
+
+Verification:
+- Measured panel heights with Playwright:
+  - Desktop `1280x800`: login `571.609375`, preview `571.609375`
+  - Mobile `390x844`: panels remain independently sized
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `find . -path ./node_modules -prune -o -name '*.js' -print | xargs -r -n1 node --check`
+- `git diff --check`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused smoke browser test passed.
+- `npm test` ran 48 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
 ## 2026-05-08 - Return To Room From Admin
 
 Branch: `feature/return-to-room-from-admin`
