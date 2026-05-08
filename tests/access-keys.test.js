@@ -14,6 +14,7 @@ const {
   listAccessKeys,
   loadKeys,
   removeAccessKey,
+  rotateAccessKey,
   updateAccessKeyStatus
 } = require('../lib/accessKeys');
 
@@ -161,6 +162,43 @@ test('updateAccessKeyStatus suspends and restores a stored key', (t) => {
 
   assert.deepEqual(restored, { name: 'alpha', value: 'one', active: true });
   assert.deepEqual(loadKeys(keysFile), { alpha: 'one', beta: 'two' });
+});
+
+test('rotateAccessKey replaces one stored key and preserves status', (t) => {
+  const tempDir = withTempDir(t);
+  const keysFile = path.join(tempDir, 'keys.json');
+  fs.writeFileSync(
+    keysFile,
+    JSON.stringify({
+      alpha: 'one',
+      beta: { value: 'two', active: false }
+    }),
+    'utf8'
+  );
+
+  const rotatedActive = rotateAccessKey(keysFile, 'alpha', 'three');
+
+  assert.deepEqual(rotatedActive, {
+    name: 'alpha',
+    value: 'three',
+    previousValue: 'one',
+    active: true
+  });
+  assert.deepEqual(loadKeys(keysFile), { alpha: 'three' });
+
+  const rotatedSuspended = rotateAccessKey(keysFile, 'beta', 'four');
+
+  assert.deepEqual(rotatedSuspended, {
+    name: 'beta',
+    value: 'four',
+    previousValue: 'two',
+    active: false
+  });
+  assert.deepEqual(loadKeys(keysFile), { alpha: 'three' });
+  assert.deepEqual(listAccessKeys(keysFile), [
+    { name: 'alpha', value: 'three', active: true },
+    { name: 'beta', value: 'four', active: false }
+  ]);
 });
 
 test('isAdminKeyAuthorized validates admin keys without accepting blanks', () => {

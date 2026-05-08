@@ -54,12 +54,12 @@ test('logAdminActivity appends entries and listAdminActivity returns newest firs
   );
   const second = logAdminActivity(
     activityFile,
-    { action: 'suspended', teamName: 'Alpha Team', keyValue: 'alpha-key' },
+    { action: 'rotated', teamName: 'Alpha Team', keyValue: 'alpha-key' },
     new Date('2026-05-08T11:00:00.000Z')
   );
 
   assert.equal(first.action, 'created');
-  assert.equal(second.action, 'suspended');
+  assert.equal(second.action, 'rotated');
   assert.equal(fs.readFileSync(activityFile, 'utf8').split('\n').filter(Boolean).length, 2);
   assert.deepEqual(listAdminActivity(activityFile), [second, first]);
   assert.deepEqual(listAdminActivity(activityFile, 1), [second]);
