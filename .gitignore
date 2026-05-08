@@ -1,5 +1,7 @@
 node_modules/
+playwright-report/
 Scrum\ Poker.code-workspace
+test-results/
 node_modules/.package-lock.json
 package-lock.json
 package.json

@@ -353,3 +353,49 @@ Result:
 - Local checks passed on Node.js `v20.19.6`.
 - GitHub Actions CI passed on Node.js 24 for PR #3.
 - No project `node server.js` process was left running.
+
+## 2026-05-08 - Browser Smoke Test Coverage
+
+Branch: `feature/browser-smoke-tests`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `c480b82 Update CI to Node 24`
+- Working tree: clean
+- Server status: no `node server.js` process was running
+- GitHub PR #3 was merged, main CI passed on Node.js 24, and `feature/update-ci-node24` was deleted locally and remotely.
+
+Work planned:
+- Add browser-level coverage before making larger UI changes.
+- Exercise the current page login, vote, reveal, and reset wiring through a real browser.
+- Include the browser smoke test in CI.
+
+Work completed:
+- Added Playwright as a development dependency.
+- Added `playwright.config.js`.
+- Added `npm run test:e2e`.
+- Added `tests/e2e/scrum-poker-smoke.spec.js`, which starts the app with a temporary keys file and drives the facilitator workflow in Chromium.
+- Updated CI to install Chromium and run the browser smoke test.
+- Updated deployment verification docs for Playwright checks and e2e execution.
+- Ignored Playwright output directories in `.gitignore`.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+- `npx playwright install chromium`
+- `npm run test:e2e`
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- `npx playwright install chromium` completed locally.
+- After the host Chromium dependencies were installed, `npm run test:e2e` passed locally with 1 browser smoke test.
+- GitHub Actions CI passed, including `npm run test:e2e` in Chromium after `npx playwright install --with-deps chromium`.
+- No project `node server.js` process was left running.

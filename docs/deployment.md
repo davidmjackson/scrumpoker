@@ -62,15 +62,22 @@ Run these checks before pushing application changes:
 npm ci
 node --check server.js
 node --check manageKeys.js
+node --check playwright.config.js
 for file in lib/*.js; do node --check "$file"; done
 for file in public/js/*.js; do node --check "$file"; done
 for file in tests/*.test.js; do node --check "$file"; done
+for file in tests/e2e/*.js; do node --check "$file"; done
 git diff --check
 npm test
+npm run test:e2e
 npm audit --omit=dev
 ```
 
-For future browser workflow changes, add and run an e2e script before deployment.
+If Playwright browsers are not installed locally, run:
+
+```bash
+npx playwright install chromium
+```
 
 ## GitHub Actions
 
@@ -83,12 +90,15 @@ CI is defined in:
 It runs:
 
 - `npm ci`
+- `npx playwright install --with-deps chromium`
 - `node --check server.js`
 - `node --check manageKeys.js`
+- `node --check playwright.config.js`
 - syntax checks for `lib/*.js`
 - syntax checks for `public/js/*.js`
-- syntax checks for `tests/*.test.js`
+- syntax checks for `tests/*.test.js` and `tests/e2e/*.js`
 - `npm test`
+- `npm run test:e2e`
 - `npm audit --omit=dev`
 
 CI uses Node.js 24 and opts JavaScript actions into the Node 24 runtime with `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`.

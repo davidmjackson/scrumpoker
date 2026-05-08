@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test"
   },
   "author": "",
   "license": "SEE LICENSE IN LICENSE",
@@ -13,5 +14,8 @@
     "express": "^5.1.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
   }
 }
