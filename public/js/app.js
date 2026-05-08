@@ -20,6 +20,7 @@
  const resetVotesButton = document.getElementById('reset-votes-button');
  const voteSummary = document.getElementById('vote-summary');
  const averageVoteSpan = document.getElementById('average-vote');
+ const adminRoomLink = document.getElementById('admin-room-link');
  const logoutButton = document.getElementById('logout-button');
 
  const editRoleButton = document.getElementById('edit-role-button');
@@ -388,10 +389,12 @@ function showVoteError(message) {
     // Show/Hide Facilitator Controls & Enable/Disable buttons
     if (currentUser.role === 'Facilitator') {
         facilitatorControls.classList.remove('hidden');
+        adminRoomLink.classList.remove('hidden');
         showVotesButton.disabled = votesRevealed; // Disable if already revealed
         resetVotesButton.disabled = false;
     } else {
         facilitatorControls.classList.add('hidden');
+        adminRoomLink.classList.add('hidden');
     }
 
     // Show/Hide Observer Message & Disable Voting Cards

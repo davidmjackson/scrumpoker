@@ -335,6 +335,7 @@ img {
   font-weight: 800;
   cursor: pointer;
   padding: 0;
+  text-decoration: none;
 }
 
 .text-action:hover {
