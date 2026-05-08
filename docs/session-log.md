@@ -609,3 +609,44 @@ Result:
 - `npx playwright test tests/e2e/multi-user-room.spec.js` passed with 1 browser test.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Client Error Handling Cleanup
+
+Branch: `feature/client-error-cleanup`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `727cee1 Add multi-user browser coverage`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+- GitHub PR #9 was merged, main CI passed, and `feature/multi-user-browser-coverage` was deleted remotely.
+
+Work planned:
+- Keep the next slice small after the browser-coverage merge.
+- Improve client-side inline error handling without changing the room workflow.
+- Remove stale browser helpers and duplicate WebSocket event logging from `public/js/app.js`.
+- Add browser coverage for invalid access-key feedback on the login screen.
+
+Work completed:
+- Added shared login and vote error helpers in `public/js/app.js`.
+- Preserved connection errors when returning to the login screen instead of hiding them immediately.
+- Replaced the disconnected-send alert fallback with inline login feedback.
+- Removed unused saved-session reads, hostname logging, duplicate WebSocket event listeners, and unused hidden-field/reload helpers.
+- Extended the browser smoke test so it first verifies an invalid access key shows `Invalid access key.` and keeps the user on the login screen.
+
+Verification:
+- `node --check public/js/app.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js` passed with 1 browser test.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
