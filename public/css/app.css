@@ -1011,9 +1011,12 @@ img {
   max-width: 560px;
 }
 
-.admin-invite-room {
-  max-width: 560px;
+.admin-invite-options {
+  max-width: 720px;
   margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.45fr);
 }
 
 .compact-action {
@@ -1121,6 +1124,10 @@ img {
 
   .admin-panel-actions {
     justify-content: flex-start;
+  }
+
+  .admin-invite-options {
+    grid-template-columns: 1fr;
   }
 
   .admin-key-actions {

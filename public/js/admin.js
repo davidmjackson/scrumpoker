@@ -8,6 +8,7 @@ const keysList = document.getElementById('keys-list');
 const createKeyForm = document.getElementById('create-key-form');
 const keyNameInput = document.getElementById('key-name-input');
 const inviteRoomInput = document.getElementById('invite-room-input');
+const inviteRoleSelect = document.getElementById('invite-role-select');
 const refreshKeysButton = document.getElementById('refresh-keys-button');
 const keyCount = document.getElementById('key-count');
 
@@ -19,6 +20,10 @@ function getAppUrl() {
 
 function getInviteRoom() {
   return inviteRoomInput.value.trim();
+}
+
+function getInviteRole() {
+  return inviteRoleSelect.value;
 }
 
 function setStatus(message, tone = '') {
@@ -62,8 +67,10 @@ async function requestAdmin(path, options = {}) {
 
 function createInviteUrl(key) {
   const inviteUrl = new URL('/', getAppUrl());
+  const role = getInviteRole();
+
   inviteUrl.searchParams.set('accessKey', key.value);
-  inviteUrl.searchParams.set('role', 'Facilitator');
+  inviteUrl.searchParams.set('role', role);
 
   const room = getInviteRoom();
   if (room) {
@@ -73,8 +80,9 @@ function createInviteUrl(key) {
   return inviteUrl.toString();
 }
 
-function createFacilitatorInvite(key) {
+function createTeamInvite(key) {
   const room = getInviteRoom();
+  const role = getInviteRole();
   const inviteLines = [
     'Scrum Poker team access',
     `Team: ${key.name}`,
@@ -87,7 +95,7 @@ function createFacilitatorInvite(key) {
 
   inviteLines.push(
     `App: ${createInviteUrl(key)}`,
-    'Role: Facilitator'
+    `Role: ${role}`
   );
 
   return inviteLines.join('\n');
@@ -129,7 +137,7 @@ function renderKeys(keys) {
     copyInviteButton.className = 'primary-action compact-action';
     copyInviteButton.textContent = 'Copy invite';
     copyInviteButton.addEventListener('click', async () => {
-      await copyText(createFacilitatorInvite(key));
+      await copyText(createTeamInvite(key));
       setStatus(`Copied invite for ${key.name}.`, 'success');
     });
 
