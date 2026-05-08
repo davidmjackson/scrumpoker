@@ -9,6 +9,12 @@ const {
   leaveRoom,
   reassignFacilitatorIfLeaving
 } = require('./lib/roomState');
+const {
+  getInternalRoomName,
+  getKeysFilePath,
+  isValidAccessKey,
+  loadKeys
+} = require('./lib/accessKeys');
 
 console.log('⏳ server.js is starting');
 
@@ -20,7 +26,6 @@ setInterval(() => {
   expireRooms(rooms, Date.now(), DEFAULT_ROOM_EXPIRY_MS);
 }, 60 * 1000);
 
-const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { WebSocketServer, WebSocket } = require('ws');
@@ -28,20 +33,7 @@ const { v4: uuidv4 } = require('uuid');
 
 //console.log('✅ Required modules loaded');
 
-const KEYS_FILE = process.env.SCRUM_POKER_KEYS_FILE
-  ? path.resolve(process.env.SCRUM_POKER_KEYS_FILE)
-  : path.join(__dirname, 'keys.json');
-
-
-function loadKeys() {
-  try {
-    const data = fs.readFileSync(KEYS_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch (err) {
-    console.error('Failed to load keys.json:', err);
-    return {};
-  }
-}
+const KEYS_FILE = getKeysFilePath(__dirname);
 
 
 // Use PORT from env or default to 3000
@@ -265,11 +257,13 @@ wss.on('connection', (ws) => {
           });
         }
 
-        const internalRoom = `${room}-${accessKey}`;
+        const internalRoom = getInternalRoomName(room, accessKey);
 
         // 2) Validate accessKey against saved keys
-        const allKeys = loadKeys();
-        const valid = Object.values(allKeys).includes(accessKey);
+        const allKeys = loadKeys(KEYS_FILE, (err) => {
+          console.error('Failed to load keys.json:', err);
+        });
+        const valid = isValidAccessKey(allKeys, accessKey);
 
         if (!valid) {
           return sendToClient(ws, {

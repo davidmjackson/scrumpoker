@@ -35,8 +35,11 @@ jobs:
       - name: Check server syntax
         run: node --check server.js
 
-      - name: Check room helper syntax
-        run: node --check lib/roomState.js
+      - name: Check helper syntax
+        run: |
+          for file in lib/*.js; do
+            node --check "$file"
+          done
 
       - name: Check browser script syntax
         run: node --check public/js/app.js

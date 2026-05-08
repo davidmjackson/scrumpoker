@@ -155,3 +155,42 @@ Result:
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Test server processes were started by the test suite and stopped during cleanup.
 - No project `node server.js` process was left running.
+
+## 2026-05-08 - Access Key Extraction
+
+Branch: `feature/extract-room-state`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `feature/extract-room-state`
+- Latest baseline commit: `089bd12 Extract room state helpers`
+- Working tree: clean
+- Server status: no `node server.js` process was running
+
+Work planned:
+- Extract access-key file path resolution, loading, validation, and internal room naming from `server.js`.
+- Preserve the current key-file behavior used by the WebSocket login flow.
+- Add direct unit coverage for access-key helpers.
+
+Work completed:
+- Added `lib/accessKeys.js`.
+- Updated `server.js` to use the access-key helper module.
+- Added `tests/access-keys.test.js`.
+- Updated GitHub Actions and deployment docs to syntax-check all helper modules in `lib/*.js`.
+
+Verification:
+- `npm ci`
+- `node --check server.js`
+- `for file in lib/*.js; do node --check "$file"; done`
+- `node --check public/js/app.js`
+- `for file in tests/*.test.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+
+Result:
+- All checks passed.
+- `npm test` ran 18 tests successfully.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Test server processes were started by the test suite and stopped during cleanup.
+- No project `node server.js` process was left running.
