@@ -148,6 +148,15 @@ function renderKeys(keys) {
       setStatus(`Copied invite for ${key.name}.`, 'success');
     });
 
+    const copyLinkButton = document.createElement('button');
+    copyLinkButton.type = 'button';
+    copyLinkButton.className = 'secondary-action compact-action';
+    copyLinkButton.textContent = 'Copy link';
+    copyLinkButton.addEventListener('click', async () => {
+      await copyText(createInviteUrl(key));
+      setStatus(`Copied link for ${key.name}.`, 'success');
+    });
+
     const copyKeyButton = document.createElement('button');
     copyKeyButton.type = 'button';
     copyKeyButton.className = 'secondary-action compact-action';
@@ -167,6 +176,7 @@ function renderKeys(keys) {
     });
 
     actions.appendChild(copyInviteButton);
+    actions.appendChild(copyLinkButton);
     actions.appendChild(copyKeyButton);
     actions.appendChild(removeButton);
 
