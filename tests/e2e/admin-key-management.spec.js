@@ -34,6 +34,19 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await expect(page.locator('#keys-list')).toContainText('alpha');
     await expect(page.locator('#keys-list')).toContainText('browser');
 
+    await page.locator('#team-search-input').fill('alp');
+    await expect(page.locator('#key-count')).toHaveText('1 team of 2');
+    await expect(page.locator('#keys-list')).toContainText('alpha');
+    await expect(page.locator('#keys-list')).not.toContainText('browser');
+
+    await page.locator('#team-search-input').fill('missing');
+    await expect(page.locator('#key-count')).toHaveText('0 teams of 2');
+    await expect(page.locator('#keys-list')).toHaveText('No teams match this search.');
+
+    await page.locator('#team-search-input').fill('');
+    await expect(page.locator('#key-count')).toHaveText('2 teams');
+    await expect(page.locator('#keys-list')).toContainText('browser');
+
     await page.locator('#key-name-input').fill('Gamma Team');
     await page.locator('#invite-room-input').fill('Sprint Planning');
     await page.locator('#invite-role-select').selectOption('Voter');

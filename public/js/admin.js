@@ -9,6 +9,7 @@ const createKeyForm = document.getElementById('create-key-form');
 const keyNameInput = document.getElementById('key-name-input');
 const inviteRoomInput = document.getElementById('invite-room-input');
 const inviteRoleSelect = document.getElementById('invite-role-select');
+const teamSearchInput = document.getElementById('team-search-input');
 const refreshKeysButton = document.getElementById('refresh-keys-button');
 const keyCount = document.getElementById('key-count');
 
@@ -25,6 +26,10 @@ function getInviteRoom() {
 
 function getInviteRole() {
   return inviteRoleSelect.value;
+}
+
+function getTeamSearch() {
+  return teamSearchInput.value.trim().toLowerCase();
 }
 
 function setStatus(message, tone = '') {
@@ -112,8 +117,14 @@ function getOpenTeamNames() {
 
 function renderKeys(keys) {
   const openTeamNames = getOpenTeamNames();
+  const search = getTeamSearch();
+  const visibleKeys = search
+    ? keys.filter((key) => key.name.toLowerCase().includes(search))
+    : keys;
+
   keysList.innerHTML = '';
-  keyCount.textContent = `${keys.length} ${keys.length === 1 ? 'team' : 'teams'}`;
+  const visibleLabel = `${visibleKeys.length} ${visibleKeys.length === 1 ? 'team' : 'teams'}`;
+  keyCount.textContent = search ? `${visibleLabel} of ${keys.length}` : visibleLabel;
 
   if (keys.length === 0) {
     const empty = document.createElement('p');
@@ -123,7 +134,15 @@ function renderKeys(keys) {
     return;
   }
 
-  keys.forEach((key) => {
+  if (visibleKeys.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'admin-empty';
+    empty.textContent = 'No teams match this search.';
+    keysList.appendChild(empty);
+    return;
+  }
+
+  visibleKeys.forEach((key) => {
     const row = document.createElement('details');
     row.className = 'admin-key-row admin-team-section';
     row.dataset.teamName = key.name;
@@ -308,6 +327,10 @@ inviteRoomInput.addEventListener('input', () => {
 });
 
 inviteRoleSelect.addEventListener('change', () => {
+  renderKeys(currentKeys);
+});
+
+teamSearchInput.addEventListener('input', () => {
   renderKeys(currentKeys);
 });
 

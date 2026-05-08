@@ -1019,6 +1019,11 @@ img {
   grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.45fr);
 }
 
+.admin-team-search {
+  max-width: 720px;
+  margin-top: 0.75rem;
+}
+
 .compact-action {
   min-height: 2.2rem;
   padding: 0.45rem 0.7rem;
