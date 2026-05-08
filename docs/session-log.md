@@ -1279,3 +1279,59 @@ Result:
 - `npm test` ran 47 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - IONOS Production Deployment
+
+Branch: `main` on the IONOS production checkout, documentation recorded from `chore/log-production-deployment`
+
+Starting state:
+- Production host: IONOS server reachable with `ssh scrum-poker.uk`
+- Production path: `/var/www/scrumpoker`
+- Existing app checkout: old Bitbucket `master` branch with `origin` pointing at `git@bitbucket-scrumpoker-prod:epicnerd/scrum-poker.git`
+- New production domain: `sprintpoker.uk`
+- Existing service: `scrumpoker.service`
+- Existing reverse proxy: Apache with `scrum-poker.uk` TLS vhosts
+
+Work completed:
+- Backed up the old production app directory to `/var/www/scrumpoker-backup-20260508-135250.tar.gz`.
+- Switched the production checkout to GitHub:
+  - Renamed old `origin` remote to `bitbucket`.
+  - Added `origin` as `git@github.com:davidmjackson/scrumpoker.git`.
+  - Fetched and switched production to `origin/main` at `b1f167b Add admin activity log`.
+- Installed production dependencies with `npm ci --omit=dev`.
+- Updated `scrumpoker.service` to set:
+  - `NODE_ENV=production`
+  - `PORT=3000`
+  - `SCRUM_POKER_ADMIN_KEY`
+  - `SCRUM_POKER_KEYS_FILE=/var/www/scrumpoker/keys.json`
+  - `SCRUM_POKER_ACTIVITY_FILE=/var/www/scrumpoker/admin-activity.jsonl`
+- Restarted `scrumpoker.service`.
+- Removed a stale extra `node server.js` process so only the systemd-managed Node process remained.
+- Added Apache vhost config for `sprintpoker.uk` and `www.sprintpoker.uk`.
+- Used Certbot to issue and deploy the `sprintpoker.uk` and `www.sprintpoker.uk` certificate.
+- Confirmed Certbot added HTTP-to-HTTPS redirects.
+- Removed the old local shell alias/banner setup from the IONOS user's `.bashrc`.
+- Removed old untracked `/var/www/scrumpoker/README.txt` from production.
+
+Verification:
+- `curl -fsS http://127.0.0.1:3000/health`
+- `curl -fsS -H 'Host: sprintpoker.uk' http://127.0.0.1/health`
+- `curl -fsSI http://sprintpoker.uk/`
+- `curl -fsS https://sprintpoker.uk/health`
+- `curl -fsS https://sprintpoker.uk/admin | grep -E 'Team access|Recent activity|Team keys'`
+- `curl -fsS https://sprintpoker.uk/ | grep -E 'Scrum Poker|Sprint|access-key-input|voting-deck' | head`
+- Node WebSocket smoke test against `wss://sprintpoker.uk/ws`
+- `systemctl is-active scrumpoker.service apache2`
+
+Result:
+- `https://sprintpoker.uk` is live.
+- `http://sprintpoker.uk` redirects to HTTPS.
+- `https://sprintpoker.uk/health` returned healthy with `rooms: 0`.
+- `/admin` serves the new admin UI with team keys and recent activity.
+- `wss://sprintpoker.uk/ws` opened successfully.
+- `scrumpoker.service` and `apache2` were active.
+- Production checkout reported `## main...origin/main`.
+
+Notes:
+- The production admin key was set in the systemd service during deployment. Treat it as a secret and rotate it if it has been shared beyond the deployment session.
+- The old alias banner may continue to show in already-open shells because `.bashrc` was loaded before cleanup. It should be gone in new SSH sessions.
