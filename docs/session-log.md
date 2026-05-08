@@ -441,3 +441,45 @@ Result:
 - `npm run test:e2e` passed with 1 browser smoke test.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Preview server was started on port `3001` for local review.
+
+## 2026-05-08 - Room UI Foundation
+
+Branch: `feature/room-ui-foundation`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `b556038 Add login UI foundation (#5)`
+- Working tree: clean before the room UI branch changes
+- Server status: `node server.js` was already running on port `3001`
+- GitHub PR #5 was merged, main CI passed, and `feature/ui-login-foundation` was deleted remotely.
+
+Work planned:
+- Continue the UI rebuild with a narrow in-room screen slice.
+- Preserve existing DOM IDs and WebSocket behavior covered by the Playwright smoke test.
+- Keep the login screen from the previous slice unchanged.
+
+Work completed:
+- Rebuilt the in-room poker markup in `public/index.html` with room header, vote panel, participants panel, results panels, and facilitator controls.
+- Added room, participant, result, modal, and action button styling in `public/css/app.css`.
+- Updated generated voting cards, participant rows, role controls, and grouped result rows in `public/js/app.js` to use app-owned classes.
+- Added scroll reset when switching between login and room views so mobile users land at the top of the target screen.
+- Reviewed room screenshots at desktop `1440x900` and mobile `390x844` using a temporary access key server.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+- Browser screenshots reviewed for room and revealed-results states.
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 1 browser smoke test.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Preview server remained available on port `3001` for local review.

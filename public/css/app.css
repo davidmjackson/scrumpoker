@@ -136,6 +136,7 @@ body {
   font-weight: 800;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
+  padding: 0.72rem 1rem;
 }
 
 .primary-action:hover:not(:disabled) {
@@ -255,9 +256,293 @@ body {
   font-weight: 900;
 }
 
-#poker-room-section {
+.room-shell {
+  width: min(1180px, 100%);
   margin: 3rem auto 5rem;
-  padding: 0 1rem;
+}
+
+.room-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.room-heading h1 {
+  margin: 0.7rem 0 0.25rem;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.room-display {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.room-userbar {
+  min-width: 260px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.55rem;
+  justify-items: end;
+}
+
+.user-greeting {
+  color: var(--ink);
+  font-weight: 800;
+  text-align: right;
+}
+
+.room-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.text-action {
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+
+.text-action:hover {
+  text-decoration: underline;
+}
+
+.text-action.danger {
+  color: var(--red);
+}
+
+.room-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.room-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.section-heading.compact {
+  margin-bottom: 0.55rem;
+}
+
+.section-heading h2 {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.section-kicker,
+.deck-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.deck-label {
+  color: var(--primary);
+}
+
+.voting-deck {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.voting-deck.is-disabled {
+  opacity: 0.62;
+  pointer-events: none;
+}
+
+.observer-note {
+  grid-column: 1 / -1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  color: var(--muted);
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 800;
+}
+
+.room-error {
+  text-align: center;
+  margin-top: 0.75rem;
+}
+
+.participants-list,
+.ordered-votes-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.participant-row,
+.result-row {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.75rem;
+}
+
+.participant-info {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.participant-name {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.participant-name.is-current-user {
+  color: var(--primary);
+}
+
+.participant-role {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.participant-role.is-facilitator {
+  color: #ad6200;
+}
+
+.participant-role-controls {
+  flex-basis: 100%;
+}
+
+.participant-role-select {
+  min-height: 2rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 0.25rem 0.45rem;
+}
+
+.participant-vote {
+  flex-shrink: 0;
+}
+
+.result-card {
+  grid-column: 1;
+}
+
+.result-card p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+#average-vote,
+.result-value {
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.grouped-results {
+  grid-column: 1 / -1;
+}
+
+.result-names {
+  color: var(--ink);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.facilitator-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.success-action,
+.secondary-action,
+.danger-action {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0.7rem 1rem;
+}
+
+.success-action {
+  background: var(--green);
+  color: #ffffff;
+}
+
+.secondary-action {
+  background: var(--surface-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.danger-action {
+  background: var(--red);
+  color: #ffffff;
+}
+
+.success-action:hover:not(:disabled) {
+  background: #14874a;
+}
+
+.secondary-action:hover:not(:disabled) {
+  background: #edf2f7;
+}
+
+.danger-action:hover:not(:disabled) {
+  background: #c9343a;
+}
+
+.success-action:disabled,
+.secondary-action:disabled,
+.danger-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .app-footer {
@@ -301,6 +586,41 @@ body {
     min-height: 320px;
   }
 
+  .room-shell {
+    margin-top: 3.25rem;
+  }
+
+  .room-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .room-userbar {
+    justify-items: start;
+    min-width: 0;
+  }
+
+  .user-greeting {
+    text-align: left;
+  }
+
+  .room-actions {
+    justify-content: flex-start;
+  }
+
+  .room-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .voting-deck {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .result-card,
+  .grouped-results {
+    grid-column: auto;
+  }
+
   .app-footer {
     position: static;
     transform: none;
@@ -326,71 +646,142 @@ body {
   .preview-stage {
     min-height: 220px;
   }
+
+  .room-heading h1 {
+    font-size: 1.65rem;
+  }
+
+  .room-card {
+    padding: 0.85rem;
+  }
+
+  .voting-deck {
+    gap: 0.5rem;
+  }
+
+  .participant-row,
+  .result-row {
+    align-items: flex-start;
+  }
 }
 
-/* --- Card Flip Animation --- */
+/* Card flip animation */
+.vote-card {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  min-width: 0;
+  padding: 0;
+  perspective: 1000px;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.vote-card:hover:not(:disabled) {
+  transform: translateY(-4px);
+}
+
+.vote-card:focus-visible {
+  outline: 3px solid rgba(91, 53, 213, 0.28);
+  outline-offset: 3px;
+}
+
+.vote-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .card-container {
-    perspective: 1000px;
-    width: 40px; /* Adjust size as needed */
-    height: 60px; /* Adjust size as needed */
-    position: relative; /* Needed for checkmark positioning */
+  perspective: 1000px;
+  width: 44px;
+  height: 62px;
+  position: relative;
+}
+
+.card,
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 2, 0.4, 0.8);
 }
 
 .card {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.6s;
-    cursor: default; /* Indicate non-interactive */
+  cursor: default;
 }
 
-.card.flipped {
-    transform: rotateY(180deg);
+.card.flipped,
+.card-inner.is-face-down {
+  transform: rotateY(180deg);
 }
 
 .card-face {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px; /* Rounded corners for cards */
-    font-size: 1rem; /* Adjust font size */
-    font-weight: bold;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 7px 16px rgba(15, 23, 42, 0.1);
+  font-weight: 900;
 }
 
-.card-front {
-    /* Styling for the back of the card (visible initially) */
-    background-color: #4a90e2; /* Blue card back */
-    color: white;
-    /* Simple pattern for card back */
-    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.1) 75%, transparent 75%, transparent);
-    background-size: 10px 10px;
+.vote-card .card-front {
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 1.45rem;
 }
 
-.card-back {
-    /* Styling for the front of the card (showing the vote) */
-    background-color: #ffffff; /* White card face */
-    color: #333;
-    transform: rotateY(180deg);
-    border: 1px solid #ccc;
+.vote-card .card-back {
+  overflow: hidden;
+  transform: rotateY(180deg);
+  background: var(--blue-soft);
 }
 
-/* Style for voting cards */
-.vote-card {
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+.vote-card.selected .card-front {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(91, 53, 213, 0.16), 0 10px 24px rgba(15, 23, 42, 0.12);
 }
-.vote-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+
+.vote-card-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
-.vote-card.selected {
-     border: 3px solid #2563eb; /* Blue border for selected */
-     transform: scale(1.05);
+
+.card-container .card-front {
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 1.05rem;
+}
+
+.card-container .card-back {
+  background: var(--surface);
+  color: var(--primary);
+  transform: rotateY(180deg);
+  font-size: 1rem;
+}
+
+.vote-checkmark {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  min-width: 1.2rem;
+  min-height: 1.2rem;
+  border-radius: 999px;
+  background: var(--green);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 900;
+  box-shadow: var(--shadow-sm);
 }
 
 /* Hide elements */
@@ -400,38 +791,51 @@ body {
 
 /* Basic modal styles */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 50;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(16, 24, 40, 0.48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
 }
+
 .modal-overlay.hidden {
-    display: none;
+  display: none;
 }
+
 .modal-content {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    min-width: 300px;
+  width: min(420px, 100%);
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 1.25rem;
+}
+
+.modal-content h2 {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 /* Connection Status Indicator */
 #connection-status {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    z-index: 100;
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 900;
+  z-index: 100;
 }
 #connection-status.connected {
     background-color: #dcfce7; /* Light green */
@@ -445,56 +849,6 @@ body {
      background-color: #fef9c3; /* Light yellow */
     color: #854d0e; /* Dark yellow */
 }
-
-
-.vote-card {
-  perspective: 1000px;
-  background: none;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-  min-width: 3rem;
-}
-
-.card-inner {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(.4,2,.4,.8);
-}
-
-.card-inner.is-face-down {
-  transform: rotateY(180deg);
-}
-
-.card-face {
-    font-size: 1.25rem; /* smaller text inside cards */
-  backface-visibility: hidden;
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0; left: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.5rem;
-}
-
-.card-back {
-  background: #2563eb;
-  color: #fff;
-  z-index: 2;
-  transform: rotateY(180deg);
-}
-
-.card-front {
-  background: #fff;
-  color: #2563eb;
-  font-weight: bold;
-  z-index: 1;
-}
-
 /* License page styles (kept in external CSS for CSP compatibility). */
 .license-wrap {
   max-width: 900px;

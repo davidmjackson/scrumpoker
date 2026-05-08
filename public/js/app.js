@@ -322,6 +322,7 @@ function animateCardsIntoView() {
      loginSection.classList.remove('hidden');
      pokerRoomSection.classList.add('hidden');
      loginError.classList.add('hidden');
+     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
 
      if (ws && ws.readyState === WebSocket.OPEN) {
          loginButton.disabled = false;
@@ -334,9 +335,9 @@ function animateCardsIntoView() {
 
 
  function showPokerRoom() {
-    
      loginSection.classList.add('hidden');
      pokerRoomSection.classList.remove('hidden');
+     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
      // UI update will be triggered by receiving state from server
  }
 
@@ -374,10 +375,10 @@ function animateCardsIntoView() {
     // Show/Hide Observer Message & Disable Voting Cards
     if (currentUser.role === 'Observer') {
         observerMessage.classList.remove('hidden');
-        votingCardsContainer.classList.add('pointer-events-none', 'opacity-50'); // Disable clicks
+        votingCardsContainer.classList.add('is-disabled'); // Disable clicks
     } else {
         observerMessage.classList.add('hidden');
-        votingCardsContainer.classList.remove('pointer-events-none', 'opacity-50');
+        votingCardsContainer.classList.remove('is-disabled');
     }
 
     // Show/Hide Vote Summary & Calculate Average
@@ -411,14 +412,14 @@ function animateCardsIntoView() {
         sortedVotes.forEach(voteValue => {
             const names = groups[voteValue].join(', ');
             const line = document.createElement('div');
-            line.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-md shadow-sm';
+            line.className = 'result-row';
 
             const namesSpan = document.createElement('span');
-            namesSpan.className = 'font-medium text-gray-800';
+            namesSpan.className = 'result-names';
             namesSpan.textContent = names;
 
             const voteSpan = document.createElement('span');
-            voteSpan.className = 'font-bold text-blue-600';
+            voteSpan.className = 'result-value';
             voteSpan.textContent = voteValue;
 
             line.appendChild(namesSpan);
@@ -445,37 +446,29 @@ function animateCardsIntoView() {
      votingCardsContainer.innerHTML = ''; // Clear existing cards
       // Add observer message placeholder back if needed
      votingCardsContainer.appendChild(observerMessage);
-     votingCardsContainer.appendChild(voteError); // Keep error element
 
      fibonacciVotes.forEach(value => {
          const cardButton = document.createElement('button');
             cardButton.dataset.value = value;
-            cardButton.classList.add(
-            'vote-card', 'transform', 'relative', 
-            'w-12',  // width: 3rem (smaller than before)
-            'h-20',  // height: 5rem
-            'm-1',   // margin smaller for more compact layout
-            'perspective-1000',
-            'focus:outline-none', 'disabled:opacity-60', 'disabled:cursor-not-allowed'
-            );
+            cardButton.classList.add('vote-card');
 
             // Card inner for the 3D flip
             const cardInner = document.createElement('div');
-            cardInner.classList.add('card-inner', 'w-full', 'h-full', 'relative');
+            cardInner.classList.add('card-inner');
 
             // Card back (what you see first)
             const cardBack = document.createElement('div');
-            cardBack.classList.add('card-face', 'card-back', 'absolute', 'inset-0', 'flex', 'items-center', 'justify-center', 'bg-blue-700', 'text-white', 'rounded-lg');
+            cardBack.classList.add('card-face', 'card-back');
             
             const cardBackImg = document.createElement('img');
             cardBackImg.src = '/images/cardback.jpg'; // or your actual image path
             cardBackImg.alt = 'Playing card back';
-            cardBackImg.classList.add('w-full', 'h-full', 'object-cover', 'rounded-lg');
+            cardBackImg.classList.add('vote-card-image');
             cardBack.appendChild(cardBackImg);
 
             // Card front (the vote value)
             const cardFront = document.createElement('div');
-            cardFront.classList.add('card-face', 'card-front', 'absolute', 'inset-0', 'flex', 'items-center', 'justify-center', 'bg-white', 'text-blue-600', 'font-bold', 'rounded-lg');
+            cardFront.classList.add('card-face', 'card-front');
             cardFront.textContent = value;
 
             // Stack them
@@ -520,38 +513,38 @@ function animateCardsIntoView() {
 
      sortedParticipants.forEach(participant => {
          const div = document.createElement('div');
-         div.classList.add('flex', 'items-center', 'justify-between', 'p-3', 'bg-gray-50', 'rounded-md', 'shadow-sm');
+         div.classList.add('participant-row');
 
          // --- Left side: Name and Role ---
          const nameRoleDiv = document.createElement('div');
-         nameRoleDiv.classList.add('flex', 'flex-col', 'sm:flex-row', 'sm:items-center', 'flex-grow', 'mr-2'); // Allow wrapping and spacing
+         nameRoleDiv.classList.add('participant-info'); // Allow wrapping and spacing
 
          const nameSpan = document.createElement('span');
          nameSpan.textContent = participant.name;
-         nameSpan.classList.add('font-medium', 'text-gray-800', 'mr-2');
+         nameSpan.classList.add('participant-name');
          if (participant.id === currentUser?.id) {
              nameSpan.textContent += ' (You)';
-             nameSpan.classList.add('font-bold');
+             nameSpan.classList.add('is-current-user');
          }
          nameRoleDiv.appendChild(nameSpan);
 
          const roleSpan = document.createElement('span');
          roleSpan.textContent = `(${participant.role})`; // Display role clearly
-         roleSpan.classList.add('text-sm', 'text-gray-500');
+         roleSpan.classList.add('participant-role');
           if (participant.id === facilitatorId) {
-              roleSpan.textContent += ' 👑'; // Indicate Facilitator
-              roleSpan.classList.add('font-semibold', 'text-yellow-600');
+              roleSpan.textContent += ' Lead'; // Indicate Facilitator
+              roleSpan.classList.add('is-facilitator');
           }
          nameRoleDiv.appendChild(roleSpan);
 
           // --- Role change controls (for Facilitator view) ---
           if (currentUser?.role === 'Facilitator' && participant.id !== currentUser.id) {
               const controlsDiv = document.createElement('div');
-              controlsDiv.classList.add('mt-1', 'sm:mt-0', 'sm:ml-4', 'flex', 'gap-2', 'flex-wrap'); // Spacing and wrapping for controls
+              controlsDiv.classList.add('participant-role-controls'); // Spacing and wrapping for controls
 
               // Select dropdown for roles
               const roleSelect = document.createElement('select');
-              roleSelect.classList.add('text-xs', 'border', 'border-gray-300', 'rounded', 'px-1', 'py-0.5', 'bg-white');
+              roleSelect.classList.add('participant-role-select');
               const roles = ['Voter', 'Observer', 'Facilitator'];
               roles.forEach(r => {
                   const option = document.createElement('option');
@@ -575,7 +568,7 @@ function animateCardsIntoView() {
 
          // --- Right side: Vote display / Card placeholder ---
          const voteContainer = document.createElement('div');
-         voteContainer.classList.add('card-container', 'flex-shrink-0'); // Prevent shrinking
+         voteContainer.classList.add('card-container', 'participant-vote'); // Prevent shrinking
          voteContainer.dataset.userId = participant.id; // Link container to user
 
          const card = document.createElement('div');
@@ -603,7 +596,7 @@ function animateCardsIntoView() {
          if (!votesRevealed && participant.vote !== null && participant.role !== 'Observer') {
               const checkMark = document.createElement('span');
               checkMark.textContent = '✓';
-              checkMark.classList.add('text-green-500', 'font-bold', 'absolute', '-top-1', '-right-1', 'bg-white', 'rounded-full', 'px-1', 'text-xs', 'shadow');
+              checkMark.classList.add('vote-checkmark');
               voteContainer.appendChild(checkMark);
          }
 
