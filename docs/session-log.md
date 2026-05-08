@@ -47,3 +47,38 @@ Result:
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Test server processes were started by the test suite and stopped during cleanup.
 - No project `node server.js` process was left running.
+
+## 2026-05-08 - GitHub Actions CI
+
+Branch: `feature/github-actions-ci`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `e7eda7e Add Scrum Poker baseline tests`
+- Working tree: clean
+- Server status: no `node server.js` process was running
+
+Work planned:
+- Add a GitHub Actions workflow that runs the established local baseline checks on pushes and pull requests.
+- Keep Bitbucket as a backup remote while GitHub remains the primary `origin`.
+
+Work completed:
+- Added `.github/workflows/ci.yml`.
+- Configured CI to run on pull requests to `main`/`master` and pushes to `main`, `master`, and `feature/**`.
+- CI installs with `npm ci`, checks JavaScript syntax, runs `npm test`, and audits production dependencies.
+
+Verification:
+- `npm ci`
+- `node --check server.js`
+- `node --check public/js/app.js`
+- `node --check tests/ws-operations.test.js`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+
+Result:
+- All checks passed.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Test server processes were started by the test suite and stopped during cleanup.
+- No project `node server.js` process was left running.
