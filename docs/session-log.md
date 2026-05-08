@@ -116,3 +116,42 @@ Result:
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - Test server processes were started by the test suite and stopped during cleanup.
 - No project `node server.js` process was left running.
+
+## 2026-05-08 - Room State Extraction
+
+Branch: `feature/extract-room-state`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `24a9f84 Document GitHub deployment workflow`
+- Working tree: clean
+- Server status: no `node server.js` process was running
+
+Work planned:
+- Extract room lifecycle and room-state projection helpers from `server.js`.
+- Preserve current WebSocket behavior under the existing baseline tests.
+- Add direct unit coverage for the extracted helper module.
+
+Work completed:
+- Added `lib/roomState.js` for room creation, join/leave, expiry, state projection, and facilitator assignment/reassignment.
+- Updated `server.js` to use the extracted helpers and a local room-broadcast helper.
+- Added `tests/room-state.test.js` with focused helper coverage.
+- Updated GitHub Actions and deployment docs to syntax-check the helper module and all test files.
+
+Verification:
+- `npm ci`
+- `node --check server.js`
+- `node --check lib/roomState.js`
+- `node --check public/js/app.js`
+- `for file in tests/*.test.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npm audit --omit=dev`
+
+Result:
+- All checks passed.
+- `npm test` ran 11 tests successfully.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- Test server processes were started by the test suite and stopped during cleanup.
+- No project `node server.js` process was left running.

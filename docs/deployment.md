@@ -61,8 +61,9 @@ Run these checks before pushing application changes:
 ```bash
 npm ci
 node --check server.js
+node --check lib/roomState.js
 node --check public/js/app.js
-node --check tests/ws-operations.test.js
+for file in tests/*.test.js; do node --check "$file"; done
 git diff --check
 npm test
 npm audit --omit=dev
@@ -82,8 +83,9 @@ It runs:
 
 - `npm ci`
 - `node --check server.js`
+- `node --check lib/roomState.js`
 - `node --check public/js/app.js`
-- `node --check tests/ws-operations.test.js`
+- syntax checks for `tests/*.test.js`
 - `npm test`
 - `npm audit --omit=dev`
 

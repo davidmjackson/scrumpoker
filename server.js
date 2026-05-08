@@ -1,46 +1,23 @@
 // server.js
 
+const {
+  DEFAULT_ROOM_EXPIRY_MS,
+  assignFacilitator,
+  expireRooms,
+  getRoomState,
+  joinRoom,
+  leaveRoom,
+  reassignFacilitatorIfLeaving
+} = require('./lib/roomState');
+
 console.log('⏳ server.js is starting');
 
 // Map<roomName: string, { users: Set<string>, lastActive: number }>
 const rooms = new Map();
 
-function joinRoom(roomName, userId) {
-  const now = Date.now();
-  if (!rooms.has(roomName)) {
-    // Create new room if missing, with its own reveal and facilitator fields
-    rooms.set(roomName, {
-      users: new Set(),
-      lastActive: now,
-      votesRevealed: false,
-      facilitatorId: null
-    });
-  }
-  const room = rooms.get(roomName);
-  room.users.add(userId);
-  room.lastActive = now;
-}
-
-function leaveRoom(roomName, userId) {
-  if (!rooms.has(roomName)) return;
-  const room = rooms.get(roomName);
-  room.users.delete(userId);
-  room.lastActive = Date.now();
-  if (room.users.size === 0) {
-    rooms.delete(roomName);
-  }
-}
-
-// Every minute: sweep out rooms idle for 45 minutes
+// Every minute: sweep out rooms idle for 60 minutes
 setInterval(() => {
-  const now = Date.now();
-  const EXPIRY_MS = 60 * 60 * 1000; // 30 minutes
-  for (const [roomName, data] of rooms.entries()) {
-    if (now - data.lastActive > EXPIRY_MS) {
-      rooms.delete(roomName);
-      //console.log(`Expired room deleted: ${roomName}`);
-    }
-  }
+  expireRooms(rooms, Date.now(), DEFAULT_ROOM_EXPIRY_MS);
 }, 60 * 1000);
 
 const fs = require('fs');
@@ -218,55 +195,24 @@ function broadcast(message) {
 
 function sendToClient(ws, message) {
   if (ws.readyState === WebSocket.OPEN) {
-    const data = JSON.stringify(message);
-
-   const clientName = participants[ws.userId] && participants[ws.userId].name ? participants[ws.userId].name : 'Unknown';
-  //console.log(`Sending to client ${clientName}: ${data}`);
-   
-ws.send(data);
+    ws.send(JSON.stringify(message));
   }
 }
 
-function getRoomState(roomName) {
-  // 1) Gather only participants in this room
-  const participantList = Object.values(participants)
-    .filter((p) => p.roomName === roomName)
-    .map(({ ws, ...rest }) => rest);
+function sendToRoom(roomName, message) {
+  const room = rooms.get(roomName);
+  if (!room) return;
 
-  // 2) Read the room’s votesRevealed and facilitatorId (we’ll store these in `rooms` later)
-  const roomObj = rooms.get(roomName) || {};
-  const votesRevealedInRoom = roomObj.votesRevealed || false;
-  const facilitatorIdInRoom = roomObj.facilitatorId || null;
-
-  return {
-    type: 'updateState',
-    payload: {
-      participants: participantList,
-      votesRevealed: votesRevealedInRoom,
-      facilitatorId: facilitatorIdInRoom,
-    },
-  };
-}
-
-function assignFacilitator(roomName) {
-  const roomObj = rooms.get(roomName);
-  if (!roomObj) return;
-
-  // If there is no current facilitator for this room (or they’ve disconnected), choose a new one
-  if (!roomObj.facilitatorId || !participants[roomObj.facilitatorId]) {
-    const ids = Array.from(roomObj.users);
-    if (ids.length > 0) {
-      roomObj.facilitatorId = ids[0];
-      participants[ids[0]].role = 'Facilitator';
-      //console.log(`Assigned Facilitator in "${roomName}" to: ${participants[ids[0]].name}`);
-    } else {
-      roomObj.facilitatorId = null;
-      //console.log(`No users left in "${roomName}", cleared facilitator.`);
+  room.users.forEach((id) => {
+    const clientSocket = participants[id]?.ws;
+    if (clientSocket?.readyState === WebSocket.OPEN) {
+      sendToClient(clientSocket, message);
     }
-  } else if (participants[roomObj.facilitatorId]) {
-    // Ensure they still have the “Facilitator” role
-    participants[roomObj.facilitatorId].role = 'Facilitator';
-  }
+  });
+}
+
+function sendRoomState(roomName) {
+  sendToRoom(roomName, getRoomState(rooms, participants, roomName));
 }
 
 // ── 4) Handle WebSocket connections ───────────────────────────────────────
@@ -336,7 +282,7 @@ wss.on('connection', (ws) => {
         ws.name = name;
         ws.role = role;
         ws.roomName = internalRoom;
-        joinRoom(internalRoom, userId);
+        joinRoom(rooms, internalRoom, userId);
 
         let assignedRole = role;
         const roomForLogin = rooms.get(internalRoom);
@@ -357,17 +303,10 @@ wss.on('connection', (ws) => {
           roomName: internalRoom
         };
 
-        assignFacilitator(internalRoom);
+        assignFacilitator(rooms, participants, internalRoom);
 
         // Broadcast updated room state…
-        const roomState = getRoomState(internalRoom);
-
-        rooms.get(internalRoom).users.forEach((id) => {
-          const clientSocket = participants[id].ws;
-          if (clientSocket.readyState === WebSocket.OPEN) {
-            sendToClient(clientSocket, roomState);
-          }
-        });
+        sendRoomState(internalRoom);
 
         const joinedPayload = {
           type: 'userJoined',
@@ -381,12 +320,7 @@ wss.on('connection', (ws) => {
             })
           }
         };
-        rooms.get(internalRoom).users.forEach((id) => {
-          const clientSocket = participants[id].ws;
-          if (clientSocket && clientSocket.readyState === WebSocket.OPEN) {
-            sendToClient(clientSocket, joinedPayload);
-          }
-        });
+        sendToRoom(internalRoom, joinedPayload);
 
         //console.log(`User logged in: ${name} (${userId}), Room: ${room}`);
         break;
@@ -412,15 +346,7 @@ wss.on('connection', (ws) => {
             //console.log(`User ${currentUser.name} voted: ${payload.vote}`);
 
             // 7.3) Send the updated state only to users in this room
-            {
-              const roomState = getRoomState(roomNameVote);
-              rooms.get(roomNameVote).users.forEach((id) => {
-                const clientSocket = participants[id].ws;
-                if (clientSocket.readyState === WebSocket.OPEN) {
-                  sendToClient(clientSocket, roomState);
-                }
-              });
-            }
+            sendRoomState(roomNameVote);
           } else {
             sendToClient(ws, { type: 'error', payload: { message: 'Invalid vote payload.' } });
           }
@@ -445,15 +371,7 @@ wss.on('connection', (ws) => {
           //console.log(`Votes revealed by ${currentUser.name} in room "${roomNameReveal}"`);
 
           // 8.2) Send updated state only to sockets in this room
-          {
-            const roomState = getRoomState(roomNameReveal);
-            rooms.get(roomNameReveal).users.forEach((id) => {
-              const clientSocket = participants[id].ws;
-              if (clientSocket.readyState === WebSocket.OPEN) {
-                sendToClient(clientSocket, roomState);
-              }
-            });
-          }
+          sendRoomState(roomNameReveal);
 
           break;
         }
@@ -485,15 +403,7 @@ wss.on('connection', (ws) => {
         //console.log(`Votes reset by ${currentUser.name} in room "${roomNameReset}"`);
 
         // 9.4) Send the updated state only to sockets in this room
-        {
-          const roomState = getRoomState(roomNameReset);
-          rooms.get(roomNameReset).users.forEach((id) => {
-            const clientSocket = participants[id].ws;
-            if (clientSocket.readyState === WebSocket.OPEN) {
-              sendToClient(clientSocket, roomState);
-            }
-          });
-        }
+        sendRoomState(roomNameReset);
 
         break;
       }
@@ -550,15 +460,7 @@ wss.on('connection', (ws) => {
         //console.log(`Role for ${target.name} changed to ${newRole} by ${currentUser.name} in room "${roomNameCR}"`);
 
         // 10.4) Send updated state only to that room
-        {
-          const roomStateCR = getRoomState(roomNameCR);
-          rooms.get(roomNameCR).users.forEach((id) => {
-            const clientSocket = participants[id].ws;
-            if (clientSocket.readyState === WebSocket.OPEN) {
-              sendToClient(clientSocket, roomStateCR);
-            }
-          });
-        }
+        sendRoomState(roomNameCR);
 
         break;
       }
@@ -569,33 +471,16 @@ wss.on('connection', (ws) => {
             const roomNameLO = leavingUser.roomName;
             //console.log(`User logged out: ${leavingUser.name} (${userId}) from room "${roomNameLO}"`);
 
-            // 11.1) Remove user from the room's Set
-            leaveRoom(roomNameLO, userId);
-
-            // 11.2) If they were that room's facilitator, clear and reassign within the room
-            const roomObjLO = rooms.get(roomNameLO);
-            if (roomObjLO && roomObjLO.facilitatorId === userId) {
-              roomObjLO.facilitatorId = null;
-              // Optionally pick a new facilitator among remaining users:
-              if (roomObjLO.users.size > 0) {
-                const [newFacilitatorId] = roomObjLO.users.values();
-                roomObjLO.facilitatorId = newFacilitatorId;
-                participants[newFacilitatorId].role = 'Facilitator';
-              }
-            }
+            // 11.1) Remove user and reassign facilitator within the room if needed
+            leaveRoom(rooms, roomNameLO, userId);
+            const roomObjLO = reassignFacilitatorIfLeaving(rooms, participants, roomNameLO, userId);
 
             // 11.3) Delete from participants
             delete participants[userId];
 
             // 11.4) Send updated state only to users still in that room
             if (roomObjLO) {
-              const roomStateLO = getRoomState(roomNameLO);
-              roomObjLO.users.forEach((id) => {
-                const clientSocket = participants[id].ws;
-                if (clientSocket.readyState === WebSocket.OPEN) {
-                  sendToClient(clientSocket, roomStateLO);
-                }
-              });
+              sendRoomState(roomNameLO);
             }
           }
           break;
@@ -613,32 +498,16 @@ wss.on('connection', (ws) => {
       const roomNameDC = disc.roomName;
       //console.log(`Client disconnected: ${disc.name} (${userId}) from room "${roomNameDC}"`);
 
-      // 12.1) Remove user from their room
-      leaveRoom(roomNameDC, userId);
-
-      // 12.2) If they were that room’s facilitator, clear & reassign within the room
-      const roomObjDC = rooms.get(roomNameDC);
-      if (roomObjDC && roomObjDC.facilitatorId === userId) {
-        roomObjDC.facilitatorId = null;
-        if (roomObjDC.users.size > 0) {
-          const [newFacilitatorId] = roomObjDC.users.values();
-          roomObjDC.facilitatorId = newFacilitatorId;
-          participants[newFacilitatorId].role = 'Facilitator';
-        }
-      }
+      // 12.1) Remove user and reassign facilitator within the room if needed
+      leaveRoom(rooms, roomNameDC, userId);
+      const roomObjDC = reassignFacilitatorIfLeaving(rooms, participants, roomNameDC, userId);
 
       // 12.3) Delete from participants
       delete participants[userId];
 
       // 12.4) Send updated state only to remaining users in that room
       if (roomObjDC) {
-        const roomStateDC = getRoomState(roomNameDC);
-        roomObjDC.users.forEach((id) => {
-          const clientSocket = participants[id].ws;
-          if (clientSocket.readyState === WebSocket.OPEN) {
-            sendToClient(clientSocket, roomStateDC);
-          }
-        });
+        sendRoomState(roomNameDC);
       }
     } else {
       //console.log(`Client disconnected (not logged in): ${userId}`);
@@ -652,32 +521,16 @@ ws.on('error', (error) => {
     const roomNameErr = errUser.roomName;
     //console.log(`WebSocket error cleanup: ${errUser.name} (${userId}) in room "${roomNameErr}"`);
 
-    // 13.1) Remove user from their room’s Set
-    leaveRoom(roomNameErr, userId);
-
-    // 13.2) If they were that room’s facilitator, clear & reassign within the room
-    const roomObjErr = rooms.get(roomNameErr);
-    if (roomObjErr && roomObjErr.facilitatorId === userId) {
-      roomObjErr.facilitatorId = null;
-      if (roomObjErr.users.size > 0) {
-        const [newFacilitatorId] = roomObjErr.users.values();
-        roomObjErr.facilitatorId = newFacilitatorId;
-        participants[newFacilitatorId].role = 'Facilitator';
-      }
-    }
+    // 13.1) Remove user and reassign facilitator within the room if needed
+    leaveRoom(rooms, roomNameErr, userId);
+    const roomObjErr = reassignFacilitatorIfLeaving(rooms, participants, roomNameErr, userId);
 
     // 13.3) Delete from participants
     delete participants[userId];
 
     // 13.4) Send updated state only to remaining users in that room
     if (roomObjErr) {
-      const roomStateErr = getRoomState(roomNameErr);
-      roomObjErr.users.forEach((id) => {
-        const clientSocket = participants[id].ws;
-        if (clientSocket.readyState === WebSocket.OPEN) {
-          sendToClient(clientSocket, roomStateErr);
-        }
-      });
+      sendRoomState(roomNameErr);
     }
   }
 });
