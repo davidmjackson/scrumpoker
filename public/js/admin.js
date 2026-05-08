@@ -13,6 +13,7 @@ const refreshKeysButton = document.getElementById('refresh-keys-button');
 const keyCount = document.getElementById('key-count');
 
 const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
+let currentKeys = [];
 
 function getAppUrl() {
   return window.location.origin || `${window.location.protocol}//${window.location.host}`;
@@ -126,8 +127,14 @@ function renderKeys(keys) {
     const value = document.createElement('code');
     value.textContent = key.value;
 
+    const preview = document.createElement('pre');
+    preview.className = 'admin-invite-preview';
+    preview.setAttribute('aria-label', `Invite preview for ${key.name}`);
+    preview.textContent = createTeamInvite(key);
+
     details.appendChild(name);
     details.appendChild(value);
+    details.appendChild(preview);
 
     const actions = document.createElement('div');
     actions.className = 'admin-key-actions';
@@ -187,9 +194,10 @@ async function copyText(value) {
 
 async function loadKeys() {
   const data = await requestAdmin('/api/admin/keys');
+  currentKeys = data.keys || [];
   sessionStorage.setItem(ADMIN_KEY_STORAGE, getAdminKey());
   keysPanel.classList.remove('hidden');
-  renderKeys(data.keys || []);
+  renderKeys(currentKeys);
   setStatus('Team keys loaded.', 'success');
 }
 
@@ -244,6 +252,14 @@ refreshKeysButton.addEventListener('click', async () => {
   } catch (err) {
     setStatus(err.message, 'error');
   }
+});
+
+inviteRoomInput.addEventListener('input', () => {
+  renderKeys(currentKeys);
+});
+
+inviteRoleSelect.addEventListener('change', () => {
+  renderKeys(currentKeys);
 });
 
 const savedAdminKey = sessionStorage.getItem(ADMIN_KEY_STORAGE);
