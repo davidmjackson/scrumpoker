@@ -125,8 +125,21 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     const copiedKey = await page.evaluate(() => navigator.clipboard.readText());
     expect(copiedKey).toBe(originalGammaKey);
 
-    page.once('dialog', (dialog) => dialog.accept());
+    const rotateModal = page.locator('#rotate-key-modal');
+    await expect(rotateModal).toBeHidden();
     await gammaRow.getByRole('button', { name: 'Rotate key' }).click();
+    await expect(rotateModal).toBeVisible();
+    await expect(rotateModal).toContainText('Rotate team key?');
+    await expect(rotateModal).toContainText('This will generate a new access key for Gamma Team.');
+    await expect(rotateModal).toContainText('Existing invite links for this team will stop working immediately.');
+    await rotateModal.getByRole('button', { name: 'Cancel' }).click();
+    await expect(rotateModal).toBeHidden();
+    await expect(gammaRow.locator('code')).toHaveText(originalGammaKey);
+
+    await gammaRow.getByRole('button', { name: 'Rotate key' }).click();
+    await expect(rotateModal).toBeVisible();
+    await rotateModal.getByRole('button', { name: 'Rotate key' }).click();
+    await expect(rotateModal).toBeHidden();
     await expect(page.locator('#admin-status')).toHaveText('Rotated key for Gamma Team.');
     await expect(page.locator('#activity-count')).toHaveText('2 events');
     await expect(page.locator('.admin-activity-item').first()).toContainText('Rotated');

@@ -18,11 +18,16 @@ const refreshKeysButton = document.getElementById('refresh-keys-button');
 const refreshActivityButton = document.getElementById('refresh-activity-button');
 const keyCount = document.getElementById('key-count');
 const activityCount = document.getElementById('activity-count');
+const rotateKeyModal = document.getElementById('rotate-key-modal');
+const rotateKeyMessage = document.getElementById('rotate-key-message');
+const cancelRotateKeyButton = document.getElementById('cancel-rotate-key-button');
+const confirmRotateKeyButton = document.getElementById('confirm-rotate-key-button');
 
 const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
 let currentKeys = [];
 let currentActivity = [];
 let openTeamNames = new Set();
+let pendingRotateKeyName = '';
 
 function getAppUrl() {
   return window.location.origin || `${window.location.protocol}//${window.location.host}`;
@@ -190,6 +195,36 @@ function getTeamCountText(keys, visibleKeys, search) {
   const suspendedLabel = suspendedCount ? ` - ${suspendedCount} suspended` : '';
 
   return search ? `${visibleLabel} of ${keys.length}${suspendedLabel}` : `${visibleLabel}${suspendedLabel}`;
+}
+
+function openRotateKeyModal(teamName) {
+  pendingRotateKeyName = teamName;
+  rotateKeyMessage.textContent = `This will generate a new access key for ${teamName}.`;
+  rotateKeyModal.classList.remove('hidden');
+  confirmRotateKeyButton.focus();
+}
+
+function closeRotateKeyModal() {
+  pendingRotateKeyName = '';
+  rotateKeyModal.classList.add('hidden');
+}
+
+async function confirmRotateKey() {
+  const teamName = pendingRotateKeyName;
+  if (!teamName) return;
+
+  confirmRotateKeyButton.disabled = true;
+  cancelRotateKeyButton.disabled = true;
+
+  try {
+    await rotateKey(teamName);
+    closeRotateKeyModal();
+  } catch (err) {
+    setStatus(err.message, 'error');
+  } finally {
+    confirmRotateKeyButton.disabled = false;
+    cancelRotateKeyButton.disabled = false;
+  }
 }
 
 function renderActivity(activity) {
@@ -384,9 +419,8 @@ function renderKeys(keys) {
     rotateButton.type = 'button';
     rotateButton.className = 'secondary-action compact-action';
     rotateButton.textContent = 'Rotate key';
-    rotateButton.addEventListener('click', async () => {
-      if (!window.confirm(`Rotate key "${key.name}"? Existing invite links will stop working.`)) return;
-      await rotateKey(key.name);
+    rotateButton.addEventListener('click', () => {
+      openRotateKeyModal(key.name);
     });
 
     const statusButton = document.createElement('button');
@@ -565,6 +599,21 @@ expandTeamsButton.addEventListener('click', () => {
 
 collapseTeamsButton.addEventListener('click', () => {
   setRenderedTeamsOpen(false);
+});
+
+cancelRotateKeyButton.addEventListener('click', closeRotateKeyModal);
+confirmRotateKeyButton.addEventListener('click', confirmRotateKey);
+
+rotateKeyModal.addEventListener('click', (event) => {
+  if (event.target === rotateKeyModal) {
+    closeRotateKeyModal();
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !rotateKeyModal.classList.contains('hidden')) {
+    closeRotateKeyModal();
+  }
 });
 
 const savedAdminKey = sessionStorage.getItem(ADMIN_KEY_STORAGE);
