@@ -35,6 +35,10 @@
  let animateVotingCards = true; // Controls whether cards animate in
  let flipAnimationTimers = [];
  let voteErrorTimer = null;
+ const cardFlipTransitionMs = 600;
+ const cardFlipStaggerDelayMs = 120;
+ const cardIntroDelayMs = 300;
+ const resetTurnaroundDelayMs = 180;
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
@@ -151,28 +155,55 @@ function clearFlipAnimationTimers() {
     flipAnimationTimers = [];
 }
 
+function getVotingCardInners() {
+    const cards = Array.from(document.querySelectorAll('.vote-card .card-inner'));
+    return cards;
+}
+
+function flipCardsInOrder(cards, { faceDown, reverse = false, startDelayMs = 0 }) {
+    const orderedCards = reverse ? [...cards].reverse() : cards;
+
+    orderedCards.forEach((card, index) => {
+        const timer = setTimeout(() => {
+            card.classList.toggle('is-face-down', faceDown);
+        }, startDelayMs + index * cardFlipStaggerDelayMs);
+        flipAnimationTimers.push(timer);
+    });
+
+    return startDelayMs + Math.max(0, orderedCards.length - 1) * cardFlipStaggerDelayMs + cardFlipTransitionMs;
+}
+
 function animateCardsIntoView() {
     clearFlipAnimationTimers();
 
-    const cards = Array.from(document.querySelectorAll('.vote-card .card-inner'));
+    const cards = getVotingCardInners();
     if (cards.length === 0) return;
 
     cards.forEach((card) => {
         card.classList.add('is-face-down');
     });
 
-    const introDelayMs = 300;
-    const staggerDelayMs = 120;
     const firstTimer = setTimeout(() => {
-        cards.forEach((card, index) => {
-            const timer = setTimeout(() => {
-                card.classList.remove('is-face-down');
-            }, index * staggerDelayMs);
-            flipAnimationTimers.push(timer);
-        });
-    }, introDelayMs);
+        flipCardsInOrder(cards, { faceDown: false });
+    }, cardIntroDelayMs);
 
     flipAnimationTimers.push(firstTimer);
+}
+
+function animateCardsFaceDownBeforeReset(onComplete) {
+    clearFlipAnimationTimers();
+
+    const cards = getVotingCardInners();
+    if (cards.length === 0) {
+        onComplete();
+        return;
+    }
+
+    const faceDownDurationMs = flipCardsInOrder(cards, { faceDown: true, reverse: true });
+    const completeTimer = setTimeout(() => {
+        onComplete();
+    }, faceDownDurationMs + resetTurnaroundDelayMs);
+    flipAnimationTimers.push(completeTimer);
 }
 
  // --- Server Message Handler ---
@@ -191,6 +222,8 @@ function animateCardsIntoView() {
 
          case 'updateState':
              if (payload) {
+                 const wasVotesRevealed = votesRevealed;
+                 const wasRoomVisible = isRoomVisible();
                  participants = payload.participants || [];
                  votesRevealed = payload.votesRevealed || false;
                  facilitatorId = payload.facilitatorId || null;
@@ -214,7 +247,10 @@ function animateCardsIntoView() {
                      sessionStorage.setItem('scrumPokerUserId', currentUser.id);
                      sessionStorage.setItem('scrumPokerUserName', currentUser.name);
 
-                    if (!pokerRoomSection || pokerRoomSection.classList.contains('hidden')) {
+                    const isEnteringRoom = !pokerRoomSection || pokerRoomSection.classList.contains('hidden');
+                    const shouldAnimateResetDeck = wasVotesRevealed && !votesRevealed && wasRoomVisible && !isEnteringRoom;
+
+                    if (isEnteringRoom) {
                         // Only entering the room for the first time!
                         animateVotingCards = true;
                     }
@@ -222,7 +258,14 @@ function animateCardsIntoView() {
 
 
                      showPokerRoom(); // Ensure poker room is visible
-                     updateUI(); // Update the UI with the new state
+                     if (shouldAnimateResetDeck) {
+                         animateCardsFaceDownBeforeReset(() => {
+                             animateVotingCards = true;
+                             updateUI();
+                         });
+                     } else {
+                         updateUI(); // Update the UI with the new state
+                     }
                  } else if (!loginSection.classList.contains('hidden')) {
                      // Still on login screen, do nothing until login action
                  } else {
@@ -647,8 +690,9 @@ function animateCardsIntoView() {
  function handleResetVotes() {
      animateVotingCards = true;
       if (currentUser?.role === 'Facilitator') {
+         resetVotesButton.disabled = true;
          sendMessage('resetVotes', {});
-         resetAllCards()
+         resetAllCards();
      }
  }
 
