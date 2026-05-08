@@ -137,6 +137,7 @@ function getActivityActionLabel(action) {
     created: 'Created',
     suspended: 'Suspended',
     restored: 'Restored',
+    rotated: 'Rotated',
     removed: 'Removed'
   };
 
@@ -379,6 +380,15 @@ function renderKeys(keys) {
       setStatus(`Copied key for ${key.name}.`, 'success');
     });
 
+    const rotateButton = document.createElement('button');
+    rotateButton.type = 'button';
+    rotateButton.className = 'secondary-action compact-action';
+    rotateButton.textContent = 'Rotate key';
+    rotateButton.addEventListener('click', async () => {
+      if (!window.confirm(`Rotate key "${key.name}"? Existing invite links will stop working.`)) return;
+      await rotateKey(key.name);
+    });
+
     const statusButton = document.createElement('button');
     statusButton.type = 'button';
     statusButton.className = keyActive ? 'secondary-action compact-action' : 'success-action compact-action';
@@ -400,6 +410,7 @@ function renderKeys(keys) {
     actions.appendChild(copyInviteButton);
     actions.appendChild(copyLinkButton);
     actions.appendChild(copyKeyButton);
+    actions.appendChild(rotateButton);
     actions.appendChild(statusButton);
     actions.appendChild(removeButton);
 
@@ -479,6 +490,15 @@ async function updateKeyStatus(name, active) {
   });
   await loadAdminData();
   setStatus(`${data.key.active ? 'Restored' : 'Suspended'} ${data.key.name}.`, 'success');
+}
+
+async function rotateKey(name) {
+  const encodedName = encodeURIComponent(name);
+  const data = await requestAdmin(`/api/admin/keys/${encodedName}/rotate`, {
+    method: 'POST'
+  });
+  await loadAdminData();
+  setStatus(`Rotated key for ${data.key.name}.`, 'success');
 }
 
 authForm.addEventListener('submit', async (event) => {

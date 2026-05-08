@@ -85,7 +85,7 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await gammaRow.locator('summary').click();
     await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
     await expect(gammaRow.locator('.admin-key-status')).toHaveText('Active - team members can use this key to join rooms.');
-    const gammaKey = await gammaRow.locator('code').innerText();
+    const originalGammaKey = await gammaRow.locator('code').innerText();
 
     await page.locator('#invite-room-input').fill('Release Planning');
     await page.locator('#invite-role-select').selectOption('Observer');
@@ -93,7 +93,7 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
 
     const invitePreview = gammaRow.locator('.admin-invite-preview');
     await expect(invitePreview).toContainText('Team: Gamma Team');
-    await expect(invitePreview).toContainText(`Access key: ${gammaKey}`);
+    await expect(invitePreview).toContainText(`Access key: ${originalGammaKey}`);
     await expect(invitePreview).toContainText('Room: Release Planning');
     await expect(invitePreview).toContainText('Role: Observer');
     const previewText = await invitePreview.evaluate((node) => node.textContent);
@@ -104,14 +104,14 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     expect(copiedInvite).toBe(previewText);
     expect(copiedInvite).toContain('Scrum Poker team access');
     expect(copiedInvite).toContain('Team: Gamma Team');
-    expect(copiedInvite).toContain(`Access key: ${gammaKey}`);
+    expect(copiedInvite).toContain(`Access key: ${originalGammaKey}`);
     expect(copiedInvite).toContain('Room: Release Planning');
     expect(copiedInvite).toContain('Role: Observer');
     const inviteUrl = copiedInvite.match(/^App: (.+)$/m)?.[1];
     expect(inviteUrl).toBeTruthy();
     const parsedInviteUrl = new URL(inviteUrl);
     expect(parsedInviteUrl.origin).toBe(server.baseUrl);
-    expect(parsedInviteUrl.searchParams.get('accessKey')).toBe(gammaKey);
+    expect(parsedInviteUrl.searchParams.get('accessKey')).toBe(originalGammaKey);
     expect(parsedInviteUrl.searchParams.get('room')).toBe('Release Planning');
     expect(parsedInviteUrl.searchParams.get('role')).toBe('Observer');
 
@@ -123,13 +123,24 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await gammaRow.getByRole('button', { name: 'Copy key' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Copied key for Gamma Team.');
     const copiedKey = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copiedKey).toBe(gammaKey);
+    expect(copiedKey).toBe(originalGammaKey);
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await gammaRow.getByRole('button', { name: 'Rotate key' }).click();
+    await expect(page.locator('#admin-status')).toHaveText('Rotated key for Gamma Team.');
+    await expect(page.locator('#activity-count')).toHaveText('2 events');
+    await expect(page.locator('.admin-activity-item').first()).toContainText('Rotated');
+    await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
+    const rotatedGammaKey = await gammaRow.locator('code').innerText();
+    expect(rotatedGammaKey).not.toBe(originalGammaKey);
+    await expect(gammaRow.locator('.admin-invite-preview')).toContainText(`Access key: ${rotatedGammaKey}`);
+    await expect(gammaRow.locator('.admin-invite-preview')).not.toContainText(originalGammaKey);
 
     page.once('dialog', (dialog) => dialog.accept());
     await gammaRow.getByRole('button', { name: 'Suspend' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Suspended Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('3 teams - 1 suspended');
-    await expect(page.locator('#activity-count')).toHaveText('2 events');
+    await expect(page.locator('#activity-count')).toHaveText('3 events');
     await expect(page.locator('.admin-activity-item').first()).toContainText('Suspended');
     await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
     await expect(gammaRow.locator('.admin-team-status')).toHaveText('Suspended');
@@ -142,7 +153,7 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     await gammaRow.getByRole('button', { name: 'Restore' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Restored Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('3 teams');
-    await expect(page.locator('#activity-count')).toHaveText('3 events');
+    await expect(page.locator('#activity-count')).toHaveText('4 events');
     await expect(page.locator('.admin-activity-item').first()).toContainText('Restored');
     await expect(gammaRow.locator('.admin-team-body')).toBeVisible();
     await expect(gammaRow.locator('.admin-team-status')).toHaveText('Active');
@@ -153,13 +164,14 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
 
     await expect(page.locator('#admin-status')).toHaveText('Removed Gamma Team.');
     await expect(page.locator('#key-count')).toHaveText('2 teams');
-    await expect(page.locator('#activity-count')).toHaveText('4 events');
+    await expect(page.locator('#activity-count')).toHaveText('5 events');
     await expect(page.locator('.admin-activity-item').first()).toContainText('Removed');
-    await expect(page.locator('#activity-list')).not.toContainText(gammaKey);
+    await expect(page.locator('#activity-list')).not.toContainText(originalGammaKey);
+    await expect(page.locator('#activity-list')).not.toContainText(rotatedGammaKey);
     await expect(gammaRow).toHaveCount(0);
 
     await page.goto(inviteUrl);
-    await expect(page.locator('#access-key-input')).toHaveValue(gammaKey);
+    await expect(page.locator('#access-key-input')).toHaveValue(originalGammaKey);
     await expect(page.locator('#room-input')).toHaveValue('Release Planning');
     await expect(page.locator('#role-select')).toHaveValue('Observer');
     expect(page.url()).not.toContain('accessKey=');

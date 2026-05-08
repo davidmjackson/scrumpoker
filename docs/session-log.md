@@ -1335,3 +1335,54 @@ Result:
 Notes:
 - The production admin key was set in the systemd service during deployment. Treat it as a secret and rotate it if it has been shared beyond the deployment session.
 - The old alias banner may continue to show in already-open shells because `.bashrc` was loaded before cleanup. It should be gone in new SSH sessions.
+
+## 2026-05-08 - Admin Key Rotation
+
+Branch: `feature/admin-key-rotation`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `0e0c9b9 Log IONOS production deployment`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+
+Work planned:
+- Add a reversible admin operation to rotate a team key without deleting the team.
+- Preserve the team's active or suspended status after rotation.
+- Invalidate old invite links by replacing the stored key value.
+- Log key rotations in the admin activity trail without exposing full keys.
+
+Work completed:
+- Added `rotateAccessKey` to replace one team key while preserving team name and status.
+- Added `POST /api/admin/keys/:name/rotate`.
+- Logged `rotated` admin activity events with short key fingerprints only.
+- Added a `Rotate key` action to each admin team section with a confirmation prompt.
+- Updated admin activity labels and badge styling for rotated events.
+- Extended unit, API, activity, and browser coverage for key rotation.
+
+Verification:
+- `node --check lib/accessKeys.js`
+- `node --check lib/adminActivity.js`
+- `node --check lib/httpApp.js`
+- `node --check public/js/admin.js`
+- `node --check tests/access-keys.test.js`
+- `node --check tests/admin-activity.test.js`
+- `node --check tests/ws-operations.test.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `node --test tests/access-keys.test.js`
+- `node --test tests/admin-activity.test.js`
+- `node --test tests/ws-operations.test.js`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused key-storage, activity, API, and admin browser tests passed.
+- `npm test` ran 48 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.

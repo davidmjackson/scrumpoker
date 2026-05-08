@@ -290,6 +290,25 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
     active: true
   });
 
+  const rotated = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}/rotate`, {
+    method: 'POST',
+    headers
+  });
+  const rotatedBody = await rotated.json();
+
+  assert.equal(rotated.status, 200);
+  assert.equal(rotatedBody.key.name, 'Gamma Team');
+  assert.equal(rotatedBody.key.active, true);
+  assert.match(rotatedBody.key.value, /^[A-Za-z0-9]{12}$/);
+  assert.notEqual(rotatedBody.key.value, createdBody.key.value);
+
+  const afterRotate = await fetch(baseUrl, { headers });
+  const afterRotateBody = await afterRotate.json();
+  assert.equal(
+    afterRotateBody.keys.find((key) => key.name === 'Gamma Team')?.value,
+    rotatedBody.key.value
+  );
+
   const removed = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
     method: 'DELETE',
     headers
@@ -310,11 +329,12 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
   assert.equal(activity.status, 200);
   assert.deepEqual(
     activityBody.activity.map((event) => event.action),
-    ['removed', 'restored', 'suspended', 'created']
+    ['removed', 'rotated', 'restored', 'suspended', 'created']
   );
   assert.equal(activityBody.activity.every((event) => event.teamName === 'Gamma Team'), true);
   assert.equal(activityBody.activity.every((event) => event.keyFingerprint.length === 12), true);
   assert.doesNotMatch(JSON.stringify(activityBody), new RegExp(createdBody.key.value));
+  assert.doesNotMatch(JSON.stringify(activityBody), new RegExp(rotatedBody.key.value));
 });
 
 test('WebSocket workflow covers login, voting, reveal, reset, and role limits', async (t) => {
