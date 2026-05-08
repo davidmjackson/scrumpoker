@@ -1022,3 +1022,41 @@ Result:
 - `npm test` ran 39 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Admin Copy Invite Link
+
+Branch: `feature/admin-copy-invite-link`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `30755c1 Add admin invite preview`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+
+Work planned:
+- Add a direct way to copy only the prefilled invite link.
+- Reuse the same invite URL helper used by the full invite preview/message.
+- Keep the existing full invite and raw key copy actions.
+
+Work completed:
+- Added `Copy link` to each admin team key row.
+- Wired `Copy link` to `createInviteUrl`, matching the URL embedded in the full invite text.
+- Extended admin browser coverage to verify copied link text equals the invite URL.
+
+Verification:
+- `node --check public/js/admin.js`
+- `node --check tests/e2e/admin-key-management.spec.js`
+- `for file in server.js manageKeys.js playwright.config.js lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npx playwright test tests/e2e/admin-key-management.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused admin browser test passed.
+- `npm test` ran 39 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.

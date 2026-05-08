@@ -72,6 +72,11 @@ test('admin can unlock, create, copy, and remove team access keys', async ({ pag
     expect(parsedInviteUrl.searchParams.get('room')).toBe('Release Planning');
     expect(parsedInviteUrl.searchParams.get('role')).toBe('Observer');
 
+    await gammaRow.getByRole('button', { name: 'Copy link' }).click();
+    await expect(page.locator('#admin-status')).toHaveText('Copied link for Gamma Team.');
+    const copiedLink = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copiedLink).toBe(inviteUrl);
+
     await gammaRow.getByRole('button', { name: 'Copy key' }).click();
     await expect(page.locator('#admin-status')).toHaveText('Copied key for Gamma Team.');
     const copiedKey = await page.evaluate(() => navigator.clipboard.readText());
