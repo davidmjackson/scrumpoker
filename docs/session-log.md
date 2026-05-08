@@ -771,3 +771,44 @@ Result:
 - `npx playwright test tests/e2e/scrum-poker-smoke.spec.js` passed with 1 browser test.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-08 - Reset Animation Visibility Follow-Up
+
+Branch: `feature/reset-animation-visible`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `f4d42ea Animate reset card flip sequence`
+- Working tree: clean before branch changes
+- Server status: `node server.js` was already running on port `3001`
+- User reported that the reset animation change was not visible after refreshing with F5.
+
+Work planned:
+- Make the reset face-down phase visibly start as soon as the facilitator clicks `Reset Votes`.
+- Keep the two-phase sequence: right-to-left face-down, then left-to-right face-up.
+- Preserve behavior for other connected users.
+
+Work completed:
+- Added a local reset animation guard so the facilitator starts the face-down phase before the reset WebSocket message is sent.
+- Delayed sending `resetVotes` until the local face-down phase completes.
+- Kept non-clicking clients on the state-update-driven face-down animation path.
+- Slightly increased the reset stagger and turnaround timing so the right-to-left pass is easier to see.
+
+Verification:
+- `node --check server.js`
+- `node --check manageKeys.js`
+- `node --check playwright.config.js`
+- `for file in lib/*.js public/js/*.js tests/*.test.js tests/e2e/*.js tests/e2e/helpers/*.js; do node --check "$file"; done`
+- `git diff --check`
+- `npm test`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax checks passed.
+- `npm test` ran 39 tests successfully.
+- Focused reset animation browser test passed.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
