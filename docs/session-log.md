@@ -2080,3 +2080,47 @@ Result:
 - `npm run test:e2e` passed with 4 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Remove Room History Section
+
+Branch: `feature/remove-room-history-section`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `1cd6c6b Hide current item panel (#43)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+- Production had been verified at commit `1cd6c6b64705` with `/health` ok and `js/app.js?v=10`.
+
+Decision:
+- The Poker Room should stay lightweight and not show past-round history.
+- Keep Grouped Results because it is useful during the active reveal.
+- Leave server-side round history behavior in place for compatibility, but remove browser rendering and copy controls.
+
+Work completed:
+- Removed the Revealed rounds / History section from the Poker Room.
+- Removed individual and copy-all history browser code.
+- Removed history-specific CSS.
+- Kept Vote Results and Grouped Results behavior unchanged.
+- Bumped the app script query to `js/app.js?v=11`.
+- Updated smoke and multi-user browser coverage to assert history controls are absent while grouped results remain visible.
+
+Verification:
+- `node --check public/js/app.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused smoke and multi-user browser tests passed.
+- `npm test` ran 57 tests successfully.
+- `npm run test:e2e` passed with 4 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.
