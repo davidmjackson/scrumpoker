@@ -105,7 +105,7 @@ CI uses Node.js 24 and opts JavaScript actions into the Node 24 runtime with `FO
 
 GitHub repository settings should make `main` the default branch and require CI to pass before merging.
 
-## Production Pull
+## Production Deploy
 
 On the production checkout, confirm the remote points to GitHub:
 
@@ -123,12 +123,18 @@ git switch main
 git pull --ff-only origin main
 ```
 
-If `origin` already points to GitHub:
+For normal deployments after a PR has been merged to `main`, run the pull and commit confirmation as one command:
 
 ```bash
-git fetch origin
-git switch main
-git pull --ff-only
+cd /var/www/scrumpoker && git fetch origin && git switch main && git pull --ff-only origin main && git rev-parse --short=12 HEAD
+```
+
+Confirm the printed commit matches the merged `main` commit you intend to deploy.
+
+Then restart and check the service:
+
+```bash
+sudo systemctl restart scrumpoker && sudo systemctl status scrumpoker --no-pager
 ```
 
 ## Runtime
@@ -165,10 +171,10 @@ Do not reuse a team access key as the admin key.
 
 ## Health Check
 
-After restarting the app, verify the local health endpoint:
+After restarting the app, verify the public health endpoint and frontend cache-buster:
 
 ```bash
-curl -fsS http://127.0.0.1:3000/health
+curl -fsS https://scrum-poker.uk/health && printf '\n' && curl -fsS https://scrum-poker.uk/ | grep 'js/app.js'
 ```
 
 Expected response shape:
@@ -176,12 +182,22 @@ Expected response shape:
 ```json
 {
   "status": "ok",
+  "version": "1.0.0",
+  "commit": "abc123def456",
   "uptime": 12.34,
   "rooms": 0
 }
 ```
 
-Then smoke-test the public site and WebSocket path through the reverse proxy.
+The `printf '\n'` keeps the shell prompt from appearing on the same line as the JSON health response.
+
+For a local-only check on the server, use:
+
+```bash
+curl -fsS http://127.0.0.1:3000/health && printf '\n'
+```
+
+Then smoke-test the public site and WebSocket path through the reverse proxy when the change affects room workflows.
 
 ## Reverse Proxy
 
