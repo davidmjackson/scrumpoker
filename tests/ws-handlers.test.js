@@ -228,8 +228,8 @@ test('handleStartNextItem clears the item and votes while preserving history', (
   });
 
   assert.deepEqual(harness.clientMessages.map(({ message }) => message.payload.message), [
-    'Only Facilitator can start the next item.',
-    'Reveal votes before starting the next item.'
+    'Only Facilitator can start the next round.',
+    'Reveal votes before starting the next round.'
   ]);
   assert.equal(room.votesRevealed, false);
   assert.equal(room.currentItem, '');

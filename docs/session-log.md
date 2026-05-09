@@ -2124,3 +2124,48 @@ Result:
 - `npm run test:e2e` passed with 4 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Rename Next Round Action
+
+Branch: `feature/rename-next-round-action`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `63a7289 Remove room history section (#44)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+- Production had been verified at commit `63a7289f056e` with `/health` ok and `js/app.js?v=11`.
+
+Decision:
+- Keep the facilitator control because it resets the room for the next Jira ticket discussion.
+- Rename the visible wording away from "item" because the app no longer tracks tickets/items directly.
+
+Work completed:
+- Renamed the facilitator-only `Start Next Item` button to `Next Round`.
+- Updated server-side facilitator/reveal prerequisite messages to say `next round`.
+- Bumped the app script query to `js/app.js?v=12`.
+- Updated focused handler and browser assertions for the new wording.
+- Kept the existing internal `startNextItem` message name unchanged to avoid unnecessary protocol churn.
+
+Verification:
+- `node --check lib/wsHandlers.js`
+- `node --check public/js/app.js`
+- `node --check tests/ws-handlers.test.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `node --test tests/ws-handlers.test.js`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused handler, smoke, and multi-user browser tests passed.
+- `npm test` ran 57 tests successfully.
+- `npm run test:e2e` passed with 4 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.
