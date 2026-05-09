@@ -22,9 +22,6 @@
  const voteSummary = document.getElementById('vote-summary');
  const averageVoteSpan = document.getElementById('average-vote');
  const roundStatus = document.getElementById('round-status');
- const roundHistorySection = document.getElementById('round-history-section');
- const roundHistoryList = document.getElementById('round-history-list');
- const copyRoundHistoryButton = document.getElementById('copy-round-history-button');
  const adminRoomLink = document.getElementById('admin-room-link');
  const copyVoterInviteButton = document.getElementById('copy-voter-invite-button');
  const copyObserverInviteButton = document.getElementById('copy-observer-invite-button');
@@ -63,7 +60,6 @@
  let participants = []; // Array of user objects received from server
  let votesRevealed = false; // Status received from server
  let facilitatorId = null; // ID received from server
- let roundHistory = [];
  let pendingLoginContext = null;
  let pendingLoginSource = '';
  let allowStoredRoomRestore = true;
@@ -197,7 +193,6 @@ function showVoteError(message) {
                  participants = payload.participants || [];
                  votesRevealed = payload.votesRevealed || false;
                  facilitatorId = payload.facilitatorId || null;
-                 roundHistory = Array.isArray(payload.roundHistory) ? payload.roundHistory : [];
 
                  // Find the current user in the updated participant list
                 const myTempId    = sessionStorage.getItem('scrumPokerUserId_temp');
@@ -460,8 +455,6 @@ function markRoomReconnectIntent() {
      showVotesButton.addEventListener('click', handleShowVotes);
      startNextItemButton.addEventListener('click', handleStartNextItem);
      resetVotesButton.addEventListener('click', handleResetVotes);
-     roundHistoryList.addEventListener('click', handleRoundHistoryAction);
-     copyRoundHistoryButton.addEventListener('click', handleCopyAllRoundHistory);
 
      adminRoomLink.addEventListener('click', markRoomReturnFromAdmin);
      copyVoterInviteButton.addEventListener('click', handleCopyRoomInvite);
@@ -581,7 +574,6 @@ function markRoomReconnectIntent() {
     userGreeting.textContent = `Hello, ${currentUser.name} (${currentUser.role})`;
 
     renderRoundStatus();
-    renderRoundHistory();
 
     // Generate/Update Voting Cards
     renderVotingCards();
@@ -679,142 +671,6 @@ function markRoomReconnectIntent() {
 function renderRoundStatus() {
     roundStatus.textContent = votesRevealed ? 'Revealed' : 'Open';
     roundStatus.classList.toggle('is-locked', votesRevealed);
-}
-
-function renderRoundHistory() {
-    roundHistoryList.innerHTML = '';
-
-    if (!roundHistory.length) {
-        roundHistorySection.classList.add('hidden');
-        copyRoundHistoryButton.classList.add('hidden');
-        return;
-    }
-
-    roundHistorySection.classList.remove('hidden');
-    copyRoundHistoryButton.classList.toggle('hidden', currentUser?.role !== 'Facilitator');
-    roundHistory.forEach((round, index) => {
-        const article = document.createElement('article');
-        article.className = 'round-history-item';
-
-        const header = document.createElement('div');
-        header.className = 'round-history-header';
-
-        const title = document.createElement('h3');
-        title.className = 'round-history-title';
-        title.textContent = getRoundTitle(round, roundHistory.length - index);
-
-        const copyButton = document.createElement('button');
-        copyButton.type = 'button';
-        copyButton.className = 'text-action round-copy-action';
-        copyButton.dataset.roundId = round.id;
-        copyButton.textContent = 'Copy summary';
-
-        header.appendChild(title);
-        header.appendChild(copyButton);
-        article.appendChild(header);
-
-        const meta = document.createElement('div');
-        meta.className = 'round-history-meta';
-        meta.appendChild(createMetaText(`Average ${round.average || '--'}`));
-        meta.appendChild(createMetaText(`${round.voteCount || 0} vote${round.voteCount === 1 ? '' : 's'}`));
-        meta.appendChild(createMetaText(formatRoundRevealedAt(round.revealedAt)));
-        article.appendChild(meta);
-
-        const groups = document.createElement('div');
-        groups.className = 'round-history-groups';
-        const roundGroups = Array.isArray(round.groups) ? round.groups : [];
-
-        if (roundGroups.length) {
-            roundGroups.forEach((group) => {
-                const row = document.createElement('div');
-                row.className = 'round-history-group';
-
-                const vote = document.createElement('span');
-                vote.textContent = group.vote;
-
-                const names = document.createElement('span');
-                names.textContent = Array.isArray(group.names) ? group.names.join(', ') : '';
-
-                row.appendChild(vote);
-                row.appendChild(names);
-                groups.appendChild(row);
-            });
-        } else {
-            const empty = document.createElement('p');
-            empty.className = 'admin-empty';
-            empty.textContent = 'No votes recorded.';
-            groups.appendChild(empty);
-        }
-
-        article.appendChild(groups);
-        roundHistoryList.appendChild(article);
-    });
-}
-
-function createMetaText(text) {
-    const span = document.createElement('span');
-    span.textContent = text;
-    return span;
-}
-
-function getRoundTitle(round, fallbackNumber) {
-    if (round?.title && round.title !== 'Untitled item') {
-        return round.title;
-    }
-
-    return fallbackNumber ? `Round ${fallbackNumber}` : 'Revealed round';
-}
-
-function formatRoundRevealedAt(value) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Revealed';
-
-    return date.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function createRoundSummaryText(round, fallbackNumber) {
-    const lines = [
-        `Scrum Poker round: ${getRoundTitle(round, fallbackNumber)}`,
-        `Average: ${round.average || '--'}`,
-        `Votes: ${round.voteCount || 0}`
-    ];
-
-    appendRoundSpread(lines, round);
-    return lines.join('\n');
-}
-
-function createAllRoundHistorySummaryText(rounds) {
-    const chronologicalRounds = [...rounds].reverse();
-    const lines = [
-        'Scrum Poker session summary',
-        `Rounds: ${chronologicalRounds.length}`
-    ];
-
-    chronologicalRounds.forEach((round, index) => {
-        lines.push(
-            '',
-            `${index + 1}. ${getRoundTitle(round, index + 1)}`,
-            `Average: ${round.average || '--'}`,
-            `Votes: ${round.voteCount || 0}`
-        );
-        appendRoundSpread(lines, round);
-    });
-
-    return lines.join('\n');
-}
-
-function appendRoundSpread(lines, round) {
-    const groups = Array.isArray(round.groups) ? round.groups : [];
-    if (groups.length) {
-        lines.push('Spread:');
-        groups.forEach((group) => {
-            const names = Array.isArray(group.names) ? group.names.join(', ') : '';
-            lines.push(`- ${group.vote}: ${names}`);
-        });
-    }
 }
 
 async function copyText(text) {
@@ -967,49 +823,6 @@ function renderVotingCards() {
  }
 
  // --- Event Handlers (Send messages to server) ---
- async function handleRoundHistoryAction(event) {
-  const copyButton = event.target.closest('.round-copy-action');
-  if (!copyButton) return;
-
-  const roundIndex = roundHistory.findIndex((entry) => entry.id === copyButton.dataset.roundId);
-  const round = roundHistory[roundIndex];
-  if (!round) return;
-
-  const originalText = copyButton.textContent;
-  copyButton.disabled = true;
-
-  try {
-    await copyText(createRoundSummaryText(round, roundHistory.length - roundIndex));
-    copyButton.textContent = 'Copied';
-  } catch (_err) {
-    copyButton.textContent = 'Copy failed';
-  } finally {
-    setTimeout(() => {
-      copyButton.disabled = false;
-      copyButton.textContent = originalText;
-    }, 1600);
-  }
- }
-
- async function handleCopyAllRoundHistory() {
-  if (currentUser?.role !== 'Facilitator' || !roundHistory.length) return;
-
-  const originalText = copyRoundHistoryButton.textContent;
-  copyRoundHistoryButton.disabled = true;
-
-  try {
-    await copyText(createAllRoundHistorySummaryText(roundHistory));
-    copyRoundHistoryButton.textContent = 'Copied all';
-  } catch (_err) {
-    copyRoundHistoryButton.textContent = 'Copy failed';
-  } finally {
-    setTimeout(() => {
-      copyRoundHistoryButton.disabled = false;
-      copyRoundHistoryButton.textContent = originalText;
-    }, 1600);
-  }
- }
-
  function createRoomInviteUrl(role) {
   const storedSession = getStoredRoomSession();
   const accessKey = storedSession?.accessKey;
@@ -1123,7 +936,6 @@ function renderVotingCards() {
      participants = [];
      votesRevealed = false;
      facilitatorId = null;
-     roundHistory = [];
      currentRoom = null;
      pendingLoginContext = null;
      pendingLoginSource = '';

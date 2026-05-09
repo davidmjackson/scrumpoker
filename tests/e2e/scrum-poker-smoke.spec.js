@@ -98,31 +98,15 @@ test('facilitator can enter a room, reveal, copy, start the next item, and reset
     await expect(page.locator('#result-item-name')).toHaveCount(0);
     await expect(page.locator('#ordered-votes-list')).toContainText('Alice');
     await expect(page.locator('#ordered-votes-list')).toContainText('5');
-    await expect(page.locator('#round-history-section')).toBeVisible();
-    await expect(page.locator('#round-history-list')).toContainText('Round 1');
-    await expect(page.locator('#round-history-list')).toContainText('Average 5.0');
-
-    const roundHistoryItem = page.locator('.round-history-item').filter({ hasText: 'Round 1' });
-    const copySummaryButton = roundHistoryItem.locator('.round-copy-action');
-    await expect(copySummaryButton).toHaveText('Copy summary');
-    await copySummaryButton.click();
-    await expect(copySummaryButton).toHaveText('Copied');
-    const copiedSummary = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copiedSummary).toBe([
-      'Scrum Poker round: Round 1',
-      'Average: 5.0',
-      'Votes: 1',
-      'Spread:',
-      '- 5: Alice'
-    ].join('\n'));
+    await expect(page.locator('#round-history-section')).toHaveCount(0);
+    await expect(page.locator('#copy-round-history-button')).toHaveCount(0);
 
     await expect(page.locator('#start-next-item-button')).toBeVisible();
     await page.locator('#start-next-item-button').click();
     await expect(page.locator('#vote-summary')).toBeHidden();
     await expect(page.locator('#ordered-votes')).toBeHidden();
     await expect(page.locator('#round-status')).toHaveText('Open');
-    await expect(page.locator('#round-history-section')).toBeVisible();
-    await expect(page.locator('#round-history-list')).toContainText('Round 1');
+    await expect(page.locator('#round-history-section')).toHaveCount(0);
     await expect(page.locator('button.vote-card[data-value="5"]')).not.toHaveClass(/selected/);
 
     await page.locator('button.vote-card[data-value="8"]').click();
@@ -130,30 +114,8 @@ test('facilitator can enter a room, reveal, copy, start the next item, and reset
     await page.locator('#show-votes-button').click();
     await expect(page.locator('#vote-summary')).toBeVisible();
     await expect(page.locator('#average-vote')).toHaveText('8.0');
-    await expect(page.locator('#round-history-list')).toContainText('Round 2');
-
-    const copyAllHistoryButton = page.locator('#copy-round-history-button');
-    await expect(copyAllHistoryButton).toBeVisible();
-    await expect(copyAllHistoryButton).toHaveText('Copy all');
-    await copyAllHistoryButton.click();
-    await expect(copyAllHistoryButton).toHaveText('Copied all');
-    const copiedAllHistory = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copiedAllHistory).toBe([
-      'Scrum Poker session summary',
-      'Rounds: 2',
-      '',
-      '1. Round 1',
-      'Average: 5.0',
-      'Votes: 1',
-      'Spread:',
-      '- 5: Alice',
-      '',
-      '2. Round 2',
-      'Average: 8.0',
-      'Votes: 1',
-      'Spread:',
-      '- 8: Alice'
-    ].join('\n'));
+    await expect(page.locator('#ordered-votes-list')).toContainText('8');
+    await expect(page.locator('#round-history-section')).toHaveCount(0);
 
     await page.locator('#reset-votes-button').click();
     await page.waitForFunction(() => {
@@ -170,7 +132,7 @@ test('facilitator can enter a room, reveal, copy, start the next item, and reset
       return cards.length > 0 && cards.every((card) => card.classList.contains('is-face-down'));
     });
     await expect(page.locator('#vote-summary')).toBeHidden();
-    await expect(page.locator('#round-history-section')).toBeVisible();
+    await expect(page.locator('#round-history-section')).toHaveCount(0);
     await expect(page.locator('.vote-card .card-inner').first()).not.toHaveClass(/is-face-down/, { timeout: 6000 });
     await expect(page.locator('button.vote-card[data-value="5"]')).not.toHaveClass(/selected/);
   } finally {

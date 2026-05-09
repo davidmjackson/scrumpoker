@@ -73,16 +73,13 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     for (const roomPage of [facilitator, voter, observer]) {
       await expect(roomPage.locator('#vote-summary')).toBeVisible();
       await expect(roomPage.locator('#average-vote')).toHaveText('6.5');
-      await expect(roomPage.locator('#round-history-list')).toContainText('Round 1');
+      await expect(roomPage.locator('#round-history-section')).toHaveCount(0);
+      await expect(roomPage.locator('#copy-round-history-button')).toHaveCount(0);
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('Alice');
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('Bob');
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('8');
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('5');
     }
-
-    await expect(facilitator.locator('#copy-round-history-button')).toBeVisible();
-    await expect(voter.locator('#copy-round-history-button')).toBeHidden();
-    await expect(observer.locator('#copy-round-history-button')).toBeHidden();
 
     await expect(facilitator.locator('#start-next-item-button')).toBeVisible();
     await expect(voter.locator('#start-next-item-button')).toBeHidden();
@@ -94,8 +91,7 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
       await expect(roomPage.locator('#vote-summary')).toBeHidden();
       await expect(roomPage.locator('#ordered-votes')).toBeHidden();
       await expect(roomPage.locator('#round-status')).toHaveText('Open');
-      await expect(roomPage.locator('#round-history-section')).toBeVisible();
-      await expect(roomPage.locator('#round-history-list')).toContainText('Round 1');
+      await expect(roomPage.locator('#round-history-section')).toHaveCount(0);
       await expect(roomPage.locator('button.vote-card[data-value="5"]')).not.toHaveClass(/selected/);
       await expect(roomPage.locator('button.vote-card[data-value="8"]')).not.toHaveClass(/selected/);
     }
@@ -107,8 +103,7 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     for (const roomPage of [facilitator, voter, observer]) {
       await expect(roomPage.locator('#vote-summary')).toBeVisible();
       await expect(roomPage.locator('#average-vote')).toHaveText('4.0');
-      await expect(roomPage.locator('#round-history-list')).toContainText('Round 2');
-      await expect(roomPage.locator('#round-history-list')).toContainText('Round 1');
+      await expect(roomPage.locator('#round-history-section')).toHaveCount(0);
     }
 
     await facilitator.locator('#reset-votes-button').click();
