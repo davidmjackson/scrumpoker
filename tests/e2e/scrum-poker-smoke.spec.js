@@ -3,12 +3,14 @@ const { startServer } = require('./helpers/test-server');
 
 const testAccessKey = 'browser-test-key';
 
-test('facilitator can enter a room, vote, reveal, and reset', async ({ page }) => {
+test('facilitator can enter a room, vote, reveal, copy the round summary, and reset', async ({ page, context }) => {
   const server = await startServer({
     keys: { browser: testAccessKey }
   });
 
   try {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: server.baseUrl });
+
     await page.goto(server.baseUrl);
 
     await expect(page.locator('#connection-status')).toHaveText('Connected');
@@ -71,6 +73,20 @@ test('facilitator can enter a room, vote, reveal, and reset', async ({ page }) =
     await expect(page.locator('#round-history-section')).toBeVisible();
     await expect(page.locator('#round-history-list')).toContainText('Checkout flow estimate');
     await expect(page.locator('#round-history-list')).toContainText('Average 5.0');
+
+    const roundHistoryItem = page.locator('.round-history-item').filter({ hasText: 'Checkout flow estimate' });
+    const copySummaryButton = roundHistoryItem.locator('.round-copy-action');
+    await expect(copySummaryButton).toHaveText('Copy summary');
+    await copySummaryButton.click();
+    await expect(copySummaryButton).toHaveText('Copied');
+    const copiedSummary = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copiedSummary).toBe([
+      'Sprint Poker estimate: Checkout flow estimate',
+      'Average: 5.0',
+      'Votes: 1',
+      'Spread:',
+      '- 5: Alice'
+    ].join('\n'));
 
     await page.locator('#reset-votes-button').click();
     await page.waitForFunction(() => {
