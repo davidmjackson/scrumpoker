@@ -3,7 +3,7 @@ const { startServer } = require('./helpers/test-server');
 
 const testAccessKey = 'browser-test-key';
 
-test('facilitator can enter a room, reveal, copy, start the next item, and reset', async ({ page, context }) => {
+test('facilitator can enter a room, reveal, copy, start the next round, and reset', async ({ page, context }) => {
   const server = await startServer({
     keys: { browser: testAccessKey }
   });
@@ -102,6 +102,7 @@ test('facilitator can enter a room, reveal, copy, start the next item, and reset
     await expect(page.locator('#copy-round-history-button')).toHaveCount(0);
 
     await expect(page.locator('#start-next-item-button')).toBeVisible();
+    await expect(page.locator('#start-next-item-button')).toHaveText('Next Round');
     await page.locator('#start-next-item-button').click();
     await expect(page.locator('#vote-summary')).toBeHidden();
     await expect(page.locator('#ordered-votes')).toBeHidden();
