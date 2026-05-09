@@ -4,6 +4,7 @@ const {
   DEFAULT_ROOM_EXPIRY_MS,
   expireRooms
 } = require('./lib/roomState');
+const { getBuildInfo } = require('./lib/buildInfo');
 const { getKeysFilePath } = require('./lib/accessKeys');
 const { getActivityFilePath } = require('./lib/adminActivity');
 const { createHttpApp } = require('./lib/httpApp');
@@ -35,6 +36,7 @@ const app = createHttpApp({
   keysFile: KEYS_FILE,
   activityFile: ACTIVITY_FILE,
   adminKey: ADMIN_KEY,
+  buildInfo: getBuildInfo(__dirname),
   getRoomCount: () => rooms.size
 });
 

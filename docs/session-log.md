@@ -1861,3 +1861,46 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Health Build Info
+
+Branch: `feature/health-build-info`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `f4780dd Add copy all round history (#38)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+
+Work planned:
+- Add version and deployed commit metadata to `/health`.
+- Make deploy verification possible from the health endpoint instead of inspecting served HTML.
+
+Work completed:
+- Added `lib/buildInfo.js` to resolve package version and git commit.
+- Added `SCRUM_POKER_VERSION`, `SCRUM_POKER_COMMIT`, and `GITHUB_SHA` runtime overrides.
+- Updated `/health` to include `version` and `commit` alongside status, uptime, and rooms.
+- Documented the enhanced health check in `README.md`.
+- Added unit coverage for build-info helpers and integration coverage for the health payload.
+
+Verification:
+- `node --check lib/buildInfo.js`
+- `node --check lib/httpApp.js`
+- `node --check server.js`
+- `node --check tests/build-info.test.js`
+- `node --check tests/ws-operations.test.js`
+- `node --test tests/build-info.test.js`
+- `node --test tests/ws-operations.test.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused build-info and health integration tests passed.
+- `npm test` ran 55 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.
