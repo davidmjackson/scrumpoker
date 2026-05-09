@@ -1675,3 +1675,40 @@ Result:
 - `npm test` ran 48 tests successfully.
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+
+## 2026-05-09 - Round History Copy Coverage
+
+Branch: `feature/round-history-copy-coverage`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `59d080b Add estimation rounds and history`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+
+Work planned:
+- Add browser coverage for the revealed round history `Copy summary` workflow.
+- Verify the copied clipboard text matches the summary teams can paste elsewhere.
+- Keep the change test-only unless the workflow exposes an implementation bug.
+
+Work completed:
+- Extended the Scrum Poker smoke test to grant clipboard permissions.
+- Verified the round history copy button changes to `Copied`.
+- Verified the clipboard payload includes the item title, average, vote count, and grouped spread.
+
+Verification:
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `git diff --check`
+- `npm test`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused smoke browser test passed.
+- `npm test` ran 51 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.
