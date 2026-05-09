@@ -2222,3 +2222,43 @@ Result:
 - `npm run test:e2e` passed with 4 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Production Smoke And Alias Cleanup
+
+Branch: `feature/remove-next-item-alias`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `16025bf Remove room item history plumbing (#46)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+- Production had been verified at commit `16025bfabb18` with `/health` ok and `js/app.js?v=13`.
+
+Production smoke verification:
+- A facilitator and voter joined the same production room.
+- Both users voted.
+- `Show Votes` revealed the expected `6.5` average and grouped results.
+- `Next Round` cleared results and selected cards for both users while keeping the room active.
+
+Work completed:
+- Removed the temporary `startNextItem` WebSocket compatibility alias.
+- Added WebSocket integration coverage that stale `startNextItem` messages now return `Unknown type: startNextItem`.
+- Kept `startNextRound` as the only supported next-round command.
+
+Verification:
+- `node --check lib/wsServer.js`
+- `node --check tests/ws-operations.test.js`
+- `node --test tests/ws-operations.test.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused WebSocket integration coverage passed.
+- `npm test` ran 54 tests successfully.
+- `npm run test:e2e` passed with 4 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.
