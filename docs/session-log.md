@@ -1819,3 +1819,45 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Copy All Round History
+
+Branch: `feature/copy-all-round-history`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `f9f6a7a Cover start next item multi-user sync (#37)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+
+Work planned:
+- Add a facilitator-visible control to copy the full revealed round history.
+- Keep individual round copy behavior unchanged.
+- Copy full session history in chronological order so it is useful in planning notes.
+
+Work completed:
+- Added a `Copy all` action to the Revealed rounds panel for facilitators.
+- Added a full-session clipboard summary with round count, item titles, averages, vote counts, and grouped spreads.
+- Kept voters and observers from seeing the facilitator-only copy-all control.
+- Bumped the app script query to `js/app.js?v=6`.
+- Extended smoke and multi-user browser coverage for copy-all behavior and visibility.
+
+Verification:
+- `node --check public/js/app.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused smoke and multi-user browser tests passed.
+- `npm test` ran 52 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.

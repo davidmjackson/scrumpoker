@@ -30,6 +30,7 @@
  const roundItemError = document.getElementById('round-item-error');
  const roundHistorySection = document.getElementById('round-history-section');
  const roundHistoryList = document.getElementById('round-history-list');
+ const copyRoundHistoryButton = document.getElementById('copy-round-history-button');
  const adminRoomLink = document.getElementById('admin-room-link');
  const logoutButton = document.getElementById('logout-button');
 
@@ -417,6 +418,7 @@ function markRoomReturnFromAdmin() {
      resetVotesButton.addEventListener('click', handleResetVotes);
      roundItemForm.addEventListener('submit', handleSetRoundItem);
      roundHistoryList.addEventListener('click', handleRoundHistoryAction);
+     copyRoundHistoryButton.addEventListener('click', handleCopyAllRoundHistory);
 
      adminRoomLink.addEventListener('click', markRoomReturnFromAdmin);
      logoutButton.addEventListener('click', logout);
@@ -617,10 +619,12 @@ function renderRoundHistory() {
 
     if (!roundHistory.length) {
         roundHistorySection.classList.add('hidden');
+        copyRoundHistoryButton.classList.add('hidden');
         return;
     }
 
     roundHistorySection.classList.remove('hidden');
+    copyRoundHistoryButton.classList.toggle('hidden', currentUser?.role !== 'Facilitator');
     roundHistory.forEach((round) => {
         const article = document.createElement('article');
         article.className = 'round-history-item';
@@ -707,6 +711,31 @@ function createRoundSummaryText(round) {
         `Votes: ${round.voteCount || 0}`
     ];
 
+    appendRoundSpread(lines, round);
+    return lines.join('\n');
+}
+
+function createAllRoundHistorySummaryText(rounds) {
+    const chronologicalRounds = [...rounds].reverse();
+    const lines = [
+        'Sprint Poker session summary',
+        `Rounds: ${chronologicalRounds.length}`
+    ];
+
+    chronologicalRounds.forEach((round, index) => {
+        lines.push(
+            '',
+            `${index + 1}. ${getRoundTitle(round)}`,
+            `Average: ${round.average || '--'}`,
+            `Votes: ${round.voteCount || 0}`
+        );
+        appendRoundSpread(lines, round);
+    });
+
+    return lines.join('\n');
+}
+
+function appendRoundSpread(lines, round) {
     const groups = Array.isArray(round.groups) ? round.groups : [];
     if (groups.length) {
         lines.push('Spread:');
@@ -715,8 +744,6 @@ function createRoundSummaryText(round) {
             lines.push(`- ${group.vote}: ${names}`);
         });
     }
-
-    return lines.join('\n');
 }
 
 async function copyText(text) {
@@ -908,6 +935,25 @@ function renderVotingCards() {
     setTimeout(() => {
       copyButton.disabled = false;
       copyButton.textContent = originalText;
+    }, 1600);
+  }
+ }
+
+ async function handleCopyAllRoundHistory() {
+  if (currentUser?.role !== 'Facilitator' || !roundHistory.length) return;
+
+  const originalText = copyRoundHistoryButton.textContent;
+  copyRoundHistoryButton.disabled = true;
+
+  try {
+    await copyText(createAllRoundHistorySummaryText(roundHistory));
+    copyRoundHistoryButton.textContent = 'Copied all';
+  } catch (_err) {
+    copyRoundHistoryButton.textContent = 'Copy failed';
+  } finally {
+    setTimeout(() => {
+      copyRoundHistoryButton.disabled = false;
+      copyRoundHistoryButton.textContent = originalText;
     }, 1600);
   }
  }

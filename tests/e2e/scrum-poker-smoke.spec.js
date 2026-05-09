@@ -108,6 +108,30 @@ test('facilitator can enter a room, reveal, copy, start the next item, and reset
     await page.locator('#show-votes-button').click();
     await expect(page.locator('#vote-summary')).toBeVisible();
     await expect(page.locator('#average-vote')).toHaveText('8.0');
+    await expect(page.locator('#round-history-list')).toContainText('Reset animation check');
+
+    const copyAllHistoryButton = page.locator('#copy-round-history-button');
+    await expect(copyAllHistoryButton).toBeVisible();
+    await expect(copyAllHistoryButton).toHaveText('Copy all');
+    await copyAllHistoryButton.click();
+    await expect(copyAllHistoryButton).toHaveText('Copied all');
+    const copiedAllHistory = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copiedAllHistory).toBe([
+      'Sprint Poker session summary',
+      'Rounds: 2',
+      '',
+      '1. Checkout flow estimate',
+      'Average: 5.0',
+      'Votes: 1',
+      'Spread:',
+      '- 5: Alice',
+      '',
+      '2. Reset animation check',
+      'Average: 8.0',
+      'Votes: 1',
+      'Spread:',
+      '- 8: Alice'
+    ].join('\n'));
 
     await page.locator('#reset-votes-button').click();
     await page.waitForFunction(() => {
