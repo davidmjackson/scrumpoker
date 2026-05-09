@@ -40,17 +40,29 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     await login(observer, server.baseUrl, { name: 'Carol', role: 'Observer' });
 
     await expect(facilitator.locator('#admin-room-link')).toBeVisible();
+    await expect(facilitator.locator('#admin-room-link')).toHaveText('Team access');
     await expect(voter.locator('#admin-room-link')).toBeHidden();
     await expect(observer.locator('#admin-room-link')).toBeHidden();
-    await expect(facilitator.locator('#copy-voter-invite-button')).toBeVisible();
-    await expect(facilitator.locator('#copy-observer-invite-button')).toBeVisible();
+    await expect(facilitator.locator('#invite-menu-button')).toBeVisible();
+    await expect(facilitator.locator('#copy-voter-invite-button')).toBeHidden();
+    await expect(facilitator.locator('#copy-observer-invite-button')).toBeHidden();
     await expect(facilitator.locator('#end-session-button')).toBeVisible();
+    await expect(facilitator.locator('#end-session-button')).toHaveText('End');
+    await expect(facilitator.locator('#edit-role-button')).toHaveText('Role');
     await expect(voter.locator('#copy-voter-invite-button')).toBeHidden();
     await expect(voter.locator('#copy-observer-invite-button')).toBeHidden();
+    await expect(voter.locator('#invite-menu-button')).toBeHidden();
     await expect(voter.locator('#end-session-button')).toBeHidden();
     await expect(observer.locator('#copy-voter-invite-button')).toBeHidden();
     await expect(observer.locator('#copy-observer-invite-button')).toBeHidden();
+    await expect(observer.locator('#invite-menu-button')).toBeHidden();
     await expect(observer.locator('#end-session-button')).toBeHidden();
+
+    await facilitator.locator('#invite-menu-button').click();
+    await expect(facilitator.locator('#copy-voter-invite-button')).toBeVisible();
+    await expect(facilitator.locator('#copy-observer-invite-button')).toBeVisible();
+    await facilitator.keyboard.press('Escape');
+    await expect(facilitator.locator('#copy-voter-invite-button')).toBeHidden();
 
     for (const roomPage of [facilitator, voter, observer]) {
       await expect(roomPage.locator('#participants-list')).toContainText('Alice');

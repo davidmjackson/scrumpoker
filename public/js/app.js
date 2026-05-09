@@ -23,6 +23,8 @@
  const averageVoteSpan = document.getElementById('average-vote');
  const roundStatus = document.getElementById('round-status');
  const adminRoomLink = document.getElementById('admin-room-link');
+ const inviteMenuButton = document.getElementById('invite-menu-button');
+ const inviteMenu = document.getElementById('invite-menu');
  const copyVoterInviteButton = document.getElementById('copy-voter-invite-button');
  const copyObserverInviteButton = document.getElementById('copy-observer-invite-button');
  const endSessionButton = document.getElementById('end-session-button');
@@ -457,6 +459,7 @@ function markRoomReconnectIntent() {
      resetVotesButton.addEventListener('click', handleResetVotes);
 
      adminRoomLink.addEventListener('click', markRoomReturnFromAdmin);
+     inviteMenuButton.addEventListener('click', toggleInviteMenu);
      copyVoterInviteButton.addEventListener('click', handleCopyRoomInvite);
      copyObserverInviteButton.addEventListener('click', handleCopyRoomInvite);
      endSessionButton.addEventListener('click', openEndSessionModal);
@@ -468,6 +471,45 @@ function markRoomReconnectIntent() {
      editRoleButton.addEventListener('click', openEditRoleModal);
      saveRoleButton.addEventListener('click', handleSaveRole);
      cancelEditRoleButton.addEventListener('click', closeEditRoleModal);
+     document.addEventListener('click', handleDocumentClick);
+     document.addEventListener('keydown', handleDocumentKeydown);
+ }
+
+ function isInviteMenuOpen() {
+     return !inviteMenu.classList.contains('hidden');
+ }
+
+ function openInviteMenu() {
+     if (currentUser?.role !== 'Facilitator') return;
+     inviteMenu.classList.remove('hidden');
+     inviteMenuButton.setAttribute('aria-expanded', 'true');
+ }
+
+ function closeInviteMenu() {
+     inviteMenu.classList.add('hidden');
+     inviteMenuButton.setAttribute('aria-expanded', 'false');
+ }
+
+ function toggleInviteMenu(event) {
+     event.stopPropagation();
+     if (isInviteMenuOpen()) {
+         closeInviteMenu();
+     } else {
+         openInviteMenu();
+     }
+ }
+
+ function handleDocumentClick(event) {
+     if (!isInviteMenuOpen()) return;
+     if (inviteMenu.contains(event.target) || inviteMenuButton.contains(event.target)) return;
+     closeInviteMenu();
+ }
+
+ function handleDocumentKeydown(event) {
+     if (event.key === 'Escape' && isInviteMenuOpen()) {
+         closeInviteMenu();
+         inviteMenuButton.focus();
+     }
  }
 
  // Function to open modal and pre‐select current role
@@ -533,6 +575,7 @@ function markRoomReconnectIntent() {
 
  // --- View Management ---
  function showLogin({ clearError = true } = {}) {
+     closeInviteMenu();
      loginSection.classList.remove('hidden');
      pokerRoomSection.classList.add('hidden');
      if (clearError) {
@@ -585,19 +628,18 @@ function markRoomReconnectIntent() {
     if (currentUser.role === 'Facilitator') {
         facilitatorControls.classList.remove('hidden');
         adminRoomLink.classList.remove('hidden');
+        inviteMenuButton.classList.remove('hidden');
         showVotesButton.disabled = votesRevealed; // Disable if already revealed
         startNextRoundButton.classList.toggle('hidden', !votesRevealed);
         startNextRoundButton.disabled = !votesRevealed;
         resetVotesButton.disabled = false;
-        copyVoterInviteButton.classList.remove('hidden');
-        copyObserverInviteButton.classList.remove('hidden');
         endSessionButton.classList.remove('hidden');
     } else {
         facilitatorControls.classList.add('hidden');
         adminRoomLink.classList.add('hidden');
+        inviteMenuButton.classList.add('hidden');
+        closeInviteMenu();
         startNextRoundButton.classList.add('hidden');
-        copyVoterInviteButton.classList.add('hidden');
-        copyObserverInviteButton.classList.add('hidden');
         endSessionButton.classList.add('hidden');
     }
 
