@@ -21,6 +21,10 @@ async function login(page, baseUrl, { name, role }) {
   await expect(page.locator('#user-greeting')).toHaveText(`Hello, ${name} (${role})`);
 }
 
+async function closeCurrentWebSocket(page) {
+  await page.evaluate(() => window.eval('ws.close()'));
+}
+
 test('facilitator, voter, and observer room state stays synchronized', async ({ page, context }) => {
   const server = await startServer({
     keys: { multi: testAccessKey }
@@ -156,6 +160,52 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
       await expect(roomPage.locator('#login-error')).toHaveText('Session ended by facilitator.');
     }
   } finally {
+    await server.stop();
+  }
+});
+
+test('voter automatically rejoins after a transient disconnect', async ({ browser }) => {
+  const server = await startServer({
+    keys: { multi: testAccessKey }
+  });
+
+  const facilitatorContext = await browser.newContext();
+  const voterContext = await browser.newContext();
+  const facilitator = await facilitatorContext.newPage();
+  const voter = await voterContext.newPage();
+
+  try {
+    await login(facilitator, server.baseUrl, { name: 'Alice', role: 'Facilitator' });
+    await login(voter, server.baseUrl, { name: 'Bob', role: 'Voter' });
+
+    await facilitator.locator('#round-item-input').fill('Reconnect story');
+    await facilitator.locator('#round-item-form').getByRole('button', { name: 'Set item' }).click();
+    await expect(voter.locator('#current-item-display')).toHaveText('Reconnect story');
+
+    await closeCurrentWebSocket(voter);
+    await expect(voter.locator('#connection-status')).toHaveText('Disconnected', { timeout: 7000 });
+    await expect(voter.locator('#login-error')).toHaveText('Connection lost. Reconnecting...');
+    await expect(facilitator.locator('#participants-list')).not.toContainText('Bob');
+
+    await expect(voter.locator('#poker-room-section')).toBeVisible({ timeout: 12000 });
+    await expect(voter.locator('#room-display')).toHaveText(`Room: ${roomName}`);
+    await expect(voter.locator('#user-greeting')).toHaveText('Hello, Bob (Voter)');
+    await expect(voter.locator('#current-item-display')).toHaveText('Reconnect story');
+    await expect(facilitator.locator('#participants-list')).toContainText('Bob');
+
+    await voter.locator('#logout-button').click();
+    await expect(voter.locator('#login-section')).toBeVisible();
+    await expect(facilitator.locator('#participants-list')).not.toContainText('Bob');
+
+    await closeCurrentWebSocket(voter);
+    await expect(voter.locator('#connection-status')).toHaveText('Disconnected', { timeout: 7000 });
+    await expect(voter.locator('#login-section')).toBeVisible({ timeout: 12000 });
+    await expect(voter.locator('#poker-room-section')).toBeHidden();
+    await expect(voter.locator('#login-button')).toBeEnabled({ timeout: 12000 });
+    await expect(facilitator.locator('#participants-list')).not.toContainText('Bob');
+  } finally {
+    await voterContext.close();
+    await facilitatorContext.close();
     await server.stop();
   }
 });
