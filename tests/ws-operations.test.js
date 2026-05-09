@@ -198,6 +198,8 @@ test('health endpoint reports a running app', async (t) => {
 
   assert.equal(response.status, 200);
   assert.equal(body.status, 'ok');
+  assert.match(body.version, /^\d+\.\d+\.\d+/);
+  assert.match(body.commit, /^[0-9a-f]{7,12}$/);
   assert.equal(typeof body.uptime, 'number');
   assert.equal(body.rooms, 0);
 });

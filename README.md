@@ -68,6 +68,8 @@ server {
 ## Production runtime tweaks
 
 - Run Node with a process manager (systemd or pm2) and automatic restart.
+- Use `/health` after deployment to confirm `status`, active room count, app
+  version, and deployed commit.
 - Bind Node to localhost only when behind Nginx (`127.0.0.1`) unless you need direct LAN access.
 - Use firewall rules to expose only `80/443` publicly.
 - Set `SCRUM_POKER_ADMIN_KEY` before using `/admin` for team access and invite management.
