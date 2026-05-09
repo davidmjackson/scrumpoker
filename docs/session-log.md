@@ -1947,3 +1947,50 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - End Room Session
+
+Branch: `feature/end-room-session`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `e3ea05f Add room invite links (#40)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+
+Work planned:
+- Add a facilitator-only way to end the active room session.
+- Clear the server-side room and participant state for that room.
+- Return every connected participant to the login screen with a clear message.
+
+Work completed:
+- Added an `endSession` WebSocket action restricted to facilitators.
+- Broadcast `sessionEnded` to all room participants before deleting the room and its participants.
+- Added a facilitator-only `End session` room action with a confirmation modal.
+- Updated the client to clear local room/session state and return to login without sending an extra logout.
+- Bumped the app script query to `js/app.js?v=8`.
+- Added unit, WebSocket integration, and multi-user browser coverage for ending a room session.
+
+Verification:
+- `node --check lib/wsHandlers.js`
+- `node --check lib/wsServer.js`
+- `node --check public/js/app.js`
+- `node --check tests/ws-handlers.test.js`
+- `node --check tests/ws-operations.test.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `node --test tests/ws-handlers.test.js`
+- `node --test tests/ws-operations.test.js`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused handler, WebSocket integration, and multi-user browser tests passed.
+- `npm test` ran 57 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.

@@ -40,10 +40,13 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     await expect(observer.locator('#admin-room-link')).toBeHidden();
     await expect(facilitator.locator('#copy-voter-invite-button')).toBeVisible();
     await expect(facilitator.locator('#copy-observer-invite-button')).toBeVisible();
+    await expect(facilitator.locator('#end-session-button')).toBeVisible();
     await expect(voter.locator('#copy-voter-invite-button')).toBeHidden();
     await expect(voter.locator('#copy-observer-invite-button')).toBeHidden();
+    await expect(voter.locator('#end-session-button')).toBeHidden();
     await expect(observer.locator('#copy-voter-invite-button')).toBeHidden();
     await expect(observer.locator('#copy-observer-invite-button')).toBeHidden();
+    await expect(observer.locator('#end-session-button')).toBeHidden();
     await expect(voter.locator('#round-item-form')).toBeHidden();
     await expect(observer.locator('#round-item-form')).toBeHidden();
 
@@ -140,12 +143,18 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     await observer.locator('button.vote-card[data-value="?"]').click();
     await expect(observer.locator('button.vote-card[data-value="?"]')).toHaveClass(/selected/);
 
-    await voter.locator('#logout-button').click();
-    await expect(voter.locator('#login-section')).toBeVisible();
-    await expect(facilitator.locator('#participants-list')).not.toContainText('Bob');
+    await facilitator.locator('#end-session-button').click();
+    await expect(facilitator.locator('#end-session-modal')).toBeVisible();
+    await facilitator.locator('#cancel-end-session-button').click();
+    await expect(facilitator.locator('#end-session-modal')).toBeHidden();
 
-    await observer.close();
-    await expect(facilitator.locator('#participants-list')).not.toContainText('Carol');
+    await facilitator.locator('#end-session-button').click();
+    await facilitator.locator('#confirm-end-session-button').click();
+
+    for (const roomPage of [facilitator, voter, observer]) {
+      await expect(roomPage.locator('#login-section')).toBeVisible();
+      await expect(roomPage.locator('#login-error')).toHaveText('Session ended by facilitator.');
+    }
   } finally {
     await server.stop();
   }
