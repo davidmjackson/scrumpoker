@@ -371,19 +371,12 @@ test('WebSocket workflow covers login, voting, reveal, reset, and role limits', 
     room: 'baseline'
   });
 
-  const voterSetItemError = waitForMessage(
-    bob.ws,
-    (message) => message.type === 'error' && message.payload?.message === 'Only Facilitator can set the current item.'
-  );
-  send(bob.ws, 'setRoundItem', { itemTitle: 'Checkout flow' });
-  await voterSetItemError;
-
-  const bobSeesCurrentItem = waitForState(
-    bob.ws,
-    (state) => state.currentItem === 'Checkout flow' && state.roundHistory.length === 0
+  const staleSetItemError = waitForMessage(
+    alice.ws,
+    (message) => message.type === 'error' && message.payload?.message === 'Unknown type: setRoundItem'
   );
   send(alice.ws, 'setRoundItem', { itemTitle: 'Checkout flow' });
-  await bobSeesCurrentItem;
+  await staleSetItemError;
 
   const observerVoteError = waitForMessage(
     oscar.ws,
@@ -410,32 +403,19 @@ test('WebSocket workflow covers login, voting, reveal, reset, and role limits', 
     bob.ws,
     (state) =>
       state.votesRevealed === true &&
-      findParticipant(state, 'Bob')?.vote === '5' &&
-      state.roundHistory.length === 1
+      findParticipant(state, 'Bob')?.vote === '5'
   );
   send(alice.ws, 'revealVotes', {});
-  const revealState = await bobSeesReveal;
-  assert.equal(revealState.roundHistory[0].title, 'Checkout flow');
-  assert.equal(revealState.roundHistory[0].average, '5.0');
-  assert.deepEqual(revealState.roundHistory[0].groups, [{ vote: '5', names: ['Bob'] }]);
+  await bobSeesReveal;
 
   const bobSeesReset = waitForState(
     bob.ws,
     (state) =>
       state.votesRevealed === false &&
-      state.currentItem === 'Checkout flow' &&
-      state.roundHistory.length === 1 &&
       state.participants.every((participant) => participant.vote === null)
   );
   send(alice.ws, 'resetVotes', {});
   await bobSeesReset;
-
-  const bobSeesSecondItem = waitForState(
-    bob.ws,
-    (state) => state.currentItem === 'Search filters' && state.roundHistory.length === 1
-  );
-  send(alice.ws, 'setRoundItem', { itemTitle: 'Search filters' });
-  await bobSeesSecondItem;
 
   const aliceSeesSecondVote = waitForState(
     alice.ws,
@@ -448,8 +428,7 @@ test('WebSocket workflow covers login, voting, reveal, reset, and role limits', 
     bob.ws,
     (state) =>
       state.votesRevealed === true &&
-      state.currentItem === 'Search filters' &&
-      state.roundHistory.length === 2
+      findParticipant(state, 'Bob')?.vote === '8'
   );
   send(alice.ws, 'revealVotes', {});
   await bobSeesSecondReveal;
@@ -458,11 +437,9 @@ test('WebSocket workflow covers login, voting, reveal, reset, and role limits', 
     bob.ws,
     (state) =>
       state.votesRevealed === false &&
-      state.currentItem === '' &&
-      state.roundHistory.length === 2 &&
       state.participants.every((participant) => participant.vote === null)
   );
-  send(alice.ws, 'startNextItem', {});
+  send(alice.ws, 'startNextRound', {});
   await bobSeesNextItem;
 
   const bobRoleChanged = waitForState(

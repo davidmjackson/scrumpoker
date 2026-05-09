@@ -101,9 +101,9 @@ test('facilitator can enter a room, reveal, copy, start the next round, and rese
     await expect(page.locator('#round-history-section')).toHaveCount(0);
     await expect(page.locator('#copy-round-history-button')).toHaveCount(0);
 
-    await expect(page.locator('#start-next-item-button')).toBeVisible();
-    await expect(page.locator('#start-next-item-button')).toHaveText('Next Round');
-    await page.locator('#start-next-item-button').click();
+    await expect(page.locator('#start-next-round-button')).toBeVisible();
+    await expect(page.locator('#start-next-round-button')).toHaveText('Next Round');
+    await page.locator('#start-next-round-button').click();
     await expect(page.locator('#vote-summary')).toBeHidden();
     await expect(page.locator('#ordered-votes')).toBeHidden();
     await expect(page.locator('#round-status')).toHaveText('Open');
