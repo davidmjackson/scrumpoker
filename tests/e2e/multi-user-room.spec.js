@@ -74,6 +74,44 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('5');
     }
 
+    await expect(facilitator.locator('#start-next-item-button')).toBeVisible();
+    await expect(voter.locator('#start-next-item-button')).toBeHidden();
+    await expect(observer.locator('#start-next-item-button')).toBeHidden();
+
+    await facilitator.locator('#start-next-item-button').click();
+
+    for (const roomPage of [facilitator, voter, observer]) {
+      await expect(roomPage.locator('#vote-summary')).toBeHidden();
+      await expect(roomPage.locator('#ordered-votes')).toBeHidden();
+      await expect(roomPage.locator('#current-item-display')).toHaveText('No item set');
+      await expect(roomPage.locator('#round-status')).toHaveText('Open');
+      await expect(roomPage.locator('#round-history-section')).toBeVisible();
+      await expect(roomPage.locator('#round-history-list')).toContainText('Payment retry story');
+      await expect(roomPage.locator('button.vote-card[data-value="5"]')).not.toHaveClass(/selected/);
+      await expect(roomPage.locator('button.vote-card[data-value="8"]')).not.toHaveClass(/selected/);
+    }
+
+    await expect(facilitator.locator('#round-item-input')).toHaveValue('');
+    await expect(facilitator.locator('#round-item-input')).toBeFocused();
+
+    await facilitator.locator('#round-item-input').fill('Invoice export story');
+    await facilitator.locator('#round-item-form').getByRole('button', { name: 'Set item' }).click();
+
+    for (const roomPage of [facilitator, voter, observer]) {
+      await expect(roomPage.locator('#current-item-display')).toHaveText('Invoice export story');
+    }
+
+    await facilitator.locator('button.vote-card[data-value="3"]').click();
+    await voter.locator('button.vote-card[data-value="5"]').click();
+    await facilitator.locator('#show-votes-button').click();
+
+    for (const roomPage of [facilitator, voter, observer]) {
+      await expect(roomPage.locator('#vote-summary')).toBeVisible();
+      await expect(roomPage.locator('#average-vote')).toHaveText('4.0');
+      await expect(roomPage.locator('#round-history-list')).toContainText('Invoice export story');
+      await expect(roomPage.locator('#round-history-list')).toContainText('Payment retry story');
+    }
+
     await facilitator.locator('#reset-votes-button').click();
 
     for (const roomPage of [facilitator, voter, observer]) {
