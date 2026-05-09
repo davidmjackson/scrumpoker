@@ -11,6 +11,7 @@ const {
   handleResetVotes,
   handleRevealVotes,
   handleSetRoundItem,
+  handleStartNextItem,
   handleVote
 } = require('../lib/wsHandlers');
 const { joinRoom } = require('../lib/roomState');
@@ -187,6 +188,53 @@ test('handleRevealVotes and handleResetVotes update room state', (t) => {
   });
 
   assert.equal(room.votesRevealed, false);
+  assert.equal(voter.vote, null);
+  assert.deepEqual(harness.roomStates, [roomName, roomName]);
+});
+
+test('handleStartNextItem clears the item and votes while preserving history', (t) => {
+  const harness = createHarness(t);
+  const roomName = 'planning-key';
+  const room = joinRoom(harness.rooms, roomName, 'alice', 100);
+  room.currentItem = 'Checkout flow';
+  const facilitator = participant('alice', roomName, { role: ROLES.FACILITATOR, vote: '8' });
+  const voter = participant('bob', roomName, { vote: '5' });
+  harness.participants.alice = facilitator;
+  harness.participants.bob = voter;
+
+  handleStartNextItem({
+    ...harness,
+    ws: voter.ws,
+    currentUser: voter
+  });
+
+  handleStartNextItem({
+    ...harness,
+    ws: facilitator.ws,
+    currentUser: facilitator
+  });
+
+  handleRevealVotes({
+    ...harness,
+    ws: facilitator.ws,
+    currentUser: facilitator
+  });
+
+  handleStartNextItem({
+    ...harness,
+    ws: facilitator.ws,
+    currentUser: facilitator
+  });
+
+  assert.deepEqual(harness.clientMessages.map(({ message }) => message.payload.message), [
+    'Only Facilitator can start the next item.',
+    'Reveal votes before starting the next item.'
+  ]);
+  assert.equal(room.votesRevealed, false);
+  assert.equal(room.currentItem, '');
+  assert.equal(room.roundHistory.length, 1);
+  assert.equal(room.roundHistory[0].title, 'Checkout flow');
+  assert.equal(facilitator.vote, null);
   assert.equal(voter.vote, null);
   assert.deepEqual(harness.roomStates, [roomName, roomName]);
 });

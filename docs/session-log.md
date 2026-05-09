@@ -1712,3 +1712,51 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Start Next Item Workflow
+
+Branch: `feature/start-next-item-workflow`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `6e84921 Cover round history copy workflow (#35)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+- PR #35 was marked ready, CI passed, and it was merged into `main` before this branch.
+
+Work planned:
+- Add a facilitator-controlled way to move from a revealed estimate into the next item.
+- Reset votes and clear the current item while preserving revealed round history.
+- Focus the item field so the facilitator can immediately enter the next estimate target.
+
+Work completed:
+- Added a `startNextItem` WebSocket message handled server-side for facilitators only.
+- Preserved the existing `resetVotes` behavior while sharing vote-reset logic.
+- Added a `Start Next Item` facilitator button that appears after votes are revealed.
+- Cleared the current item, hid revealed results, reset votes, retained history, and focused the item input after starting the next item.
+- Bumped the app script query to `js/app.js?v=5`.
+- Added handler, WebSocket workflow, and browser coverage for the new flow.
+
+Verification:
+- `node --check lib/wsHandlers.js`
+- `node --check lib/wsServer.js`
+- `node --check public/js/app.js`
+- `node --check tests/ws-handlers.test.js`
+- `node --check tests/ws-operations.test.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `git diff --check`
+- `node --test tests/ws-handlers.test.js`
+- `node --test tests/ws-operations.test.js`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused handler, WebSocket, and smoke browser tests passed.
+- `npm test` ran 52 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.

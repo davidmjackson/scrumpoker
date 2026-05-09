@@ -3,7 +3,7 @@ const { startServer } = require('./helpers/test-server');
 
 const testAccessKey = 'browser-test-key';
 
-test('facilitator can enter a room, vote, reveal, copy the round summary, and reset', async ({ page, context }) => {
+test('facilitator can enter a room, reveal, copy, start the next item, and reset', async ({ page, context }) => {
   const server = await startServer({
     keys: { browser: testAccessKey }
   });
@@ -87,6 +87,27 @@ test('facilitator can enter a room, vote, reveal, copy the round summary, and re
       'Spread:',
       '- 5: Alice'
     ].join('\n'));
+
+    await expect(page.locator('#start-next-item-button')).toBeVisible();
+    await page.locator('#start-next-item-button').click();
+    await expect(page.locator('#vote-summary')).toBeHidden();
+    await expect(page.locator('#ordered-votes')).toBeHidden();
+    await expect(page.locator('#current-item-display')).toHaveText('No item set');
+    await expect(page.locator('#round-status')).toHaveText('Open');
+    await expect(page.locator('#round-item-input')).toHaveValue('');
+    await expect(page.locator('#round-item-input')).toBeFocused();
+    await expect(page.locator('#round-history-section')).toBeVisible();
+    await expect(page.locator('#round-history-list')).toContainText('Checkout flow estimate');
+    await expect(page.locator('button.vote-card[data-value="5"]')).not.toHaveClass(/selected/);
+
+    await page.locator('#round-item-input').fill('Reset animation check');
+    await page.locator('#round-item-form').getByRole('button', { name: 'Set item' }).click();
+    await expect(page.locator('#current-item-display')).toHaveText('Reset animation check');
+    await page.locator('button.vote-card[data-value="8"]').click();
+    await expect(page.locator('button.vote-card[data-value="8"]')).toHaveClass(/selected/);
+    await page.locator('#show-votes-button').click();
+    await expect(page.locator('#vote-summary')).toBeVisible();
+    await expect(page.locator('#average-vote')).toHaveText('8.0');
 
     await page.locator('#reset-votes-button').click();
     await page.waitForFunction(() => {

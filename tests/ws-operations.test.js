@@ -428,6 +428,41 @@ test('WebSocket workflow covers login, voting, reveal, reset, and role limits', 
   send(alice.ws, 'resetVotes', {});
   await bobSeesReset;
 
+  const bobSeesSecondItem = waitForState(
+    bob.ws,
+    (state) => state.currentItem === 'Search filters' && state.roundHistory.length === 1
+  );
+  send(alice.ws, 'setRoundItem', { itemTitle: 'Search filters' });
+  await bobSeesSecondItem;
+
+  const aliceSeesSecondVote = waitForState(
+    alice.ws,
+    (state) => findParticipant(state, 'Bob')?.vote === '8' && state.votesRevealed === false
+  );
+  send(bob.ws, 'vote', { vote: '8' });
+  await aliceSeesSecondVote;
+
+  const bobSeesSecondReveal = waitForState(
+    bob.ws,
+    (state) =>
+      state.votesRevealed === true &&
+      state.currentItem === 'Search filters' &&
+      state.roundHistory.length === 2
+  );
+  send(alice.ws, 'revealVotes', {});
+  await bobSeesSecondReveal;
+
+  const bobSeesNextItem = waitForState(
+    bob.ws,
+    (state) =>
+      state.votesRevealed === false &&
+      state.currentItem === '' &&
+      state.roundHistory.length === 2 &&
+      state.participants.every((participant) => participant.vote === null)
+  );
+  send(alice.ws, 'startNextItem', {});
+  await bobSeesNextItem;
+
   const bobRoleChanged = waitForState(
     bob.ws,
     (state) => findParticipant(state, 'Bob')?.role === 'Observer'
