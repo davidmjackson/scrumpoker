@@ -17,6 +17,7 @@
  const participantsListContainer = document.getElementById('participants-list');
  const facilitatorControls = document.getElementById('facilitator-controls');
  const showVotesButton = document.getElementById('show-votes-button');
+ const startNextItemButton = document.getElementById('start-next-item-button');
  const resetVotesButton = document.getElementById('reset-votes-button');
  const voteSummary = document.getElementById('vote-summary');
  const averageVoteSpan = document.getElementById('average-vote');
@@ -62,6 +63,7 @@
  let currentItem = '';
  let roundHistory = [];
  let pendingLoginContext = null;
+ let shouldFocusNextItemInput = false;
  let allowStoredRoomRestore = true;
  let attemptedStoredRoomRestore = false;
  const fibonacciVotes = ['0', '1', '2', '3', '5', '8', '13', '?']; // Voting options
@@ -261,6 +263,7 @@ function showVoteError(message) {
                  pendingLoginContext = null;
              }
              if (isRoomVisible()) {
+                 shouldFocusNextItemInput = false;
                  showVoteError(errorMessage);
              } else if (isLoginVisible()) {
                  showLoginError(errorMessage);
@@ -410,6 +413,7 @@ function markRoomReturnFromAdmin() {
          if (e.key === 'Enter' && !loginButton.disabled) handleLogin();
      });
      showVotesButton.addEventListener('click', handleShowVotes);
+     startNextItemButton.addEventListener('click', handleStartNextItem);
      resetVotesButton.addEventListener('click', handleResetVotes);
      roundItemForm.addEventListener('submit', handleSetRoundItem);
      roundHistoryList.addEventListener('click', handleRoundHistoryAction);
@@ -503,10 +507,13 @@ function markRoomReturnFromAdmin() {
         facilitatorControls.classList.remove('hidden');
         adminRoomLink.classList.remove('hidden');
         showVotesButton.disabled = votesRevealed; // Disable if already revealed
+        startNextItemButton.classList.toggle('hidden', !votesRevealed);
+        startNextItemButton.disabled = !votesRevealed;
         resetVotesButton.disabled = false;
     } else {
         facilitatorControls.classList.add('hidden');
         adminRoomLink.classList.add('hidden');
+        startNextItemButton.classList.add('hidden');
     }
 
     // Show/Hide Observer Message & Disable Voting Cards
@@ -591,6 +598,12 @@ function renderCurrentItemPanel() {
         roundItemSaveButton.disabled = votesRevealed;
         if (document.activeElement !== roundItemInput) {
             roundItemInput.value = currentItem;
+        }
+
+        if (shouldFocusNextItemInput && !votesRevealed) {
+            shouldFocusNextItemInput = false;
+            roundItemInput.focus();
+            roundItemInput.select();
         }
     } else {
         roundItemForm.classList.add('hidden');
@@ -932,6 +945,14 @@ function renderVotingCards() {
  function handleShowVotes() {
       if (currentUser?.role === 'Facilitator' && !votesRevealed) {
          sendMessage('revealVotes', {});
+     }
+ }
+
+ function handleStartNextItem() {
+     if (currentUser?.role === 'Facilitator' && votesRevealed) {
+         shouldFocusNextItemInput = true;
+         startNextItemButton.disabled = true;
+         sendMessage('startNextItem', {});
      }
  }
 
