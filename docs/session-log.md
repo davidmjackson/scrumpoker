@@ -2169,3 +2169,56 @@ Result:
 - `npm run test:e2e` passed with 4 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Remove Item And History Plumbing
+
+Branch: `feature/remove-room-item-history-plumbing`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `a135969 Rename next round action (#45)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+- Production had been verified at commit `a1359697ccb0` with `/health` ok and `js/app.js?v=12`.
+
+Decision:
+- The app is used alongside Jira, so the backend should not keep current-item state or in-memory round history.
+- Keep the active-room workflow lightweight: vote, reveal, review grouped results, then move to the next round.
+- Keep `startNextItem` only as a temporary compatibility alias for already-open browser tabs from the previous release.
+
+Work completed:
+- Removed `currentItem`, `roundHistory`, round-history snapshots, and current-item helpers from room state.
+- Removed the `setRoundItem` WebSocket handler and its server switch case.
+- Renamed the current client/server next-round action path to `startNextRound`.
+- Renamed the DOM control id to `start-next-round-button`.
+- Kept `Next Round` behavior as a facilitator-only reset from revealed results into an open voting round.
+- Bumped the app script query to `js/app.js?v=13`.
+- Updated unit, WebSocket integration, and browser tests for the simpler room state.
+
+Verification:
+- `node --check lib/roomState.js`
+- `node --check lib/wsHandlers.js`
+- `node --check lib/wsServer.js`
+- `node --check public/js/app.js`
+- `node --check tests/room-state.test.js`
+- `node --check tests/ws-handlers.test.js`
+- `node --check tests/ws-operations.test.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `node --test tests/room-state.test.js`
+- `node --test tests/ws-handlers.test.js`
+- `node --test tests/ws-operations.test.js`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused room-state, handler, WebSocket integration, smoke, and multi-user browser tests passed.
+- `npm test` ran 54 tests successfully.
+- `npm run test:e2e` passed with 4 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.

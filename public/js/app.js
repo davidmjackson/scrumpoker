@@ -17,7 +17,7 @@
  const participantsListContainer = document.getElementById('participants-list');
  const facilitatorControls = document.getElementById('facilitator-controls');
  const showVotesButton = document.getElementById('show-votes-button');
- const startNextItemButton = document.getElementById('start-next-item-button');
+ const startNextRoundButton = document.getElementById('start-next-round-button');
  const resetVotesButton = document.getElementById('reset-votes-button');
  const voteSummary = document.getElementById('vote-summary');
  const averageVoteSpan = document.getElementById('average-vote');
@@ -453,7 +453,7 @@ function markRoomReconnectIntent() {
          if (e.key === 'Enter' && !loginButton.disabled) handleLogin();
      });
      showVotesButton.addEventListener('click', handleShowVotes);
-     startNextItemButton.addEventListener('click', handleStartNextItem);
+     startNextRoundButton.addEventListener('click', handleStartNextRound);
      resetVotesButton.addEventListener('click', handleResetVotes);
 
      adminRoomLink.addEventListener('click', markRoomReturnFromAdmin);
@@ -586,8 +586,8 @@ function markRoomReconnectIntent() {
         facilitatorControls.classList.remove('hidden');
         adminRoomLink.classList.remove('hidden');
         showVotesButton.disabled = votesRevealed; // Disable if already revealed
-        startNextItemButton.classList.toggle('hidden', !votesRevealed);
-        startNextItemButton.disabled = !votesRevealed;
+        startNextRoundButton.classList.toggle('hidden', !votesRevealed);
+        startNextRoundButton.disabled = !votesRevealed;
         resetVotesButton.disabled = false;
         copyVoterInviteButton.classList.remove('hidden');
         copyObserverInviteButton.classList.remove('hidden');
@@ -595,7 +595,7 @@ function markRoomReconnectIntent() {
     } else {
         facilitatorControls.classList.add('hidden');
         adminRoomLink.classList.add('hidden');
-        startNextItemButton.classList.add('hidden');
+        startNextRoundButton.classList.add('hidden');
         copyVoterInviteButton.classList.add('hidden');
         copyObserverInviteButton.classList.add('hidden');
         endSessionButton.classList.add('hidden');
@@ -900,10 +900,10 @@ function renderVotingCards() {
      }
  }
 
- function handleStartNextItem() {
+ function handleStartNextRound() {
      if (currentUser?.role === 'Facilitator' && votesRevealed) {
-         startNextItemButton.disabled = true;
-         sendMessage('startNextItem', {});
+         startNextRoundButton.disabled = true;
+         sendMessage('startNextRound', {});
      }
  }
 

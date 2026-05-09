@@ -81,12 +81,12 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('5');
     }
 
-    await expect(facilitator.locator('#start-next-item-button')).toBeVisible();
-    await expect(facilitator.locator('#start-next-item-button')).toHaveText('Next Round');
-    await expect(voter.locator('#start-next-item-button')).toBeHidden();
-    await expect(observer.locator('#start-next-item-button')).toBeHidden();
+    await expect(facilitator.locator('#start-next-round-button')).toBeVisible();
+    await expect(facilitator.locator('#start-next-round-button')).toHaveText('Next Round');
+    await expect(voter.locator('#start-next-round-button')).toBeHidden();
+    await expect(observer.locator('#start-next-round-button')).toBeHidden();
 
-    await facilitator.locator('#start-next-item-button').click();
+    await facilitator.locator('#start-next-round-button').click();
 
     for (const roomPage of [facilitator, voter, observer]) {
       await expect(roomPage.locator('#vote-summary')).toBeHidden();
