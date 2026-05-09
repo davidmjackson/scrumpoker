@@ -1994,3 +1994,45 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Auto Rejoin On Reconnect
+
+Branch: `feature/auto-rejoin-on-reconnect`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `ac20b2f Add facilitator end session flow (#41)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+- Production had been verified at commit `ac20b2fae310` with `/health` ok and `js/app.js?v=8`.
+
+Work planned:
+- Make reconnect behavior deliberate for transient WebSocket drops.
+- Automatically rejoin an active room once after reconnect.
+- Keep explicit Logout and End session as terminal exits that do not auto-rejoin.
+
+Work completed:
+- Added a `scrumPokerReconnectToRoom` session flag that is set only when an active room socket closes.
+- Reused the stored room session to send one automatic login after the next WebSocket connection opens.
+- Cleared reconnect intent on explicit room/session exits and on failed stored reconnect attempts.
+- Kept admin return-to-room behavior on the existing stored-session path.
+- Bumped the app script query to `js/app.js?v=9`.
+- Added browser coverage for a voter socket close, successful auto-rejoin, and no auto-rejoin after Logout.
+
+Verification:
+- `node --check public/js/app.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused multi-user browser test passed with 2 tests.
+- `npm test` ran 57 tests successfully.
+- `npm run test:e2e` passed with 4 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.

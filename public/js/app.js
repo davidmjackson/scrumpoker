@@ -62,6 +62,7 @@
  });
  const ROOM_SESSION_STORAGE = 'scrumPokerRoomSession';
  const ROOM_RETURN_STORAGE = 'scrumPokerReturnToRoom';
+ const ROOM_RECONNECT_STORAGE = 'scrumPokerReconnectToRoom';
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
@@ -71,6 +72,7 @@
  let currentItem = '';
  let roundHistory = [];
  let pendingLoginContext = null;
+ let pendingLoginSource = '';
  let shouldFocusNextItemInput = false;
  let allowStoredRoomRestore = true;
  let attemptedStoredRoomRestore = false;
@@ -107,6 +109,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
          loginButton.textContent = 'Enter Room';
 
          showLogin(); // Show login screen for first time connection
+         if (restoreDisconnectedRoomSession()) return;
          restoreStoredRoomSession();
      };
 
@@ -131,6 +134,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
      ws.onclose = (event) => {
          console.log('WebSocket connection closed:', event.reason, `Code: ${event.code}`);
+         markRoomReconnectIntent();
          updateConnectionStatus('disconnected', 'Disconnected');
          loginButton.disabled = true;
          loginButton.textContent = 'Enter Room (Disconnected)';
@@ -224,6 +228,7 @@ function showVoteError(message) {
                      sessionStorage.setItem('scrumPokerUserName', currentUser.name);
                      persistRoomSession();
                      pendingLoginContext = null;
+                     pendingLoginSource = '';
 
                     const isEnteringRoom = !pokerRoomSection || pokerRoomSection.classList.contains('hidden');
                     const didResetVotes = wasVotesRevealed &&
@@ -269,10 +274,11 @@ function showVoteError(message) {
              const errorMessage = payload?.message || 'Something went wrong.';
              console.error('Server Error:', errorMessage);
              if (pendingLoginContext) {
-                 if (attemptedStoredRoomRestore) {
+                 if (pendingLoginSource === 'stored' || pendingLoginSource === 'reconnect') {
                      clearRoomSession();
                  }
                  pendingLoginContext = null;
+                 pendingLoginSource = '';
              }
              if (isRoomVisible()) {
                  shouldFocusNextItemInput = false;
@@ -316,6 +322,7 @@ function getValidRole(value) {
 function clearRoomSession() {
     sessionStorage.removeItem(ROOM_SESSION_STORAGE);
     sessionStorage.removeItem(ROOM_RETURN_STORAGE);
+    sessionStorage.removeItem(ROOM_RECONNECT_STORAGE);
 }
 
 function getStoredRoomSession() {
@@ -360,6 +367,34 @@ function persistRoomSession() {
     });
 }
 
+function fillLoginFromStoredSession(storedSession) {
+    accessKeyInput.value = storedSession.accessKey;
+    roomInput.value = storedSession.room;
+    nameInput.value = storedSession.name;
+    roleSelect.value = storedSession.role;
+    currentRoom = storedSession.room;
+}
+
+function sendStoredLogin(storedSession, source) {
+    fillLoginFromStoredSession(storedSession);
+    pendingLoginContext = storedSession;
+    pendingLoginSource = source;
+    sendMessage('login', storedSession);
+}
+
+function restoreDisconnectedRoomSession() {
+    if (!allowStoredRoomRestore) return false;
+    if (sessionStorage.getItem(ROOM_RECONNECT_STORAGE) !== '1') return false;
+
+    sessionStorage.removeItem(ROOM_RECONNECT_STORAGE);
+    const storedSession = getStoredRoomSession();
+    if (!storedSession) return false;
+
+    showLoginError('Reconnected. Rejoining room...');
+    sendStoredLogin(storedSession, 'reconnect');
+    return true;
+}
+
 function restoreStoredRoomSession() {
     if (!allowStoredRoomRestore || attemptedStoredRoomRestore) return;
     if (sessionStorage.getItem(ROOM_RETURN_STORAGE) !== '1') return;
@@ -369,13 +404,7 @@ function restoreStoredRoomSession() {
 
     attemptedStoredRoomRestore = true;
     sessionStorage.removeItem(ROOM_RETURN_STORAGE);
-    accessKeyInput.value = storedSession.accessKey;
-    roomInput.value = storedSession.room;
-    nameInput.value = storedSession.name;
-    roleSelect.value = storedSession.role;
-    currentRoom = storedSession.room;
-    pendingLoginContext = storedSession;
-    sendMessage('login', storedSession);
+    sendStoredLogin(storedSession, 'stored');
 }
 
 function markRoomReturnFromAdmin() {
@@ -383,6 +412,15 @@ function markRoomReturnFromAdmin() {
 
     persistRoomSession();
     sessionStorage.setItem(ROOM_RETURN_STORAGE, '1');
+}
+
+function markRoomReconnectIntent() {
+    if (!currentUser || !currentRoom) return;
+
+    persistRoomSession();
+    if (getStoredRoomSession()) {
+        sessionStorage.setItem(ROOM_RECONNECT_STORAGE, '1');
+    }
 }
 
 
@@ -1072,6 +1110,7 @@ function renderVotingCards() {
     hideLoginError();
     currentRoom = room;
     pendingLoginContext = { accessKey: key, name, role, room };
+    pendingLoginSource = 'manual';
     sendMessage('login', {
       accessKey: key,
       name: name,
@@ -1139,6 +1178,7 @@ function renderVotingCards() {
      roundHistory = [];
      currentRoom = null;
      pendingLoginContext = null;
+     pendingLoginSource = '';
 
      // Clear session
      sessionStorage.removeItem('scrumPokerUserId');
