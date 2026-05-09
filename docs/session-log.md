@@ -1904,3 +1904,46 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Room Invite Links
+
+Branch: `feature/room-invite-links`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `5462a37 Add build info to health endpoint (#39)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+
+Work planned:
+- Add facilitator-only invite links directly inside the planning room.
+- Let facilitators copy voter and observer invite URLs without visiting `/admin`.
+- Verify copied invite URLs prefill access key, room, and role.
+
+Work completed:
+- Added `Copy voter invite` and `Copy observer invite` room actions for facilitators.
+- Reused the existing invite URL prefill format with `accessKey`, `room`, and `role` query parameters.
+- Added visible copied feedback for each invite action.
+- Kept room invite actions hidden for voters and observers.
+- Bumped the app script query to `js/app.js?v=7`.
+- Extended smoke and multi-user browser coverage for invite visibility, copied URL content, and invite prefill.
+
+Verification:
+- `node --check public/js/app.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused smoke and multi-user browser tests passed.
+- `npm test` ran 55 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.

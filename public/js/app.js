@@ -32,6 +32,8 @@
  const roundHistoryList = document.getElementById('round-history-list');
  const copyRoundHistoryButton = document.getElementById('copy-round-history-button');
  const adminRoomLink = document.getElementById('admin-room-link');
+ const copyVoterInviteButton = document.getElementById('copy-voter-invite-button');
+ const copyObserverInviteButton = document.getElementById('copy-observer-invite-button');
  const logoutButton = document.getElementById('logout-button');
 
  const editRoleButton = document.getElementById('edit-role-button');
@@ -421,6 +423,8 @@ function markRoomReturnFromAdmin() {
      copyRoundHistoryButton.addEventListener('click', handleCopyAllRoundHistory);
 
      adminRoomLink.addEventListener('click', markRoomReturnFromAdmin);
+     copyVoterInviteButton.addEventListener('click', handleCopyRoomInvite);
+     copyObserverInviteButton.addEventListener('click', handleCopyRoomInvite);
      logoutButton.addEventListener('click', logout);
 
      // Replace the old event binding:
@@ -512,10 +516,14 @@ function markRoomReturnFromAdmin() {
         startNextItemButton.classList.toggle('hidden', !votesRevealed);
         startNextItemButton.disabled = !votesRevealed;
         resetVotesButton.disabled = false;
+        copyVoterInviteButton.classList.remove('hidden');
+        copyObserverInviteButton.classList.remove('hidden');
     } else {
         facilitatorControls.classList.add('hidden');
         adminRoomLink.classList.add('hidden');
         startNextItemButton.classList.add('hidden');
+        copyVoterInviteButton.classList.add('hidden');
+        copyObserverInviteButton.classList.add('hidden');
     }
 
     // Show/Hide Observer Message & Disable Voting Cards
@@ -954,6 +962,46 @@ function renderVotingCards() {
     setTimeout(() => {
       copyRoundHistoryButton.disabled = false;
       copyRoundHistoryButton.textContent = originalText;
+    }, 1600);
+  }
+ }
+
+ function createRoomInviteUrl(role) {
+  const storedSession = getStoredRoomSession();
+  const accessKey = storedSession?.accessKey;
+  const room = currentRoom || storedSession?.room;
+  if (!accessKey || !room) return '';
+
+  const inviteUrl = new URL('/', window.location.origin);
+  inviteUrl.searchParams.set('accessKey', accessKey);
+  inviteUrl.searchParams.set('room', room);
+  inviteUrl.searchParams.set('role', role);
+  return inviteUrl.toString();
+ }
+
+ async function handleCopyRoomInvite(event) {
+  if (currentUser?.role !== 'Facilitator') return;
+
+  const button = event.currentTarget;
+  const role = button.dataset.inviteRole;
+  const inviteUrl = createRoomInviteUrl(role);
+  if (!inviteUrl) {
+    showVoteError('Invite link unavailable. Rejoin the room and try again.');
+    return;
+  }
+
+  const originalText = button.textContent;
+  button.disabled = true;
+
+  try {
+    await copyText(inviteUrl);
+    button.textContent = `Copied ${role.toLowerCase()} invite`;
+  } catch (_err) {
+    button.textContent = 'Copy failed';
+  } finally {
+    setTimeout(() => {
+      button.disabled = false;
+      button.textContent = originalText;
     }, 1600);
   }
  }
