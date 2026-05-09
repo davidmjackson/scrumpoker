@@ -57,6 +57,37 @@ test('facilitator can enter a room, reveal, copy, start the next item, and reset
     await expect(page.locator('#admin-room-link')).toBeVisible();
     await expect(page.locator('#current-item-display')).toHaveText('No item set');
 
+    const copyVoterInviteButton = page.locator('#copy-voter-invite-button');
+    const copyObserverInviteButton = page.locator('#copy-observer-invite-button');
+    await expect(copyVoterInviteButton).toBeVisible();
+    await expect(copyObserverInviteButton).toBeVisible();
+
+    await copyVoterInviteButton.click();
+    await expect(copyVoterInviteButton).toHaveText('Copied voter invite');
+    const copiedVoterInvite = await page.evaluate(() => navigator.clipboard.readText());
+    const voterInviteUrl = new URL(copiedVoterInvite);
+    expect(voterInviteUrl.origin).toBe(server.baseUrl);
+    expect(voterInviteUrl.searchParams.get('accessKey')).toBe(testAccessKey);
+    expect(voterInviteUrl.searchParams.get('room')).toBe('browser-room');
+    expect(voterInviteUrl.searchParams.get('role')).toBe('Voter');
+
+    await copyObserverInviteButton.click();
+    await expect(copyObserverInviteButton).toHaveText('Copied observer invite');
+    const copiedObserverInvite = await page.evaluate(() => navigator.clipboard.readText());
+    const observerInviteUrl = new URL(copiedObserverInvite);
+    expect(observerInviteUrl.origin).toBe(server.baseUrl);
+    expect(observerInviteUrl.searchParams.get('accessKey')).toBe(testAccessKey);
+    expect(observerInviteUrl.searchParams.get('room')).toBe('browser-room');
+    expect(observerInviteUrl.searchParams.get('role')).toBe('Observer');
+
+    const invitePage = await context.newPage();
+    await invitePage.goto(copiedObserverInvite);
+    await expect(invitePage.locator('#access-key-input')).toHaveValue(testAccessKey);
+    await expect(invitePage.locator('#room-input')).toHaveValue('browser-room');
+    await expect(invitePage.locator('#role-select')).toHaveValue('Observer');
+    expect(invitePage.url()).not.toContain('accessKey=');
+    await invitePage.close();
+
     await page.locator('#round-item-input').fill('Checkout flow estimate');
     await page.locator('#round-item-form').getByRole('button', { name: 'Set item' }).click();
     await expect(page.locator('#current-item-display')).toHaveText('Checkout flow estimate');
