@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scrum Poker Tool</title>
     <script src="js/cardDeck.js?v=1" defer></script>
-    <script src="js/app.js?v=13" defer></script>
+    <script src="js/app.js?v=14" defer></script>
 
     <link rel="stylesheet" href="css/app.css">
 </head>
@@ -86,21 +86,28 @@
                 <span class="entry-kicker">Estimation room</span>
                 <h1>Scrum Poker Room</h1>
                 <p id="room-display" class="room-display"></p>
+                <a id="admin-room-link" href="/admin" class="room-admin-link hidden">Team access</a>
             </div>
 
             <div class="room-userbar">
                 <span id="user-greeting" class="user-greeting"></span>
                 <div class="room-actions" aria-label="Room actions">
-                    <a id="admin-room-link" href="/admin" class="text-action hidden">Admin</a>
-                    <button id="copy-voter-invite-button" class="text-action hidden" type="button" data-invite-role="Voter">
-                        Copy voter invite
-                    </button>
-                    <button id="copy-observer-invite-button" class="text-action hidden" type="button" data-invite-role="Observer">
-                        Copy observer invite
-                    </button>
-                    <button id="end-session-button" class="text-action danger hidden" type="button">End session</button>
-                    <button id="edit-role-button" class="text-action">Change Role</button>
-                    <button id="logout-button" class="text-action danger">Logout</button>
+                    <div class="invite-menu-wrap">
+                        <button id="invite-menu-button" class="toolbar-action hidden" type="button" aria-expanded="false" aria-controls="invite-menu">
+                            Invite
+                        </button>
+                        <div id="invite-menu" class="invite-menu hidden">
+                            <button id="copy-voter-invite-button" class="invite-action" type="button" data-invite-role="Voter">
+                                Copy voter invite
+                            </button>
+                            <button id="copy-observer-invite-button" class="invite-action" type="button" data-invite-role="Observer">
+                                Copy observer invite
+                            </button>
+                        </div>
+                    </div>
+                    <button id="end-session-button" class="toolbar-action danger hidden" type="button" aria-label="End session">End</button>
+                    <button id="edit-role-button" class="toolbar-action" type="button" aria-label="Change role">Role</button>
+                    <button id="logout-button" class="toolbar-action danger" type="button">Logout</button>
                 </div>
             </div>
         </header>

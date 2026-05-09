@@ -42,6 +42,7 @@ test('facilitator can enter a room, reveal, copy, start the next round, and rese
     await expect(page.locator('#user-greeting')).toHaveText('Hello, Alice (Facilitator)');
     await expect(page.locator('#admin-room-link')).toBeVisible();
     await expect(page.locator('#admin-room-link')).toHaveAttribute('href', '/admin');
+    await expect(page.locator('#admin-room-link')).toHaveText('Team access');
     await expect(page.locator('#participants-list')).toContainText('Alice (You)');
 
     await page.locator('#admin-room-link').click();
@@ -58,8 +59,16 @@ test('facilitator can enter a room, reveal, copy, start the next round, and rese
     await expect(page.locator('#round-item-form')).toHaveCount(0);
     await expect(page.locator('#current-item-display')).toHaveCount(0);
 
+    await expect(page.locator('#invite-menu-button')).toBeVisible();
+    await expect(page.locator('#invite-menu-button')).toHaveText('Invite');
+    await expect(page.locator('#invite-menu-button')).toHaveAttribute('aria-expanded', 'false');
     const copyVoterInviteButton = page.locator('#copy-voter-invite-button');
     const copyObserverInviteButton = page.locator('#copy-observer-invite-button');
+    await expect(copyVoterInviteButton).toBeHidden();
+    await expect(copyObserverInviteButton).toBeHidden();
+
+    await page.locator('#invite-menu-button').click();
+    await expect(page.locator('#invite-menu-button')).toHaveAttribute('aria-expanded', 'true');
     await expect(copyVoterInviteButton).toBeVisible();
     await expect(copyObserverInviteButton).toBeVisible();
 
@@ -88,6 +97,10 @@ test('facilitator can enter a room, reveal, copy, start the next round, and rese
     await expect(invitePage.locator('#role-select')).toHaveValue('Observer');
     expect(invitePage.url()).not.toContain('accessKey=');
     await invitePage.close();
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#invite-menu-button')).toHaveAttribute('aria-expanded', 'false');
+    await expect(copyVoterInviteButton).toBeHidden();
 
     await page.locator('button.vote-card[data-value="5"]').click();
     await expect(page.locator('button.vote-card[data-value="5"]')).toHaveClass(/selected/);

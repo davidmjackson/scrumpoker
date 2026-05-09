@@ -318,8 +318,22 @@ img {
   font-weight: 800;
 }
 
+.room-admin-link {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 0.35rem;
+  color: var(--blue);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.room-admin-link:hover {
+  text-decoration: underline;
+}
+
 .room-userbar {
-  min-width: 260px;
+  min-width: 240px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -338,9 +352,78 @@ img {
 
 .room-actions {
   display: flex;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.45rem;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.invite-menu-wrap {
+  position: relative;
+}
+
+.toolbar-action {
+  min-height: 2.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0.42rem 0.65rem;
+}
+
+.toolbar-action:hover:not(:disabled) {
+  background: #edf2f7;
+}
+
+.toolbar-action.danger {
+  border-color: #ffd5d7;
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.toolbar-action.danger:hover:not(:disabled) {
+  background: #ffe2e3;
+}
+
+.invite-menu {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: 35;
+  min-width: 190px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  padding: 0.35rem;
+}
+
+.invite-action {
+  width: 100%;
+  min-height: 2.4rem;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+}
+
+.invite-action:hover:not(:disabled) {
+  background: var(--surface-soft);
+}
+
+.invite-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
 }
 
 .text-action {
@@ -643,6 +726,11 @@ img {
 
   .room-actions {
     justify-content: flex-start;
+  }
+
+  .invite-menu {
+    left: 0;
+    right: auto;
   }
 
   .room-grid {

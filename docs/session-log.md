@@ -2292,3 +2292,47 @@ Verification:
 Result:
 - Documentation whitespace check passed.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Compact Facilitator Toolbar
+
+Branch: `feature/compact-facilitator-toolbar`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `95f7c49 Condense deployment runbook (#48)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+- Production checkout had been verified at commit `95f7c491ce1c`.
+
+Decision:
+- The facilitator header actions were too long and visually noisy.
+- Keep the main room toolbar short with `Invite`, `End`, `Role`, and `Logout`.
+- Move admin access out of the room action row and label it as `Team access`.
+- Keep invite copy actions available behind the compact `Invite` menu.
+
+Work completed:
+- Moved the admin link beside the room name and renamed it to `Team access`.
+- Replaced the long facilitator action row with compact toolbar buttons.
+- Added an invite dropdown with `Copy voter invite` and `Copy observer invite`.
+- Added outside-click and Escape handling for the invite dropdown.
+- Bumped the app script query to `js/app.js?v=14`.
+- Updated smoke and multi-user browser coverage for the compact toolbar and invite menu.
+
+Verification:
+- `node --check public/js/app.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused smoke and multi-user browser tests passed.
+- `npm test` ran 54 tests successfully.
+- `npm run test:e2e` passed with 4 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.
