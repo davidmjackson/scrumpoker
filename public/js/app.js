@@ -21,13 +21,7 @@
  const resetVotesButton = document.getElementById('reset-votes-button');
  const voteSummary = document.getElementById('vote-summary');
  const averageVoteSpan = document.getElementById('average-vote');
- const resultItemName = document.getElementById('result-item-name');
  const roundStatus = document.getElementById('round-status');
- const currentItemDisplay = document.getElementById('current-item-display');
- const roundItemForm = document.getElementById('round-item-form');
- const roundItemInput = document.getElementById('round-item-input');
- const roundItemSaveButton = document.getElementById('round-item-save-button');
- const roundItemError = document.getElementById('round-item-error');
  const roundHistorySection = document.getElementById('round-history-section');
  const roundHistoryList = document.getElementById('round-history-list');
  const copyRoundHistoryButton = document.getElementById('copy-round-history-button');
@@ -69,11 +63,9 @@
  let participants = []; // Array of user objects received from server
  let votesRevealed = false; // Status received from server
  let facilitatorId = null; // ID received from server
- let currentItem = '';
  let roundHistory = [];
  let pendingLoginContext = null;
  let pendingLoginSource = '';
- let shouldFocusNextItemInput = false;
  let allowStoredRoomRestore = true;
  let attemptedStoredRoomRestore = false;
  const fibonacciVotes = ['0', '1', '2', '3', '5', '8', '13', '?']; // Voting options
@@ -205,7 +197,6 @@ function showVoteError(message) {
                  participants = payload.participants || [];
                  votesRevealed = payload.votesRevealed || false;
                  facilitatorId = payload.facilitatorId || null;
-                 currentItem = payload.currentItem || '';
                  roundHistory = Array.isArray(payload.roundHistory) ? payload.roundHistory : [];
 
                  // Find the current user in the updated participant list
@@ -281,7 +272,6 @@ function showVoteError(message) {
                  pendingLoginSource = '';
              }
              if (isRoomVisible()) {
-                 shouldFocusNextItemInput = false;
                  if (isEndSessionModalOpen()) {
                      showEndSessionError(errorMessage);
                      resetEndSessionButton();
@@ -470,7 +460,6 @@ function markRoomReconnectIntent() {
      showVotesButton.addEventListener('click', handleShowVotes);
      startNextItemButton.addEventListener('click', handleStartNextItem);
      resetVotesButton.addEventListener('click', handleResetVotes);
-     roundItemForm.addEventListener('submit', handleSetRoundItem);
      roundHistoryList.addEventListener('click', handleRoundHistoryAction);
      copyRoundHistoryButton.addEventListener('click', handleCopyAllRoundHistory);
 
@@ -591,7 +580,7 @@ function markRoomReconnectIntent() {
     // Update greeting
     userGreeting.textContent = `Hello, ${currentUser.name} (${currentUser.role})`;
 
-    renderCurrentItemPanel();
+    renderRoundStatus();
     renderRoundHistory();
 
     // Generate/Update Voting Cards
@@ -687,33 +676,9 @@ function markRoomReconnectIntent() {
     }
 }
 
-function renderCurrentItemPanel() {
-    const displayTitle = currentItem || 'No item set';
-    currentItemDisplay.textContent = displayTitle;
-    currentItemDisplay.classList.toggle('is-empty', !currentItem);
-    resultItemName.textContent = currentItem || 'Untitled item';
-
+function renderRoundStatus() {
     roundStatus.textContent = votesRevealed ? 'Revealed' : 'Open';
     roundStatus.classList.toggle('is-locked', votesRevealed);
-
-    if (currentUser?.role === 'Facilitator') {
-        roundItemForm.classList.remove('hidden');
-        roundItemInput.disabled = votesRevealed;
-        roundItemSaveButton.disabled = votesRevealed;
-        if (document.activeElement !== roundItemInput) {
-            roundItemInput.value = currentItem;
-        }
-
-        if (shouldFocusNextItemInput && !votesRevealed) {
-            shouldFocusNextItemInput = false;
-            roundItemInput.focus();
-            roundItemInput.select();
-        }
-    } else {
-        roundItemForm.classList.add('hidden');
-    }
-
-    roundItemError.classList.add('hidden');
 }
 
 function renderRoundHistory() {
@@ -727,7 +692,7 @@ function renderRoundHistory() {
 
     roundHistorySection.classList.remove('hidden');
     copyRoundHistoryButton.classList.toggle('hidden', currentUser?.role !== 'Facilitator');
-    roundHistory.forEach((round) => {
+    roundHistory.forEach((round, index) => {
         const article = document.createElement('article');
         article.className = 'round-history-item';
 
@@ -736,7 +701,7 @@ function renderRoundHistory() {
 
         const title = document.createElement('h3');
         title.className = 'round-history-title';
-        title.textContent = getRoundTitle(round);
+        title.textContent = getRoundTitle(round, roundHistory.length - index);
 
         const copyButton = document.createElement('button');
         copyButton.type = 'button';
@@ -792,8 +757,12 @@ function createMetaText(text) {
     return span;
 }
 
-function getRoundTitle(round) {
-    return round?.title || 'Untitled item';
+function getRoundTitle(round, fallbackNumber) {
+    if (round?.title && round.title !== 'Untitled item') {
+        return round.title;
+    }
+
+    return fallbackNumber ? `Round ${fallbackNumber}` : 'Revealed round';
 }
 
 function formatRoundRevealedAt(value) {
@@ -806,9 +775,9 @@ function formatRoundRevealedAt(value) {
     });
 }
 
-function createRoundSummaryText(round) {
+function createRoundSummaryText(round, fallbackNumber) {
     const lines = [
-        `Sprint Poker estimate: ${getRoundTitle(round)}`,
+        `Scrum Poker round: ${getRoundTitle(round, fallbackNumber)}`,
         `Average: ${round.average || '--'}`,
         `Votes: ${round.voteCount || 0}`
     ];
@@ -820,14 +789,14 @@ function createRoundSummaryText(round) {
 function createAllRoundHistorySummaryText(rounds) {
     const chronologicalRounds = [...rounds].reverse();
     const lines = [
-        'Sprint Poker session summary',
+        'Scrum Poker session summary',
         `Rounds: ${chronologicalRounds.length}`
     ];
 
     chronologicalRounds.forEach((round, index) => {
         lines.push(
             '',
-            `${index + 1}. ${getRoundTitle(round)}`,
+            `${index + 1}. ${getRoundTitle(round, index + 1)}`,
             `Average: ${round.average || '--'}`,
             `Votes: ${round.voteCount || 0}`
         );
@@ -998,38 +967,19 @@ function renderVotingCards() {
  }
 
  // --- Event Handlers (Send messages to server) ---
- function showRoundItemError(message) {
-  roundItemError.textContent = message;
-  roundItemError.classList.remove('hidden');
- }
-
- function handleSetRoundItem(event) {
-  event.preventDefault();
-
-  if (currentUser?.role !== 'Facilitator') return;
-
-  const itemTitle = roundItemInput.value.trim();
-  if (!itemTitle) {
-    showRoundItemError('Enter an item name.');
-    return;
-  }
-
-  roundItemError.classList.add('hidden');
-  sendMessage('setRoundItem', { itemTitle });
- }
-
  async function handleRoundHistoryAction(event) {
   const copyButton = event.target.closest('.round-copy-action');
   if (!copyButton) return;
 
-  const round = roundHistory.find((entry) => entry.id === copyButton.dataset.roundId);
+  const roundIndex = roundHistory.findIndex((entry) => entry.id === copyButton.dataset.roundId);
+  const round = roundHistory[roundIndex];
   if (!round) return;
 
   const originalText = copyButton.textContent;
   copyButton.disabled = true;
 
   try {
-    await copyText(createRoundSummaryText(round));
+    await copyText(createRoundSummaryText(round, roundHistory.length - roundIndex));
     copyButton.textContent = 'Copied';
   } catch (_err) {
     copyButton.textContent = 'Copy failed';
@@ -1139,7 +1089,6 @@ function renderVotingCards() {
 
  function handleStartNextItem() {
      if (currentUser?.role === 'Facilitator' && votesRevealed) {
-         shouldFocusNextItemInput = true;
          startNextItemButton.disabled = true;
          sendMessage('startNextItem', {});
      }
@@ -1174,7 +1123,6 @@ function renderVotingCards() {
      participants = [];
      votesRevealed = false;
      facilitatorId = null;
-     currentItem = '';
      roundHistory = [];
      currentRoom = null;
      pendingLoginContext = null;

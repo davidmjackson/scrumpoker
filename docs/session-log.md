@@ -2036,3 +2036,47 @@ Result:
 - `npm run test:e2e` passed with 4 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Hide Current Item Panel
+
+Branch: `feature/hide-current-item-panel`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `6eefc45 Add automatic room rejoin on reconnect (#42)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+- Production had been verified at commit `6eefc454b472` with `/health` ok and `js/app.js?v=9`.
+
+Decision:
+- The current item / ticket field is not needed because the app is used alongside Jira.
+- Keep server-side current-item support for compatibility, but remove the visible Jira-ticket-style room panel from the browser UI.
+
+Work completed:
+- Removed the visible Estimate target panel, item input, and current item display from the Poker Room.
+- Moved the Open/Revealed round status into the voting panel header.
+- Removed the item line from revealed results.
+- Updated round history and copied summaries to use generic `Round 1`, `Round 2`, etc. when no item title is present.
+- Removed unused current-item client code and CSS.
+- Bumped the app script query to `js/app.js?v=10`.
+- Updated smoke and multi-user browser coverage for the simplified room UI.
+
+Verification:
+- `node --check public/js/app.js`
+- `node --check tests/e2e/scrum-poker-smoke.spec.js`
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npx playwright test tests/e2e/scrum-poker-smoke.spec.js`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused smoke and multi-user browser tests passed.
+- `npm test` ran 57 tests successfully.
+- `npm run test:e2e` passed with 4 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.

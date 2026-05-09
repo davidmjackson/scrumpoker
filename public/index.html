@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scrum Poker Tool</title>
     <script src="js/cardDeck.js?v=1" defer></script>
-    <script src="js/app.js?v=9" defer></script>
+    <script src="js/app.js?v=10" defer></script>
 
     <link rel="stylesheet" href="css/app.css">
 </head>
@@ -106,34 +106,13 @@
         </header>
 
         <div class="room-grid">
-            <section class="room-card round-panel" aria-labelledby="round-panel-title">
-                <div class="section-heading compact">
-                    <div>
-                        <span class="section-kicker">Current item</span>
-                        <h2 id="round-panel-title">Estimate target</h2>
-                    </div>
-                    <span id="round-status" class="status-pill">Open</span>
-                </div>
-
-                <p id="current-item-display" class="current-item-display">No item set</p>
-
-                <form id="round-item-form" class="round-item-form hidden">
-                    <label class="field" for="round-item-input">
-                        <span>Item name</span>
-                        <input type="text" id="round-item-input" maxlength="140" autocomplete="off">
-                    </label>
-                    <button id="round-item-save-button" class="secondary-action" type="submit">Set item</button>
-                </form>
-                <p id="round-item-error" class="form-error room-error hidden"></p>
-            </section>
-
             <section class="room-card vote-panel" aria-labelledby="vote-panel-title">
                 <div class="section-heading">
                     <div>
                         <span class="section-kicker">Vote</span>
                         <h2 id="vote-panel-title">Cast your vote</h2>
                     </div>
-                    <span class="deck-label">Fibonacci</span>
+                    <span id="round-status" class="status-pill">Open</span>
                 </div>
 
                 <div id="voting-cards" class="voting-deck" aria-label="Voting cards">
@@ -160,7 +139,6 @@
                     </div>
                 </div>
                 <p>Average Vote: <span id="average-vote">--</span></p>
-                <p class="result-item">Item: <span id="result-item-name">--</span></p>
             </section>
 
             <section id="ordered-votes" class="room-card grouped-results hidden" aria-labelledby="grouped-results-title">
