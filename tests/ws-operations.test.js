@@ -480,6 +480,53 @@ test('WebSocket workflow covers login, voting, reveal, reset, and role limits', 
   await nonFacilitatorRoleError;
 });
 
+test('facilitator can end a room session for every participant', async (t) => {
+  const { port } = await startServer(t);
+
+  const alice = await connectClient(t, port);
+  await login(alice, {
+    name: 'Alice',
+    role: 'Facilitator',
+    room: 'baseline'
+  });
+
+  const bob = await connectClient(t, port);
+  await login(bob, {
+    name: 'Bob',
+    role: 'Voter',
+    room: 'baseline'
+  });
+
+  const voterEndSessionError = waitForMessage(
+    bob.ws,
+    (message) => message.type === 'error' && message.payload?.message === 'Only Facilitator can end the session.'
+  );
+  send(bob.ws, 'endSession', {});
+  await voterEndSessionError;
+
+  const aliceEnded = waitForMessage(
+    alice.ws,
+    (message) => message.type === 'sessionEnded' && message.payload?.message === 'Session ended by facilitator.'
+  );
+  const bobEnded = waitForMessage(
+    bob.ws,
+    (message) => message.type === 'sessionEnded' && message.payload?.message === 'Session ended by facilitator.'
+  );
+
+  send(alice.ws, 'endSession', {});
+  await Promise.all([aliceEnded, bobEnded]);
+
+  const health = await fetch(`http://127.0.0.1:${port}/health`).then((response) => response.json());
+  assert.equal(health.rooms, 0);
+
+  const loggedOutError = waitForMessage(
+    bob.ws,
+    (message) => message.type === 'error' && message.payload?.message === 'Not logged in.'
+  );
+  send(bob.ws, 'vote', { vote: '8' });
+  await loggedOutError;
+});
+
 test('invalid access keys are rejected', async (t) => {
   const { port } = await startServer(t);
   const client = await connectClient(t, port);

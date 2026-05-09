@@ -34,6 +34,7 @@
  const adminRoomLink = document.getElementById('admin-room-link');
  const copyVoterInviteButton = document.getElementById('copy-voter-invite-button');
  const copyObserverInviteButton = document.getElementById('copy-observer-invite-button');
+ const endSessionButton = document.getElementById('end-session-button');
  const logoutButton = document.getElementById('logout-button');
 
  const editRoleButton = document.getElementById('edit-role-button');
@@ -42,6 +43,10 @@
  const editRoleError  = document.getElementById('edit-role-error');
  const saveRoleButton   = document.getElementById('save-role-button');
  const cancelEditRoleButton = document.getElementById('cancel-edit-role-button');
+ const endSessionModal = document.getElementById('end-session-modal');
+ const endSessionError = document.getElementById('end-session-error');
+ const confirmEndSessionButton = document.getElementById('confirm-end-session-button');
+ const cancelEndSessionButton = document.getElementById('cancel-end-session-button');
 
  const connectionStatus = document.getElementById('connection-status');
 
@@ -256,6 +261,10 @@ function showVoteError(message) {
              }
              break;
 
+         case 'sessionEnded':
+             handleSessionEnded(payload?.message || 'Session ended by facilitator.');
+             break;
+
          case 'error':
              const errorMessage = payload?.message || 'Something went wrong.';
              console.error('Server Error:', errorMessage);
@@ -267,7 +276,12 @@ function showVoteError(message) {
              }
              if (isRoomVisible()) {
                  shouldFocusNextItemInput = false;
-                 showVoteError(errorMessage);
+                 if (isEndSessionModalOpen()) {
+                     showEndSessionError(errorMessage);
+                     resetEndSessionButton();
+                 } else {
+                     showVoteError(errorMessage);
+                 }
              } else if (isLoginVisible()) {
                  showLoginError(errorMessage);
              } else {
@@ -425,6 +439,9 @@ function markRoomReturnFromAdmin() {
      adminRoomLink.addEventListener('click', markRoomReturnFromAdmin);
      copyVoterInviteButton.addEventListener('click', handleCopyRoomInvite);
      copyObserverInviteButton.addEventListener('click', handleCopyRoomInvite);
+     endSessionButton.addEventListener('click', openEndSessionModal);
+     confirmEndSessionButton.addEventListener('click', handleConfirmEndSession);
+     cancelEndSessionButton.addEventListener('click', closeEndSessionModal);
      logoutButton.addEventListener('click', logout);
 
      // Replace the old event binding:
@@ -442,6 +459,43 @@ function markRoomReturnFromAdmin() {
  }
  function closeEditRoleModal() {
  editRoleModal.classList.add('hidden');
+ }
+
+ function isEndSessionModalOpen() {
+     return !endSessionModal.classList.contains('hidden');
+ }
+
+ function resetEndSessionButton() {
+     confirmEndSessionButton.disabled = false;
+     confirmEndSessionButton.textContent = 'End Session';
+ }
+
+ function showEndSessionError(message) {
+     endSessionError.textContent = message;
+     endSessionError.classList.remove('hidden');
+ }
+
+ function openEndSessionModal() {
+     if (currentUser?.role !== 'Facilitator') return;
+
+     endSessionError.classList.add('hidden');
+     resetEndSessionButton();
+     endSessionModal.classList.remove('hidden');
+ }
+
+ function closeEndSessionModal() {
+     endSessionModal.classList.add('hidden');
+     endSessionError.classList.add('hidden');
+     resetEndSessionButton();
+ }
+
+ function handleConfirmEndSession() {
+     if (currentUser?.role !== 'Facilitator') return;
+
+     endSessionError.classList.add('hidden');
+     confirmEndSessionButton.disabled = true;
+     confirmEndSessionButton.textContent = 'Ending...';
+     sendMessage('endSession', {});
  }
 
  // On save, send changeRole for self
@@ -518,12 +572,14 @@ function markRoomReturnFromAdmin() {
         resetVotesButton.disabled = false;
         copyVoterInviteButton.classList.remove('hidden');
         copyObserverInviteButton.classList.remove('hidden');
+        endSessionButton.classList.remove('hidden');
     } else {
         facilitatorControls.classList.add('hidden');
         adminRoomLink.classList.add('hidden');
         startNextItemButton.classList.add('hidden');
         copyVoterInviteButton.classList.add('hidden');
         copyObserverInviteButton.classList.add('hidden');
+        endSessionButton.classList.add('hidden');
     }
 
     // Show/Hide Observer Message & Disable Voting Cards
@@ -1074,10 +1130,7 @@ function renderVotingCards() {
       }
   }
 
-  function logout() {
-     console.log("Logging out.");
-
-     // Clear state
+  function resetRoomState() {
      currentUser = null;
      participants = [];
      votesRevealed = false;
@@ -1091,6 +1144,23 @@ function renderVotingCards() {
      sessionStorage.removeItem('scrumPokerUserId');
      sessionStorage.removeItem('scrumPokerUserName');
      clearRoomSession();
+  }
+
+  function handleSessionEnded(message) {
+     console.log('Session ended by facilitator.');
+     resetRoomState();
+     closeEditRoleModal();
+     closeEndSessionModal();
+     showLogin({ clearError: false });
+     showLoginError(message);
+     updateConnectionStatus('connected', 'Connected');
+  }
+
+  function logout() {
+     console.log("Logging out.");
+
+     // Clear state and session
+     resetRoomState();
 
 
      // Send logout to server

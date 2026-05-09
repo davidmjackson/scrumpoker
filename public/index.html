@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scrum Poker Tool</title>
     <script src="js/cardDeck.js?v=1" defer></script>
-    <script src="js/app.js?v=7" defer></script>
+    <script src="js/app.js?v=8" defer></script>
 
     <link rel="stylesheet" href="css/app.css">
 </head>
@@ -98,6 +98,7 @@
                     <button id="copy-observer-invite-button" class="text-action hidden" type="button" data-invite-role="Observer">
                         Copy observer invite
                     </button>
+                    <button id="end-session-button" class="text-action danger hidden" type="button">End session</button>
                     <button id="edit-role-button" class="text-action">Change Role</button>
                     <button id="logout-button" class="text-action danger">Logout</button>
                 </div>
@@ -214,6 +215,18 @@
             <div class="modal-actions">
                 <button id="cancel-edit-role-button" class="secondary-action">Cancel</button>
                 <button id="save-role-button" class="primary-action">Save</button>
+            </div>
+        </section>
+    </div>
+
+    <div id="end-session-modal" class="modal-overlay hidden">
+        <section class="modal-content" role="dialog" aria-modal="true" aria-labelledby="end-session-title" aria-describedby="end-session-message">
+            <h2 id="end-session-title">End session?</h2>
+            <p id="end-session-message">This will clear this room and return everyone to the login screen.</p>
+            <p id="end-session-error" class="form-error hidden"></p>
+            <div class="modal-actions">
+                <button id="cancel-end-session-button" class="secondary-action" type="button">Cancel</button>
+                <button id="confirm-end-session-button" class="danger-action" type="button">End Session</button>
             </div>
         </section>
     </div>

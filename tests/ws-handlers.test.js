@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const {
   handleChangeRole,
+  handleEndSession,
   handleLogin,
   handleParticipantExit,
   handleResetVotes,
@@ -306,6 +307,44 @@ test('handleChangeRole enforces facilitator-only changes to other users', (t) =>
   assert.equal(harness.participants.bob.role, ROLES.FACILITATOR);
   assert.equal(room.facilitatorId, 'bob');
   assert.deepEqual(harness.roomStates, [roomName]);
+});
+
+test('handleEndSession clears a room after notifying participants', (t) => {
+  const harness = createHarness(t);
+  const roomName = 'planning-key';
+  const room = joinRoom(harness.rooms, roomName, 'alice', 100);
+  joinRoom(harness.rooms, roomName, 'bob', 100);
+  room.facilitatorId = 'alice';
+  harness.participants.alice = participant('alice', roomName, { role: ROLES.FACILITATOR });
+  harness.participants.bob = participant('bob', roomName);
+
+  handleEndSession({
+    ...harness,
+    ws: harness.participants.bob.ws,
+    currentUser: harness.participants.bob
+  });
+
+  assert.equal(harness.clientMessages[0].message.payload.message, 'Only Facilitator can end the session.');
+  assert.equal(harness.rooms.has(roomName), true);
+
+  handleEndSession({
+    ...harness,
+    ws: harness.participants.alice.ws,
+    currentUser: harness.participants.alice
+  });
+
+  assert.deepEqual(harness.roomMessages.at(-1), {
+    roomName,
+    message: {
+      type: 'sessionEnded',
+      payload: {
+        message: 'Session ended by facilitator.'
+      }
+    }
+  });
+  assert.equal(harness.participants.alice, undefined);
+  assert.equal(harness.participants.bob, undefined);
+  assert.equal(harness.rooms.has(roomName), false);
 });
 
 test('handleParticipantExit removes participants and reassigns facilitator', (t) => {
