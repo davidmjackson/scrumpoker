@@ -1760,3 +1760,62 @@ Result:
 - `npm run test:e2e` passed with 3 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Start Next Item Production Verification
+
+Branch: `main`
+
+Production context:
+- Production was first observed at `6e84921 Cover round history copy workflow (#35)`, which served `js/app.js?v=4`.
+- PR #36 was marked ready, merged into `main`, and produced `e2a0eac Add start next item workflow (#36)`.
+- Production then pulled `origin/main` and services were bounced.
+
+Verified:
+- `https://sprintpoker.uk/health` returned `{"status":"ok","rooms":0}`.
+- The public root page served `js/app.js?v=5`.
+- The public root page contained `start-next-item-button` and `Start Next Item`.
+- `wss://sprintpoker.uk/ws` opened and returned a `yourId` message.
+
+Result:
+- The Start Next Item workflow is live on production.
+
+## 2026-05-09 - Start Next Item Multi-User Coverage
+
+Branch: `feature/start-next-item-multi-user-coverage`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `e2a0eac Add start next item workflow (#36)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+
+Work planned:
+- Add browser coverage proving Start Next Item synchronizes across facilitator, voter, and observer clients.
+- Keep the change test-only unless the workflow exposes a product bug.
+
+Work completed:
+- Extended the multi-user room Playwright test to reveal a round, use Start Next Item, and assert all connected clients see:
+  - hidden revealed results
+  - cleared current item
+  - open round status
+  - preserved round history
+  - cleared selected vote cards
+- Verified the facilitator's next item input is cleared and focused.
+- Added a second estimate after Start Next Item so reset and role-change coverage still exercise a revealed round.
+
+Verification:
+- `node --check tests/e2e/multi-user-room.spec.js`
+- `npx playwright test tests/e2e/multi-user-room.spec.js`
+- `git diff --check`
+- `npm test`
+- `npm run test:e2e`
+- `npm audit --omit=dev`
+
+Result:
+- Syntax and whitespace checks passed.
+- Focused multi-user browser test passed.
+- `npm test` ran 52 tests successfully.
+- `npm run test:e2e` passed with 3 browser tests.
+- `npm audit --omit=dev` reported `found 0 vulnerabilities`.
+- No project `node server.js` process was left running.
