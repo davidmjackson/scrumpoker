@@ -51,20 +51,13 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     await expect(observer.locator('#copy-voter-invite-button')).toBeHidden();
     await expect(observer.locator('#copy-observer-invite-button')).toBeHidden();
     await expect(observer.locator('#end-session-button')).toBeHidden();
-    await expect(voter.locator('#round-item-form')).toBeHidden();
-    await expect(observer.locator('#round-item-form')).toBeHidden();
 
     for (const roomPage of [facilitator, voter, observer]) {
       await expect(roomPage.locator('#participants-list')).toContainText('Alice');
       await expect(roomPage.locator('#participants-list')).toContainText('Bob');
       await expect(roomPage.locator('#participants-list')).toContainText('Carol');
-    }
-
-    await facilitator.locator('#round-item-input').fill('Payment retry story');
-    await facilitator.locator('#round-item-form').getByRole('button', { name: 'Set item' }).click();
-
-    for (const roomPage of [facilitator, voter, observer]) {
-      await expect(roomPage.locator('#current-item-display')).toHaveText('Payment retry story');
+      await expect(roomPage.locator('#round-item-form')).toHaveCount(0);
+      await expect(roomPage.locator('#current-item-display')).toHaveCount(0);
     }
 
     await expect(observer.locator('#observer-message')).toBeVisible();
@@ -80,7 +73,7 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     for (const roomPage of [facilitator, voter, observer]) {
       await expect(roomPage.locator('#vote-summary')).toBeVisible();
       await expect(roomPage.locator('#average-vote')).toHaveText('6.5');
-      await expect(roomPage.locator('#round-history-list')).toContainText('Payment retry story');
+      await expect(roomPage.locator('#round-history-list')).toContainText('Round 1');
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('Alice');
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('Bob');
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('8');
@@ -100,22 +93,11 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     for (const roomPage of [facilitator, voter, observer]) {
       await expect(roomPage.locator('#vote-summary')).toBeHidden();
       await expect(roomPage.locator('#ordered-votes')).toBeHidden();
-      await expect(roomPage.locator('#current-item-display')).toHaveText('No item set');
       await expect(roomPage.locator('#round-status')).toHaveText('Open');
       await expect(roomPage.locator('#round-history-section')).toBeVisible();
-      await expect(roomPage.locator('#round-history-list')).toContainText('Payment retry story');
+      await expect(roomPage.locator('#round-history-list')).toContainText('Round 1');
       await expect(roomPage.locator('button.vote-card[data-value="5"]')).not.toHaveClass(/selected/);
       await expect(roomPage.locator('button.vote-card[data-value="8"]')).not.toHaveClass(/selected/);
-    }
-
-    await expect(facilitator.locator('#round-item-input')).toHaveValue('');
-    await expect(facilitator.locator('#round-item-input')).toBeFocused();
-
-    await facilitator.locator('#round-item-input').fill('Invoice export story');
-    await facilitator.locator('#round-item-form').getByRole('button', { name: 'Set item' }).click();
-
-    for (const roomPage of [facilitator, voter, observer]) {
-      await expect(roomPage.locator('#current-item-display')).toHaveText('Invoice export story');
     }
 
     await facilitator.locator('button.vote-card[data-value="3"]').click();
@@ -125,8 +107,8 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
     for (const roomPage of [facilitator, voter, observer]) {
       await expect(roomPage.locator('#vote-summary')).toBeVisible();
       await expect(roomPage.locator('#average-vote')).toHaveText('4.0');
-      await expect(roomPage.locator('#round-history-list')).toContainText('Invoice export story');
-      await expect(roomPage.locator('#round-history-list')).toContainText('Payment retry story');
+      await expect(roomPage.locator('#round-history-list')).toContainText('Round 2');
+      await expect(roomPage.locator('#round-history-list')).toContainText('Round 1');
     }
 
     await facilitator.locator('#reset-votes-button').click();
@@ -178,9 +160,8 @@ test('voter automatically rejoins after a transient disconnect', async ({ browse
     await login(facilitator, server.baseUrl, { name: 'Alice', role: 'Facilitator' });
     await login(voter, server.baseUrl, { name: 'Bob', role: 'Voter' });
 
-    await facilitator.locator('#round-item-input').fill('Reconnect story');
-    await facilitator.locator('#round-item-form').getByRole('button', { name: 'Set item' }).click();
-    await expect(voter.locator('#current-item-display')).toHaveText('Reconnect story');
+    await expect(voter.locator('#round-item-form')).toHaveCount(0);
+    await expect(voter.locator('#current-item-display')).toHaveCount(0);
 
     await closeCurrentWebSocket(voter);
     await expect(voter.locator('#connection-status')).toHaveText('Disconnected', { timeout: 7000 });
@@ -190,7 +171,7 @@ test('voter automatically rejoins after a transient disconnect', async ({ browse
     await expect(voter.locator('#poker-room-section')).toBeVisible({ timeout: 12000 });
     await expect(voter.locator('#room-display')).toHaveText(`Room: ${roomName}`);
     await expect(voter.locator('#user-greeting')).toHaveText('Hello, Bob (Voter)');
-    await expect(voter.locator('#current-item-display')).toHaveText('Reconnect story');
+    await expect(voter.locator('#current-item-display')).toHaveCount(0);
     await expect(facilitator.locator('#participants-list')).toContainText('Bob');
 
     await voter.locator('#logout-button').click();

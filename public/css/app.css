@@ -378,10 +378,6 @@ img {
   padding: 1rem;
 }
 
-.round-panel {
-  grid-column: 1 / -1;
-}
-
 .section-heading {
   display: flex;
   align-items: flex-start;
@@ -400,36 +396,11 @@ img {
   line-height: 1.2;
 }
 
-.current-item-display {
-  margin: 0;
-  color: var(--ink);
-  font-size: 1.25rem;
-  font-weight: 900;
-  overflow-wrap: anywhere;
-}
-
-.current-item-display.is-empty {
-  color: var(--muted);
-}
-
-.round-item-form {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  align-items: end;
-}
-
-.section-kicker,
-.deck-label {
+.section-kicker {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 900;
   text-transform: uppercase;
-}
-
-.deck-label {
-  color: var(--primary);
 }
 
 .voting-deck {
@@ -755,13 +726,8 @@ img {
 
   .result-card,
   .grouped-results,
-  .round-panel,
   .round-history {
     grid-column: auto;
-  }
-
-  .round-item-form {
-    grid-template-columns: 1fr;
   }
 
   .app-footer {
