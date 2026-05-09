@@ -2262,3 +2262,33 @@ Result:
 - `npm run test:e2e` passed with 4 browser tests.
 - `npm audit --omit=dev` reported `found 0 vulnerabilities`.
 - No project `node server.js` process was left running.
+
+## 2026-05-09 - Condensed Deployment Runbook
+
+Branch: `feature/condense-deployment-runbook`
+
+Starting state:
+- Repository path: `/var/www/scrumpoker`
+- Source branch before work: `main`
+- Latest baseline commit: `d144f39 Remove next item websocket alias (#47)`
+- Working tree: clean before branch changes
+- Server status: no local `node server.js` process was running
+- Production had been verified at commit `d144f3940674` with `/health` ok and `js/app.js?v=13`.
+
+Decision:
+- Keep future production instructions concise by grouping safe commands.
+- Keep service restart/status and health/frontend verification as clear checkpoints.
+- Add `printf '\n'` after curl health output so the shell prompt stays on a new line.
+
+Work completed:
+- Updated `docs/deployment.md` to use a condensed normal deployment command.
+- Added grouped systemd restart/status guidance.
+- Added public verification for `/health` and `js/app.js` with newline-safe curl output.
+- Updated the expected health response shape to include `version` and `commit`.
+
+Verification:
+- `git diff --check`
+
+Result:
+- Documentation whitespace check passed.
+- No project `node server.js` process was left running.
