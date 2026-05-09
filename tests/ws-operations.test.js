@@ -378,6 +378,13 @@ test('WebSocket workflow covers login, voting, reveal, reset, and role limits', 
   send(alice.ws, 'setRoundItem', { itemTitle: 'Checkout flow' });
   await staleSetItemError;
 
+  const staleStartNextItemError = waitForMessage(
+    alice.ws,
+    (message) => message.type === 'error' && message.payload?.message === 'Unknown type: startNextItem'
+  );
+  send(alice.ws, 'startNextItem', {});
+  await staleStartNextItemError;
+
   const observerVoteError = waitForMessage(
     oscar.ws,
     (message) => message.type === 'error' && message.payload?.message === 'Observers cannot vote.'
