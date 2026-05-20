@@ -25,6 +25,14 @@ const keyActionMessage = document.getElementById('key-action-message');
 const keyActionNote = document.getElementById('key-action-note');
 const cancelKeyActionButton = document.getElementById('cancel-key-action-button');
 const confirmKeyActionButton = document.getElementById('confirm-key-action-button');
+const keyRevealModal = document.getElementById('key-reveal-modal');
+const keyRevealTitle = document.getElementById('key-reveal-title');
+const keyRevealValue = document.getElementById('key-reveal-value');
+const keyRevealInvite = document.getElementById('key-reveal-invite');
+const keyRevealCopyInviteButton = document.getElementById('key-reveal-copy-invite');
+const keyRevealCopyLinkButton = document.getElementById('key-reveal-copy-link');
+const keyRevealCopyKeyButton = document.getElementById('key-reveal-copy-key');
+const keyRevealCloseButton = document.getElementById('key-reveal-close-button');
 
 const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
 let currentKeys = [];
@@ -32,6 +40,7 @@ let currentActivity = [];
 let openTeamNames = new Set();
 let pendingKeyAction = null;
 let keyActionInFlight = false;
+let revealedKey = null;
 
 function getAppUrl() {
   return window.location.origin || `${window.location.protocol}//${window.location.host}`;
@@ -130,15 +139,6 @@ function isKeyActive(key) {
 
 function getKeyStatusLabel(key) {
   return isKeyActive(key) ? 'Active' : 'Suspended';
-}
-
-function createSuspendedTeamNotice(key) {
-  return [
-    'Scrum Poker team access',
-    `Team: ${key.name}`,
-    'Status: Suspended',
-    'Restore this team key before sharing an invite.'
-  ].join('\n');
 }
 
 function getActivityActionLabel(action) {
@@ -292,6 +292,24 @@ function openRemoveKeyModal(teamName) {
   });
 }
 
+// A freshly created or rotated key is the only moment the raw value exists;
+// it is stored hashed, so this modal is the one chance to copy it.
+function showKeyReveal(key) {
+  revealedKey = key;
+  keyRevealTitle.textContent = `${key.name} access key`;
+  keyRevealValue.textContent = key.value;
+  keyRevealInvite.textContent = createTeamInvite(key);
+  keyRevealModal.classList.remove('hidden');
+  keyRevealCloseButton.focus();
+}
+
+function closeKeyReveal() {
+  revealedKey = null;
+  keyRevealValue.textContent = '';
+  keyRevealInvite.textContent = '';
+  keyRevealModal.classList.add('hidden');
+}
+
 function renderActivity(activity) {
   activityList.innerHTML = '';
   activityCount.textContent = `${activity.length} ${activity.length === 1 ? 'event' : 'events'}`;
@@ -397,7 +415,9 @@ function renderKeys(keys) {
 
     const summaryMeta = document.createElement('span');
     summaryMeta.className = 'admin-team-meta';
-    summaryMeta.textContent = `${getInviteRole()} invite - ${getKeyStatusLabel(key)}`;
+    summaryMeta.textContent = key.createdAt
+      ? `Created ${formatActivityTime(key.createdAt)}`
+      : 'Created date not recorded';
 
     const summaryStatus = document.createElement('span');
     summaryStatus.className = `admin-team-status ${keyActive ? 'is-active' : 'is-suspended'}`;
@@ -422,86 +442,31 @@ function renderKeys(keys) {
     const details = document.createElement('div');
     details.className = 'admin-key-details';
 
-    const name = document.createElement('strong');
-    name.textContent = key.name;
-
-    const value = document.createElement('code');
-    value.textContent = key.value;
-
     const status = document.createElement('span');
     status.className = `admin-key-status ${keyActive ? 'is-active' : 'is-suspended'}`;
     status.textContent = keyActive
       ? 'Active - team members can use this key to join rooms.'
       : 'Suspended - this key cannot be used to join rooms.';
 
-    const preview = document.createElement('pre');
-    preview.className = 'admin-invite-preview';
-    preview.setAttribute('aria-label', `Invite preview for ${key.name}`);
-    preview.textContent = keyActive ? createTeamInvite(key) : createSuspendedTeamNotice(key);
+    const storageNote = document.createElement('p');
+    storageNote.className = 'admin-key-meta';
+    storageNote.textContent = 'The access key is stored hashed and is shown only when created or rotated.';
 
-    const created = document.createElement('span');
-    created.className = 'admin-key-meta';
-    created.textContent = key.createdAt
-      ? `Created ${formatActivityTime(key.createdAt)}`
-      : 'Created date not recorded';
-
-    details.appendChild(name);
-    details.appendChild(value);
-    details.appendChild(created);
+    details.appendChild(status);
+    details.appendChild(storageNote);
     if (key.weak) {
       const weakNote = document.createElement('p');
       weakNote.className = 'admin-key-warning';
-      weakNote.textContent = 'Weak key — rotate to a 12-character key.';
+      weakNote.textContent = 'Weak key — rotate to issue a strong 12-character key.';
       details.appendChild(weakNote);
     }
-    details.appendChild(status);
-    details.appendChild(preview);
 
     const actions = document.createElement('div');
     actions.className = 'admin-key-actions';
 
-    const copyInviteButton = document.createElement('button');
-    copyInviteButton.type = 'button';
-    copyInviteButton.className = 'primary-action compact-action';
-    copyInviteButton.textContent = 'Copy invite';
-    if (!keyActive) {
-      copyInviteButton.disabled = true;
-      copyInviteButton.title = 'Restore this team key before copying an invite.';
-    }
-    copyInviteButton.addEventListener('click', async () => {
-      await copyText(createTeamInvite(key));
-      setStatus(`Copied invite for ${key.name}.`, 'success');
-    });
-
-    const copyLinkButton = document.createElement('button');
-    copyLinkButton.type = 'button';
-    copyLinkButton.className = 'secondary-action compact-action';
-    copyLinkButton.textContent = 'Copy link';
-    if (!keyActive) {
-      copyLinkButton.disabled = true;
-      copyLinkButton.title = 'Restore this team key before copying an invite link.';
-    }
-    copyLinkButton.addEventListener('click', async () => {
-      await copyText(createInviteUrl(key));
-      setStatus(`Copied link for ${key.name}.`, 'success');
-    });
-
-    const copyKeyButton = document.createElement('button');
-    copyKeyButton.type = 'button';
-    copyKeyButton.className = 'secondary-action compact-action';
-    copyKeyButton.textContent = 'Copy key';
-    if (!keyActive) {
-      copyKeyButton.disabled = true;
-      copyKeyButton.title = 'Restore this team key before copying the key.';
-    }
-    copyKeyButton.addEventListener('click', async () => {
-      await copyText(key.value);
-      setStatus(`Copied key for ${key.name}.`, 'success');
-    });
-
     const rotateButton = document.createElement('button');
     rotateButton.type = 'button';
-    rotateButton.className = 'secondary-action compact-action';
+    rotateButton.className = 'primary-action compact-action';
     rotateButton.textContent = 'Rotate key';
     rotateButton.addEventListener('click', () => {
       openRotateKeyModal(key.name);
@@ -527,9 +492,6 @@ function renderKeys(keys) {
       openRemoveKeyModal(key.name);
     });
 
-    actions.appendChild(copyInviteButton);
-    actions.appendChild(copyLinkButton);
-    actions.appendChild(copyKeyButton);
     actions.appendChild(rotateButton);
     actions.appendChild(statusButton);
     actions.appendChild(removeButton);
@@ -588,6 +550,7 @@ async function createKey(name) {
     body: JSON.stringify({ name })
   });
   keyNameInput.value = '';
+  showKeyReveal(data.key);
   await loadAdminData();
   setStatus(`Created team key for ${data.key.name}.`, 'success');
 }
@@ -617,6 +580,7 @@ async function rotateKey(name) {
   const data = await requestAdmin(`/api/admin/keys/${encodedName}/rotate`, {
     method: 'POST'
   });
+  showKeyReveal(data.key);
   await loadAdminData();
   setStatus(`Rotated key for ${data.key.name}.`, 'success');
 }
@@ -667,14 +631,6 @@ refreshActivityButton.addEventListener('click', async () => {
   }
 });
 
-inviteRoomInput.addEventListener('input', () => {
-  renderKeys(currentKeys);
-});
-
-inviteRoleSelect.addEventListener('change', () => {
-  renderKeys(currentKeys);
-});
-
 teamSearchInput.addEventListener('input', () => {
   renderKeys(currentKeys);
 });
@@ -696,8 +652,38 @@ keyActionModal.addEventListener('click', (event) => {
   }
 });
 
+keyRevealCloseButton.addEventListener('click', closeKeyReveal);
+
+keyRevealModal.addEventListener('click', (event) => {
+  if (event.target === keyRevealModal) {
+    closeKeyReveal();
+  }
+});
+
+keyRevealCopyInviteButton.addEventListener('click', async () => {
+  if (!revealedKey) return;
+  await copyText(createTeamInvite(revealedKey));
+  setStatus(`Copied invite for ${revealedKey.name}.`, 'success');
+});
+
+keyRevealCopyLinkButton.addEventListener('click', async () => {
+  if (!revealedKey) return;
+  await copyText(createInviteUrl(revealedKey));
+  setStatus(`Copied link for ${revealedKey.name}.`, 'success');
+});
+
+keyRevealCopyKeyButton.addEventListener('click', async () => {
+  if (!revealedKey) return;
+  await copyText(revealedKey.value);
+  setStatus(`Copied key for ${revealedKey.name}.`, 'success');
+});
+
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !keyActionModal.classList.contains('hidden')) {
+  if (event.key !== 'Escape') return;
+
+  if (!keyRevealModal.classList.contains('hidden')) {
+    closeKeyReveal();
+  } else if (!keyActionModal.classList.contains('hidden')) {
     closeKeyActionModal();
   }
 });

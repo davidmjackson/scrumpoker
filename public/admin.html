@@ -112,5 +112,23 @@
       </div>
     </section>
   </div>
+
+  <div id="key-reveal-modal" class="modal-overlay hidden">
+    <section class="modal-content admin-reveal-modal" role="dialog" aria-modal="true" aria-labelledby="key-reveal-title" aria-describedby="key-reveal-note">
+      <span class="admin-warning-kicker">Access key</span>
+      <h2 id="key-reveal-title">Team key</h2>
+      <p id="key-reveal-note" class="admin-warning-note">Copy this key now. It is stored hashed and cannot be shown again — rotate the key if it is lost.</p>
+      <code id="key-reveal-value" class="admin-reveal-value"></code>
+      <pre id="key-reveal-invite" class="admin-invite-preview" aria-label="Invite preview"></pre>
+      <div class="admin-key-actions">
+        <button id="key-reveal-copy-invite" type="button" class="primary-action compact-action">Copy invite</button>
+        <button id="key-reveal-copy-link" type="button" class="secondary-action compact-action">Copy link</button>
+        <button id="key-reveal-copy-key" type="button" class="secondary-action compact-action">Copy key</button>
+      </div>
+      <div class="modal-actions">
+        <button id="key-reveal-close-button" type="button" class="primary-action">Done</button>
+      </div>
+    </section>
+  </div>
 </body>
 </html>

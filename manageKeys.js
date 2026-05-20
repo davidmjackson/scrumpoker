@@ -5,6 +5,7 @@ const {
   createAccessKey,
   getKeysFilePath,
   listAccessKeys,
+  migrateKeysFile,
   removeAccessKey
 } = require('./lib/accessKeys');
 
@@ -13,11 +14,12 @@ const KEYS_FILE = getKeysFilePath(__dirname);
 // Parse command-line arguments
 const [,, command, nameArg] = process.argv;
 
-if (!command || !['generate', 'list', 'remove'].includes(command)) {
+if (!command || !['generate', 'list', 'remove', 'migrate'].includes(command)) {
   console.error('Usage:');
   console.error('  node manageKeys.js generate <name>');
   console.error('  node manageKeys.js list');
   console.error('  node manageKeys.js remove <name>');
+  console.error('  node manageKeys.js migrate');
   process.exit(1);
 }
 
@@ -48,9 +50,10 @@ try {
         console.log('No keys found in keys.json.');
       } else {
         console.log('Existing keys:');
-        for (const { name, value, active } of keys) {
-          const status = active ? 'active' : 'suspended';
-          console.log(`  ${name}: ${value} (${status})`);
+        for (const { name, active, weak } of keys) {
+          const tags = [active ? 'active' : 'suspended'];
+          if (weak) tags.push('weak');
+          console.log(`  ${name} (${tags.join(', ')})`);
         }
       }
       break;
@@ -63,6 +66,12 @@ try {
       }
       const removed = removeAccessKey(KEYS_FILE, nameArg);
       console.log(`Removed key for "${removed.name}".`);
+      break;
+    }
+
+    case 'migrate': {
+      const { migrated, total } = migrateKeysFile(KEYS_FILE);
+      console.log(`Migrated ${migrated} of ${total} key(s) to hashed storage.`);
       break;
     }
   }
