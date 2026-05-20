@@ -410,6 +410,12 @@ function renderKeys(keys) {
     summaryText.appendChild(summaryName);
     summaryText.appendChild(summaryMeta);
     summaryText.appendChild(summaryStatus);
+    if (key.weak) {
+      const summaryWeak = document.createElement('span');
+      summaryWeak.className = 'admin-team-status is-weak';
+      summaryWeak.textContent = 'Weak key';
+      summaryText.appendChild(summaryWeak);
+    }
     summary.appendChild(summaryText);
     summary.appendChild(summaryIndicator);
 
@@ -433,8 +439,21 @@ function renderKeys(keys) {
     preview.setAttribute('aria-label', `Invite preview for ${key.name}`);
     preview.textContent = keyActive ? createTeamInvite(key) : createSuspendedTeamNotice(key);
 
+    const created = document.createElement('span');
+    created.className = 'admin-key-meta';
+    created.textContent = key.createdAt
+      ? `Created ${formatActivityTime(key.createdAt)}`
+      : 'Created date not recorded';
+
     details.appendChild(name);
     details.appendChild(value);
+    details.appendChild(created);
+    if (key.weak) {
+      const weakNote = document.createElement('p');
+      weakNote.className = 'admin-key-warning';
+      weakNote.textContent = 'Weak key — rotate to a 12-character key.';
+      details.appendChild(weakNote);
+    }
     details.appendChild(status);
     details.appendChild(preview);
 
