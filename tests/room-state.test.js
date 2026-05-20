@@ -9,7 +9,8 @@ const {
   getRoomState,
   joinRoom,
   leaveRoom,
-  reassignFacilitatorIfLeaving
+  reassignFacilitatorIfLeaving,
+  touchRoom
 } = require('../lib/roomState');
 
 function participant(id, roomName, overrides = {}) {
@@ -62,6 +63,37 @@ test('expireRooms deletes rooms idle beyond the expiry window', () => {
   assert.deepEqual(expired, ['stale']);
   assert.equal(rooms.has('stale'), false);
   assert.equal(rooms.has('active'), true);
+});
+
+test('touchRoom refreshes activity and keeps a busy room alive', () => {
+  const rooms = new Map();
+  joinRoom(rooms, 'active', 'alice', 100);
+
+  const touched = touchRoom(rooms, 'active', 100 + DEFAULT_ROOM_EXPIRY_MS);
+  assert.equal(touched.lastActive, 100 + DEFAULT_ROOM_EXPIRY_MS);
+
+  const expired = expireRooms(rooms, 100 + DEFAULT_ROOM_EXPIRY_MS + 1);
+  assert.deepEqual(expired, []);
+  assert.equal(rooms.has('active'), true);
+
+  assert.equal(touchRoom(rooms, 'missing'), null);
+});
+
+test('expireRooms drops participants of expired rooms', () => {
+  const rooms = new Map();
+  joinRoom(rooms, 'stale', 'alice', 100);
+  joinRoom(rooms, 'active', 'bob', 100 + DEFAULT_ROOM_EXPIRY_MS);
+
+  const participants = {
+    alice: participant('alice', 'stale'),
+    bob: participant('bob', 'active')
+  };
+
+  const expired = expireRooms(rooms, 100 + DEFAULT_ROOM_EXPIRY_MS + 1, DEFAULT_ROOM_EXPIRY_MS, participants);
+
+  assert.deepEqual(expired, ['stale']);
+  assert.equal(participants.alice, undefined);
+  assert.deepEqual(Object.keys(participants), ['bob']);
 });
 
 test('expireRooms leaves rooms inside the expiry window', () => {
