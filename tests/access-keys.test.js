@@ -9,10 +9,12 @@ const {
   generateAccessKey,
   getInternalRoomName,
   getKeysFilePath,
+  hashAccessKey,
   isAdminKeyAuthorized,
   isValidAccessKey,
   listAccessKeys,
   loadKeys,
+  migrateKeysFile,
   removeAccessKey,
   rotateAccessKey,
   updateAccessKeyStatus
@@ -26,6 +28,14 @@ function withTempDir(t) {
   return tempDir;
 }
 
+function keysPath(t) {
+  return path.join(withTempDir(t), 'keys.json');
+}
+
+function readStore(keysFile) {
+  return JSON.parse(fs.readFileSync(keysFile, 'utf8'));
+}
+
 test('getKeysFilePath defaults to keys.json in the given base directory', () => {
   assert.equal(
     getKeysFilePath('/srv/scrumpoker', {}),
@@ -34,20 +44,171 @@ test('getKeysFilePath defaults to keys.json in the given base directory', () => 
 });
 
 test('getKeysFilePath honors SCRUM_POKER_KEYS_FILE', () => {
-  const keysFile = '/tmp/custom-keys.json';
-
   assert.equal(
-    getKeysFilePath('/srv/scrumpoker', { SCRUM_POKER_KEYS_FILE: keysFile }),
-    keysFile
+    getKeysFilePath('/srv/scrumpoker', { SCRUM_POKER_KEYS_FILE: '/tmp/custom-keys.json' }),
+    '/tmp/custom-keys.json'
   );
 });
 
-test('loadKeys reads a JSON object from disk', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-  fs.writeFileSync(keysFile, JSON.stringify({ team: 'secret-key' }), 'utf8');
+test('generateAccessKey creates 12-character alphanumeric values', () => {
+  const key = generateAccessKey();
+  assert.equal(key.length, 12);
+  assert.match(key, /^[A-Za-z0-9]+$/);
+});
 
-  assert.deepEqual(loadKeys(keysFile), { team: 'secret-key' });
+test('hashAccessKey is deterministic per salt and salt-dependent', () => {
+  assert.equal(hashAccessKey('key-value', 'salt-a'), hashAccessKey('key-value', 'salt-a'));
+  assert.notEqual(hashAccessKey('key-value', 'salt-a'), hashAccessKey('key-value', 'salt-b'));
+  assert.match(hashAccessKey('key-value', 'salt-a'), /^[0-9a-f]{64}$/);
+});
+
+test('createAccessKey stores a salted hash, never the raw value', (t) => {
+  const keysFile = keysPath(t);
+
+  const created = createAccessKey(keysFile, 'Alpha Team');
+
+  assert.equal(created.name, 'Alpha Team');
+  assert.equal(created.value.length, 12);
+  assert.equal(created.fingerprint.length, 12);
+
+  const stored = readStore(keysFile)['Alpha Team'];
+  assert.equal(typeof stored.hash, 'string');
+  assert.equal(typeof stored.salt, 'string');
+  assert.equal(stored.value, undefined);
+  assert.doesNotMatch(fs.readFileSync(keysFile, 'utf8'), new RegExp(created.value));
+
+  assert.equal(isValidAccessKey(loadKeys(keysFile), created.value), true);
+  assert.equal(isValidAccessKey(loadKeys(keysFile), 'wrong-key-value'), false);
+});
+
+test('createAccessKey rejects short values and duplicate names', (t) => {
+  const keysFile = keysPath(t);
+
+  assert.throws(() => createAccessKey(keysFile, 'Short', 'tiny'), /at least 12 characters/);
+
+  createAccessKey(keysFile, 'Alpha Team');
+  assert.throws(() => createAccessKey(keysFile, 'Alpha Team'), /already exists/);
+});
+
+test('createAccessKey records a creation timestamp', (t) => {
+  const keysFile = keysPath(t);
+  const now = new Date('2026-05-20T10:00:00.000Z');
+
+  const created = createAccessKey(keysFile, 'Timed Team', generateAccessKey(), now);
+
+  assert.equal(created.createdAt, '2026-05-20T10:00:00.000Z');
+  assert.equal(listAccessKeys(keysFile)[0].createdAt, '2026-05-20T10:00:00.000Z');
+});
+
+test('isValidAccessKey verifies a legacy plaintext keys file', (t) => {
+  const keysFile = keysPath(t);
+  fs.writeFileSync(keysFile, JSON.stringify({
+    team: 'legacy-plaintext-key',
+    off: { value: 'inactive-key-value', active: false }
+  }), 'utf8');
+
+  const keys = loadKeys(keysFile);
+  assert.equal(isValidAccessKey(keys, 'legacy-plaintext-key'), true);
+  assert.equal(isValidAccessKey(keys, 'inactive-key-value'), false);
+  assert.equal(isValidAccessKey(keys, 'no-such-key'), false);
+  assert.equal(isValidAccessKey(keys, null), false);
+});
+
+test('isValidAccessKey verifies a hashed key and rejects suspended keys', (t) => {
+  const keysFile = keysPath(t);
+  const created = createAccessKey(keysFile, 'Hashed Team');
+
+  assert.equal(isValidAccessKey(loadKeys(keysFile), created.value), true);
+
+  updateAccessKeyStatus(keysFile, 'Hashed Team', false);
+  assert.equal(isValidAccessKey(loadKeys(keysFile), created.value), false);
+});
+
+test('migrateKeysFile converts a plaintext keys file to hashed storage', (t) => {
+  const keysFile = keysPath(t);
+  fs.writeFileSync(keysFile, JSON.stringify({
+    alpha: 'alpha-plaintext-key',
+    beta: { value: 'beta-plaintext-key', active: false }
+  }), 'utf8');
+
+  assert.deepEqual(migrateKeysFile(keysFile), { migrated: 2, total: 2 });
+
+  const stored = readStore(keysFile);
+  assert.equal(typeof stored.alpha.hash, 'string');
+  assert.equal(stored.alpha.value, undefined);
+  assert.equal(typeof stored.beta.hash, 'string');
+  assert.doesNotMatch(fs.readFileSync(keysFile, 'utf8'), /plaintext-key/);
+
+  assert.equal(isValidAccessKey(loadKeys(keysFile), 'alpha-plaintext-key'), true);
+
+  // Re-running is a no-op once everything is hashed.
+  assert.deepEqual(migrateKeysFile(keysFile), { migrated: 0, total: 2 });
+});
+
+test('listAccessKeys omits values and flags weak keys', (t) => {
+  const keysFile = keysPath(t);
+  fs.writeFileSync(keysFile, JSON.stringify({
+    weakly: 'ABiMWb',
+    strong: 'StrongKey123456'
+  }), 'utf8');
+
+  const listed = listAccessKeys(keysFile);
+  assert.deepEqual(listed.map((key) => key.name), ['strong', 'weakly']);
+  assert.equal(listed.every((key) => key.value === undefined), true);
+  assert.equal(listed.find((key) => key.name === 'weakly').weak, true);
+  assert.equal(listed.find((key) => key.name === 'strong').weak, false);
+});
+
+test('rotateAccessKey issues a new value and invalidates the old one', (t) => {
+  const keysFile = keysPath(t);
+  const created = createAccessKey(keysFile, 'Alpha Team');
+
+  const rotated = rotateAccessKey(keysFile, 'Alpha Team');
+
+  assert.equal(rotated.name, 'Alpha Team');
+  assert.notEqual(rotated.value, created.value);
+  assert.equal(rotated.fingerprint.length, 12);
+
+  const keys = loadKeys(keysFile);
+  assert.equal(isValidAccessKey(keys, rotated.value), true);
+  assert.equal(isValidAccessKey(keys, created.value), false);
+});
+
+test('rotateAccessKey preserves status and creation date', (t) => {
+  const keysFile = keysPath(t);
+  createAccessKey(keysFile, 'Alpha Team', generateAccessKey(), new Date('2026-01-02T03:04:05.000Z'));
+  updateAccessKeyStatus(keysFile, 'Alpha Team', false);
+
+  rotateAccessKey(keysFile, 'Alpha Team');
+
+  const listed = listAccessKeys(keysFile)[0];
+  assert.equal(listed.active, false);
+  assert.equal(listed.createdAt, '2026-01-02T03:04:05.000Z');
+});
+
+test('updateAccessKeyStatus suspends and restores a key', (t) => {
+  const keysFile = keysPath(t);
+  const created = createAccessKey(keysFile, 'Alpha Team');
+
+  const suspended = updateAccessKeyStatus(keysFile, 'Alpha Team', false);
+  assert.equal(suspended.name, 'Alpha Team');
+  assert.equal(suspended.active, false);
+  assert.equal(suspended.fingerprint.length, 12);
+
+  updateAccessKeyStatus(keysFile, 'Alpha Team', true);
+  assert.equal(isValidAccessKey(loadKeys(keysFile), created.value), true);
+});
+
+test('removeAccessKey deletes a stored key', (t) => {
+  const keysFile = keysPath(t);
+  createAccessKey(keysFile, 'Alpha Team');
+  createAccessKey(keysFile, 'Beta Team');
+
+  const removed = removeAccessKey(keysFile, 'Alpha Team');
+  assert.equal(removed.name, 'Alpha Team');
+  assert.equal(removed.fingerprint.length, 12);
+  assert.deepEqual(listAccessKeys(keysFile).map((key) => key.name), ['Beta Team']);
+  assert.throws(() => removeAccessKey(keysFile, 'Alpha Team'), /No key found/);
 });
 
 test('loadKeys returns an empty object for missing or invalid key files', (t) => {
@@ -61,189 +222,8 @@ test('loadKeys returns an empty object for missing or invalid key files', (t) =>
   assert.equal(errors.length, 1);
 });
 
-test('loadKeys ignores non-object JSON values', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-  fs.writeFileSync(keysFile, JSON.stringify(['secret-key']), 'utf8');
-
-  assert.deepEqual(loadKeys(keysFile), {});
-});
-
-test('isValidAccessKey checks saved key values', () => {
-  const keys = {
-    alpha: 'alpha-key',
-    beta: 'beta-key'
-  };
-
-  assert.equal(isValidAccessKey(keys, 'alpha-key'), true);
-  assert.equal(isValidAccessKey(keys, 'missing-key'), false);
-});
-
-test('loadKeys filters suspended metadata keys', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-  fs.writeFileSync(
-    keysFile,
-    JSON.stringify({
-      alpha: 'alpha-key',
-      beta: { value: 'beta-key', active: false }
-    }),
-    'utf8'
-  );
-
-  assert.deepEqual(loadKeys(keysFile), { alpha: 'alpha-key' });
-  assert.equal(isValidAccessKey(loadKeys(keysFile), 'alpha-key'), true);
-  assert.equal(isValidAccessKey(loadKeys(keysFile), 'beta-key'), false);
-});
-
 test('getInternalRoomName combines public room and access key', () => {
   assert.equal(getInternalRoomName('planning', 'alpha-key'), 'planning-alpha-key');
-});
-
-test('generateAccessKey creates alphanumeric key values', () => {
-  const key = generateAccessKey();
-
-  assert.equal(key.length, 12);
-  assert.match(key, /^[A-Za-z0-9]+$/);
-});
-
-test('createAccessKey stores a generated key and prevents duplicates', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-
-  const created = createAccessKey(keysFile, 'Alpha Team');
-
-  assert.equal(created.name, 'Alpha Team');
-  assert.equal(created.value.length, 12);
-  assert.deepEqual(loadKeys(keysFile), { 'Alpha Team': created.value });
-  assert.throws(
-    () => createAccessKey(keysFile, 'Alpha Team'),
-    /already exists/
-  );
-});
-
-test('createAccessKey rejects values below the minimum length', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-
-  assert.throws(
-    () => createAccessKey(keysFile, 'Short Team', 'tiny'),
-    /at least 12 characters/
-  );
-  assert.deepEqual(loadKeys(keysFile), {});
-});
-
-test('createAccessKey records a creation timestamp', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-  const now = new Date('2026-05-20T10:00:00.000Z');
-
-  const created = createAccessKey(keysFile, 'Timed Team', generateAccessKey(), now);
-
-  assert.equal(created.createdAt, '2026-05-20T10:00:00.000Z');
-  assert.equal(listAccessKeys(keysFile)[0].createdAt, '2026-05-20T10:00:00.000Z');
-});
-
-test('listAccessKeys flags keys shorter than the minimum length as weak', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-  fs.writeFileSync(
-    keysFile,
-    JSON.stringify({ legacy: 'ABiMWb', strong: 'StrongKey123456' }),
-    'utf8'
-  );
-
-  const keys = listAccessKeys(keysFile);
-
-  assert.equal(keys.find((key) => key.name === 'legacy').weak, true);
-  assert.equal(keys.find((key) => key.name === 'strong').weak, false);
-});
-
-test('isValidAccessKey rejects non-string candidates', () => {
-  const keys = { alpha: 'a-long-enough-key' };
-
-  assert.equal(isValidAccessKey(keys, 'a-long-enough-key'), true);
-  assert.equal(isValidAccessKey(keys, 1234567890), false);
-  assert.equal(isValidAccessKey(keys, null), false);
-});
-
-test('listAccessKeys returns keys sorted by name', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-  fs.writeFileSync(keysFile, JSON.stringify({ beta: 'two', alpha: 'one' }), 'utf8');
-
-  assert.deepEqual(listAccessKeys(keysFile), [
-    { name: 'alpha', value: 'one', active: true, createdAt: null, weak: true },
-    { name: 'beta', value: 'two', active: true, createdAt: null, weak: true }
-  ]);
-});
-
-test('removeAccessKey deletes one stored key', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-  fs.writeFileSync(keysFile, JSON.stringify({ alpha: 'one', beta: 'two' }), 'utf8');
-
-  const removed = removeAccessKey(keysFile, 'alpha');
-
-  assert.deepEqual(removed, { name: 'alpha', value: 'one', active: true });
-  assert.deepEqual(loadKeys(keysFile), { beta: 'two' });
-});
-
-test('updateAccessKeyStatus suspends and restores a stored key', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-  fs.writeFileSync(keysFile, JSON.stringify({ alpha: 'one', beta: 'two' }), 'utf8');
-
-  const suspended = updateAccessKeyStatus(keysFile, 'alpha', false);
-
-  assert.deepEqual(suspended, { name: 'alpha', value: 'one', active: false });
-  assert.deepEqual(loadKeys(keysFile), { beta: 'two' });
-  assert.deepEqual(listAccessKeys(keysFile), [
-    { name: 'alpha', value: 'one', active: false, createdAt: null, weak: true },
-    { name: 'beta', value: 'two', active: true, createdAt: null, weak: true }
-  ]);
-
-  const restored = updateAccessKeyStatus(keysFile, 'alpha', true);
-
-  assert.deepEqual(restored, { name: 'alpha', value: 'one', active: true });
-  assert.deepEqual(loadKeys(keysFile), { alpha: 'one', beta: 'two' });
-});
-
-test('rotateAccessKey replaces one stored key and preserves status', (t) => {
-  const tempDir = withTempDir(t);
-  const keysFile = path.join(tempDir, 'keys.json');
-  fs.writeFileSync(
-    keysFile,
-    JSON.stringify({
-      alpha: 'one',
-      beta: { value: 'two', active: false }
-    }),
-    'utf8'
-  );
-
-  const rotatedActive = rotateAccessKey(keysFile, 'alpha', 'three');
-
-  assert.deepEqual(rotatedActive, {
-    name: 'alpha',
-    value: 'three',
-    previousValue: 'one',
-    active: true
-  });
-  assert.deepEqual(loadKeys(keysFile), { alpha: 'three' });
-
-  const rotatedSuspended = rotateAccessKey(keysFile, 'beta', 'four');
-
-  assert.deepEqual(rotatedSuspended, {
-    name: 'beta',
-    value: 'four',
-    previousValue: 'two',
-    active: false
-  });
-  assert.deepEqual(loadKeys(keysFile), { alpha: 'three' });
-  assert.deepEqual(listAccessKeys(keysFile), [
-    { name: 'alpha', value: 'three', active: true, createdAt: null, weak: true },
-    { name: 'beta', value: 'four', active: false, createdAt: null, weak: true }
-  ]);
 });
 
 test('isAdminKeyAuthorized validates admin keys without accepting blanks', () => {

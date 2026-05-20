@@ -161,6 +161,18 @@ SCRUM_POKER_KEYS_FILE=/path/to/keys.json
 
 Keep `keys.json` out of git. Treat access keys as secrets.
 
+Access keys are stored as salted hashes. A legacy plaintext keys file keeps
+working — the server verifies plaintext keys and rewrites each record as a hash
+on the next admin change. To convert an existing file in one explicit step,
+run:
+
+```bash
+node manageKeys.js migrate
+```
+
+A raw access key is shown only when it is created or rotated and cannot be
+retrieved afterwards; rotate the key from `/admin` if it is lost.
+
 The in-app team access and invite manager is available at `/admin` only when this environment variable is set:
 
 ```bash

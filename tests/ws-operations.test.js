@@ -242,7 +242,7 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
 
   assert.equal(initial.status, 200);
   assert.deepEqual(initialBody.keys, [
-    { name: 'baseline', value: testAccessKey, active: true, createdAt: null, weak: false }
+    { name: 'baseline', active: true, createdAt: null, weak: false }
   ]);
 
   const initialActivity = await fetch(`http://127.0.0.1:${port}/api/admin/activity`, { headers });
@@ -274,11 +274,8 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
   const suspendedBody = await suspended.json();
 
   assert.equal(suspended.status, 200);
-  assert.deepEqual(suspendedBody.key, {
-    name: 'Gamma Team',
-    value: createdBody.key.value,
-    active: false
-  });
+  assert.equal(suspendedBody.key.name, 'Gamma Team');
+  assert.equal(suspendedBody.key.active, false);
 
   const restored = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
     method: 'PATCH',
@@ -288,11 +285,8 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
   const restoredBody = await restored.json();
 
   assert.equal(restored.status, 200);
-  assert.deepEqual(restoredBody.key, {
-    name: 'Gamma Team',
-    value: createdBody.key.value,
-    active: true
-  });
+  assert.equal(restoredBody.key.name, 'Gamma Team');
+  assert.equal(restoredBody.key.active, true);
 
   const rotated = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}/rotate`, {
     method: 'POST',
@@ -308,10 +302,7 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
 
   const afterRotate = await fetch(baseUrl, { headers });
   const afterRotateBody = await afterRotate.json();
-  assert.equal(
-    afterRotateBody.keys.find((key) => key.name === 'Gamma Team')?.value,
-    rotatedBody.key.value
-  );
+  assert.equal(afterRotateBody.keys.some((key) => key.name === 'Gamma Team'), true);
 
   const removed = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
     method: 'DELETE',
@@ -326,7 +317,7 @@ test('admin key API lists, creates, and removes access keys', async (t) => {
   const afterRemove = await fetch(baseUrl, { headers });
   const afterRemoveBody = await afterRemove.json();
   assert.deepEqual(afterRemoveBody.keys, [
-    { name: 'baseline', value: testAccessKey, active: true, createdAt: null, weak: false }
+    { name: 'baseline', active: true, createdAt: null, weak: false }
   ]);
 
   const activity = await fetch(`http://127.0.0.1:${port}/api/admin/activity`, { headers });
