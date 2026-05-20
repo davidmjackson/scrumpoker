@@ -80,7 +80,6 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
 
  function connectWebSocket() {
-     console.log('Attempting to connect to WebSocket server...');
      updateConnectionStatus('connecting', 'Connecting...');
      loginButton.disabled = true;
      loginButton.textContent = 'Enter Room (Connecting...)';
@@ -89,10 +88,6 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
      ws = new WebSocket(WEBSOCKET_URL);
 
      ws.onopen = () => {
-
-         console.log('WebSocket connection established.');
-
-
          updateConnectionStatus('connected', 'Connected');
 
          loginButton.disabled = false;
@@ -106,7 +101,6 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
      ws.onmessage = (event) => {
          try {
              const message = JSON.parse(event.data);
-             console.log('Message received from server:', message);
              handleServerMessage(message);
          } catch (error) {
              console.error('Failed to parse server message:', event.data, error);
@@ -123,7 +117,6 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
      };
 
      ws.onclose = (event) => {
-         console.log('WebSocket connection closed:', event.reason, `Code: ${event.code}`);
          markRoomReconnectIntent();
          updateConnectionStatus('disconnected', 'Disconnected');
          loginButton.disabled = true;
@@ -184,7 +177,6 @@ function showVoteError(message) {
              if (payload && payload.id) {
                   // We don't set currentUser here yet, wait for login success / state update
                   sessionStorage.setItem('scrumPokerUserId_temp', payload.id); // Store temporarily until login
-                  console.log('Received my user ID:', payload.id);
              }
              break;
 
@@ -248,7 +240,6 @@ function showVoteError(message) {
                      // Still on login screen, do nothing until login action
                  } else {
                      // Was in room, but now not in participant list (e.g., kicked?)
-                     console.log("User no longer in participant list. Returning to login.");
                      logout(); // Go back to login
                  }
              }
@@ -284,7 +275,7 @@ function showVoteError(message) {
              break;
 
          default:
-             console.log(`Unknown message type received: ${type}`);
+             break;
      }
  }
 
@@ -292,7 +283,6 @@ function showVoteError(message) {
  function sendMessage(type, payload) {
      if (ws && ws.readyState === WebSocket.OPEN) {
          const message = JSON.stringify({ type, payload });
-         console.log('Sending message:', message);
          ws.send(message);
      } else {
          console.error('WebSocket is not connected. Cannot send message.');
@@ -605,7 +595,6 @@ function markRoomReconnectIntent() {
     if (!currentUser) {
         // If no current user data, likely means we should be on login screen
         // This might happen if server removes user or connection drops unexpectedly
-        console.log("updateUI called without currentUser, redirecting to login.");
         logout(); // Use logout to ensure clean state
         return;
     }
@@ -715,22 +704,7 @@ function renderRoundStatus() {
     roundStatus.classList.toggle('is-locked', votesRevealed);
 }
 
-async function copyText(text) {
-    if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return;
-    }
-
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-}
+const { copyText } = window.ScrumPokerClipboard;
 
 
 function renderVotingCards() {
@@ -968,7 +942,6 @@ function renderVotingCards() {
 
   function handleChangeRole(targetUserId, newRole) {
       if (currentUser?.role === 'Facilitator') {
-          console.log(`Requesting role change for ${targetUserId} to ${newRole}`);
           sendMessage('changeRole', { targetUserId: targetUserId, newRole: newRole });
       }
   }
@@ -989,7 +962,6 @@ function renderVotingCards() {
   }
 
   function handleSessionEnded(message) {
-     console.log('Session ended by facilitator.');
      resetRoomState();
      closeEditRoleModal();
      closeEndSessionModal();
@@ -999,8 +971,6 @@ function renderVotingCards() {
   }
 
   function logout() {
-     console.log("Logging out.");
-
      // Clear state and session
      resetRoomState();
 
