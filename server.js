@@ -15,11 +15,6 @@ console.log('⏳ server.js is starting');
 // Map<roomName: string, { users: Set<string>, lastActive: number }>
 const rooms = new Map();
 
-// Every minute: sweep out rooms idle for 60 minutes
-setInterval(() => {
-  expireRooms(rooms, Date.now(), DEFAULT_ROOM_EXPIRY_MS);
-}, 60 * 1000);
-
 const path = require('path');
 
 //console.log('✅ Required modules loaded');
@@ -52,10 +47,15 @@ server.on('request', (_req, res) => {
   }
 });
 
-createWsServer({
+const { participants } = createWsServer({
   server,
   rooms,
   keysFile: KEYS_FILE
 });
+
+// Every minute: sweep out rooms idle for 60 minutes and drop their participants.
+setInterval(() => {
+  expireRooms(rooms, Date.now(), DEFAULT_ROOM_EXPIRY_MS, participants);
+}, 60 * 1000);
 
 //console.log('✅ WebSocketServer initialized');
