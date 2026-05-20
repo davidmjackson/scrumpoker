@@ -3,10 +3,7 @@ playwright-report/
 Scrum\ Poker.code-workspace
 test-results/
 node_modules/.package-lock.json
-package-lock.json
-package.json
 scrum-poker.code-workspace
 scrumpoker.code-workspace
-.gitignore
 keys.json
 admin-activity.jsonl
