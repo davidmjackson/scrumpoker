@@ -1297,6 +1297,12 @@ img {
   color: #9a3412;
 }
 
+.admin-team-status.is-weak {
+  border-color: #fecaca;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .admin-team-indicator {
   width: 1.8rem;
   height: 1.8rem;
@@ -1380,6 +1386,19 @@ img {
 
 .admin-key-status.is-suspended {
   color: #9a3412;
+}
+
+.admin-key-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-key-warning {
+  margin: 0;
+  color: #991b1b;
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
 .admin-invite-preview {

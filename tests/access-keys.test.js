@@ -122,14 +122,59 @@ test('createAccessKey stores a generated key and prevents duplicates', (t) => {
   );
 });
 
+test('createAccessKey rejects values below the minimum length', (t) => {
+  const tempDir = withTempDir(t);
+  const keysFile = path.join(tempDir, 'keys.json');
+
+  assert.throws(
+    () => createAccessKey(keysFile, 'Short Team', 'tiny'),
+    /at least 12 characters/
+  );
+  assert.deepEqual(loadKeys(keysFile), {});
+});
+
+test('createAccessKey records a creation timestamp', (t) => {
+  const tempDir = withTempDir(t);
+  const keysFile = path.join(tempDir, 'keys.json');
+  const now = new Date('2026-05-20T10:00:00.000Z');
+
+  const created = createAccessKey(keysFile, 'Timed Team', generateAccessKey(), now);
+
+  assert.equal(created.createdAt, '2026-05-20T10:00:00.000Z');
+  assert.equal(listAccessKeys(keysFile)[0].createdAt, '2026-05-20T10:00:00.000Z');
+});
+
+test('listAccessKeys flags keys shorter than the minimum length as weak', (t) => {
+  const tempDir = withTempDir(t);
+  const keysFile = path.join(tempDir, 'keys.json');
+  fs.writeFileSync(
+    keysFile,
+    JSON.stringify({ legacy: 'ABiMWb', strong: 'StrongKey123456' }),
+    'utf8'
+  );
+
+  const keys = listAccessKeys(keysFile);
+
+  assert.equal(keys.find((key) => key.name === 'legacy').weak, true);
+  assert.equal(keys.find((key) => key.name === 'strong').weak, false);
+});
+
+test('isValidAccessKey rejects non-string candidates', () => {
+  const keys = { alpha: 'a-long-enough-key' };
+
+  assert.equal(isValidAccessKey(keys, 'a-long-enough-key'), true);
+  assert.equal(isValidAccessKey(keys, 1234567890), false);
+  assert.equal(isValidAccessKey(keys, null), false);
+});
+
 test('listAccessKeys returns keys sorted by name', (t) => {
   const tempDir = withTempDir(t);
   const keysFile = path.join(tempDir, 'keys.json');
   fs.writeFileSync(keysFile, JSON.stringify({ beta: 'two', alpha: 'one' }), 'utf8');
 
   assert.deepEqual(listAccessKeys(keysFile), [
-    { name: 'alpha', value: 'one', active: true },
-    { name: 'beta', value: 'two', active: true }
+    { name: 'alpha', value: 'one', active: true, createdAt: null, weak: true },
+    { name: 'beta', value: 'two', active: true, createdAt: null, weak: true }
   ]);
 });
 
@@ -154,8 +199,8 @@ test('updateAccessKeyStatus suspends and restores a stored key', (t) => {
   assert.deepEqual(suspended, { name: 'alpha', value: 'one', active: false });
   assert.deepEqual(loadKeys(keysFile), { beta: 'two' });
   assert.deepEqual(listAccessKeys(keysFile), [
-    { name: 'alpha', value: 'one', active: false },
-    { name: 'beta', value: 'two', active: true }
+    { name: 'alpha', value: 'one', active: false, createdAt: null, weak: true },
+    { name: 'beta', value: 'two', active: true, createdAt: null, weak: true }
   ]);
 
   const restored = updateAccessKeyStatus(keysFile, 'alpha', true);
@@ -196,8 +241,8 @@ test('rotateAccessKey replaces one stored key and preserves status', (t) => {
   });
   assert.deepEqual(loadKeys(keysFile), { alpha: 'three' });
   assert.deepEqual(listAccessKeys(keysFile), [
-    { name: 'alpha', value: 'three', active: true },
-    { name: 'beta', value: 'four', active: false }
+    { name: 'alpha', value: 'three', active: true, createdAt: null, weak: true },
+    { name: 'beta', value: 'four', active: false, createdAt: null, weak: true }
   ]);
 });
 
