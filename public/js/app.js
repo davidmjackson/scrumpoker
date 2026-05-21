@@ -8,6 +8,8 @@
  const nameInput = document.getElementById('name-input');
  const roomInput = document.getElementById('room-input');
  const roleSelect = document.getElementById('role-select');
+ const nameField = document.getElementById('name-field');
+ const roomField = document.getElementById('room-field');
  const loginButton = document.getElementById('login-button');
  const loginError = document.getElementById('login-error');
  const userGreeting = document.getElementById('user-greeting');
@@ -56,6 +58,8 @@
  const ROOM_SESSION_STORAGE = 'scrumPokerRoomSession';
  const ROOM_RETURN_STORAGE = 'scrumPokerReturnToRoom';
  const ROOM_RECONNECT_STORAGE = 'scrumPokerReconnectToRoom';
+ // Shared with admin.js, which reads this key to unlock /admin automatically.
+ const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
@@ -64,6 +68,7 @@
  let facilitatorId = null; // ID received from server
  let pendingLoginContext = null;
  let pendingLoginSource = '';
+ let connectionState = 'connecting'; // 'connecting' | 'connected' | 'error' | 'disconnected'
  let allowStoredRoomRestore = true;
  let attemptedStoredRoomRestore = false;
  const fibonacciVotes = ['0', '1', '2', '3', '5', '8', '13', '?']; // Voting options
@@ -79,19 +84,89 @@ const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
 const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
 
+// Admin is a login role, not a room role: signing in as Admin routes to /admin
+// instead of joining a room over the WebSocket.
+function isAdminLoginMode() {
+    return roleSelect.value === 'Admin';
+}
+
+const LOGIN_BUTTON_SUFFIX = {
+    connecting: ' (Connecting...)',
+    connected: '',
+    error: ' (Error)',
+    disconnected: ' (Disconnected)'
+};
+
+// The login button label depends on both the connection state and the
+// selected role, so both inputs funnel through here.
+function refreshLoginButton() {
+    const verb = isAdminLoginMode() ? 'Unlock admin' : 'Enter Room';
+    loginButton.textContent = `${verb}${LOGIN_BUTTON_SUFFIX[connectionState] || ''}`;
+    loginButton.disabled = connectionState !== 'connected';
+}
+
+function setConnectionState(state) {
+    connectionState = state;
+    refreshLoginButton();
+}
+
+// Admin sign-in only needs the key; room and name do not apply.
+function applyRoleMode() {
+    const adminMode = isAdminLoginMode();
+    nameField.classList.toggle('hidden', adminMode);
+    roomField.classList.toggle('hidden', adminMode);
+    accessKeyInput.placeholder = adminMode ? 'Admin key' : 'Team key';
+    refreshLoginButton();
+}
+
+async function handleAdminLogin() {
+    const key = accessKeyInput.value.trim();
+    if (!key) {
+        showLoginError('Please enter the admin key.');
+        return;
+    }
+
+    hideLoginError();
+    loginButton.disabled = true;
+    loginButton.textContent = 'Checking key...';
+
+    try {
+        const response = await fetch('/api/admin/session', {
+            headers: { Accept: 'application/json', 'x-scrum-poker-admin-key': key }
+        });
+
+        if (!response.ok) {
+            let message = 'Admin key not recognised.';
+            try {
+                const body = await response.json();
+                if (body && body.error) message = body.error;
+            } catch (_err) {
+                // Keep the default message if the body is not JSON.
+            }
+            showLoginError(message);
+            refreshLoginButton();
+            return;
+        }
+
+        // admin.js reads this on load and unlocks /admin without a second prompt.
+        sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
+        window.location.assign('/admin');
+    } catch (_err) {
+        showLoginError('Unable to reach the server. Please try again.');
+        refreshLoginButton();
+    }
+}
+
  function connectWebSocket() {
      updateConnectionStatus('connecting', 'Connecting...');
-     loginButton.disabled = true;
-     loginButton.textContent = 'Enter Room (Connecting...)';
+     setConnectionState('connecting');
      loginError.classList.add('hidden'); // Hide previous errors
 
      ws = new WebSocket(WEBSOCKET_URL);
 
      ws.onopen = () => {
          updateConnectionStatus('connected', 'Connected');
-
-         loginButton.disabled = false;
-         loginButton.textContent = 'Enter Room';
+         setConnectionState('connected');
 
          showLogin(); // Show login screen for first time connection
          if (restoreDisconnectedRoomSession()) return;
@@ -110,8 +185,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
      ws.onerror = (error) => {
          console.error('WebSocket error:', error);
          updateConnectionStatus('disconnected', 'Connection Error');
-         loginButton.disabled = true;
-         loginButton.textContent = 'Enter Room (Error)';
+         setConnectionState('error');
          showLogin({ clearError: false }); // Force back to login on connection error
          showLoginError('Cannot connect to the server. Please try again later.');
      };
@@ -119,8 +193,7 @@ const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
      ws.onclose = (event) => {
          markRoomReconnectIntent();
          updateConnectionStatus('disconnected', 'Disconnected');
-         loginButton.disabled = true;
-         loginButton.textContent = 'Enter Room (Disconnected)';
+         setConnectionState('disconnected');
          currentUser = null; // Clear user state
          participants = [];
          showLogin({ clearError: false }); // Go back to login screen
@@ -406,6 +479,7 @@ function markRoomReconnectIntent() {
      const appliedInvitePrefill = applyInvitePrefill();
      allowStoredRoomRestore = !appliedInvitePrefill;
      setupEventListeners();
+     applyRoleMode(); // Reflect the initial (or invite-prefilled) role selection
      connectWebSocket(); // Start WebSocket connection attempt
  }
 
@@ -444,6 +518,10 @@ function markRoomReconnectIntent() {
      nameInput.addEventListener('keypress', (e) => {
          if (e.key === 'Enter' && !loginButton.disabled) handleLogin();
      });
+     accessKeyInput.addEventListener('keypress', (e) => {
+         if (e.key === 'Enter' && !loginButton.disabled) handleLogin();
+     });
+     roleSelect.addEventListener('change', applyRoleMode);
      showVotesButton.addEventListener('click', handleShowVotes);
      startNextRoundButton.addEventListener('click', handleStartNextRound);
      resetVotesButton.addEventListener('click', handleResetVotes);
@@ -880,6 +958,11 @@ function renderVotingCards() {
  }
 
  function handleLogin() {
+  if (isAdminLoginMode()) {
+    handleAdminLogin();
+    return;
+  }
+
   const key = accessKeyInput.value.trim();
   const name = nameInput.value.trim();
   const role = roleSelect.value;

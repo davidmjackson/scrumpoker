@@ -6,7 +6,7 @@
     <title>Scrum Poker Tool</title>
     <script src="js/cardDeck.js?v=1" defer></script>
     <script src="js/clipboard.js?v=1" defer></script>
-    <script src="js/app.js?v=15" defer></script>
+    <script src="js/app.js?v=16" defer></script>
 
     <link rel="stylesheet" href="css/app.css">
 </head>
@@ -29,12 +29,12 @@
                     <input type="text" id="access-key-input" placeholder="Team key" autocomplete="off" required>
                 </label>
 
-                <label class="field" for="room-input">
+                <label class="field" id="room-field" for="room-input">
                     <span>Room</span>
                     <input type="text" id="room-input" placeholder="Room name" autocomplete="off">
                 </label>
 
-                <label class="field" for="name-input">
+                <label class="field" id="name-field" for="name-input">
                     <span>Name</span>
                     <input type="text" id="name-input" placeholder="Your name" autocomplete="name">
                 </label>
@@ -45,6 +45,7 @@
                         <option value="Voter" selected>Voter</option>
                         <option value="Observer">Observer</option>
                         <option value="Facilitator">Facilitator</option>
+                        <option value="Admin">Admin</option>
                     </select>
                 </label>
 

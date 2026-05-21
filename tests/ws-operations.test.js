@@ -224,6 +224,30 @@ test('admin key API requires configured admin authentication', async (t) => {
   assert.equal(body.error, 'Admin key management is not configured.');
 });
 
+test('admin session endpoint validates the admin key', async (t) => {
+  const adminKey = 'admin-session-secret';
+  const { port } = await startServer(t, { adminKey });
+  const url = `http://127.0.0.1:${port}/api/admin/session`;
+
+  const missing = await fetch(url);
+  assert.equal(missing.status, 401);
+
+  const wrong = await fetch(url, { headers: { 'x-scrum-poker-admin-key': 'nope' } });
+  assert.equal(wrong.status, 401);
+
+  const ok = await fetch(url, { headers: { 'x-scrum-poker-admin-key': adminKey } });
+  const okBody = await ok.json();
+  assert.equal(ok.status, 200);
+  assert.equal(okBody.ok, true);
+});
+
+test('admin session endpoint reports unconfigured admin auth', async (t) => {
+  const { port } = await startServer(t);
+  const response = await fetch(`http://127.0.0.1:${port}/api/admin/session`);
+
+  assert.equal(response.status, 503);
+});
+
 test('admin key API lists, creates, and removes access keys', async (t) => {
   const adminKey = 'admin-test-secret';
   const { port } = await startServer(t, { adminKey });
