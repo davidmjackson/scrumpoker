@@ -897,6 +897,9 @@ function renderVotingCards() {
          cardFaceBack.classList.add('card-face', 'card-back');
          // Show vote value only if revealed, otherwise show placeholder
          cardFaceBack.textContent = (votesRevealed && participant.vote !== null) ? participant.vote : '--';
+         if (votesRevealed && participant.vote !== null) {
+             cardFaceBack.classList.add('vote-sticker', 'revealed-sticker');
+         }
 
          card.appendChild(cardFaceFront);
          card.appendChild(cardFaceBack);

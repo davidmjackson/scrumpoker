@@ -66,3 +66,9 @@
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: var(--s-3);
 }
+
+@keyframes sticker-reveal {
+  0%   { opacity: 0; transform: translateY(6px) rotate(-2deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+.revealed-sticker { animation: sticker-reveal 280ms cubic-bezier(.34,1.56,.64,1) both; }
