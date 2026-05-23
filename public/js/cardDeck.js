@@ -16,7 +16,7 @@
     }) {
         const cardButton = document.createElement('button');
         cardButton.dataset.value = value;
-        cardButton.classList.add('vote-card');
+        cardButton.classList.add('vote-card', 'vote-sticker');
         cardButton.disabled = disabled;
 
         const cardInner = document.createElement('div');
@@ -40,7 +40,7 @@
         cardButton.appendChild(cardInner);
 
         if (selected) {
-            cardButton.classList.add('selected');
+            cardButton.classList.add('selected', 'picked');
         }
 
         if (onClick) {

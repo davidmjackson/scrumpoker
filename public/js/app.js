@@ -989,8 +989,10 @@ function renderVotingCards() {
     if (votesRevealed || !currentUser || currentUser.role === 'Observer') return;
         const selectedValue = event.currentTarget.dataset.value; // Use currentTarget!
         sendMessage('vote', { vote: selectedValue });
-        document.querySelectorAll('.vote-card').forEach(btn => btn.classList.remove('selected'));
-        event.currentTarget.classList.add('selected');
+        document.querySelectorAll('.vote-card').forEach(btn => btn.classList.remove('selected', 'picked'));
+        const picked = event.currentTarget;
+        picked.classList.add('selected', 'picked', 'placed');
+        picked.addEventListener('animationend', () => picked.classList.remove('placed'), { once: true });
     }
 
  function handleShowVotes() {
