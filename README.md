@@ -84,6 +84,19 @@ server {
 - CSP does not allow `unsafe-eval` or `unsafe-inline`.
 - Keep future UI work in external static assets unless there is a documented security exception.
 
+## Design
+
+This app uses the shared `theme-core` design system. The canonical source
+lives in `/var/www/signal`; we pull it via `./scripts/sync-theme.sh`. To
+update the theme here after a change in Signal:
+
+    ./scripts/sync-theme.sh /var/www/signal
+    git add public/css/theme-core.css public/illos/theme-illos.svg public/fonts
+    git commit -m "Sync theme-core from Signal"
+
+Scrum Poker-specific styles live in `public/css/theme-poker.css` and
+`public/css/app.css`.
+
 ## License
 
 This project is provided under a custom free-use license.
