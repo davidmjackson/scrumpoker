@@ -883,7 +883,7 @@ function renderVotingCards() {
          voteContainer.dataset.userId = participant.id; // Link container to user
 
          const card = document.createElement('div');
-         card.classList.add('card');
+         card.classList.add('flip-card');
          // Determine flip state based on global votesRevealed and if participant voted
          if (votesRevealed && participant.vote !== null) {
              card.classList.add('flipped');
@@ -1013,7 +1013,7 @@ function renderVotingCards() {
 
  function resetAllCards() {
 
-     document.querySelectorAll('.card').forEach(card => card.classList.remove('flipped'));
+     document.querySelectorAll('.flip-card').forEach(card => card.classList.remove('flipped'));
  }
 
  function handleResetVotes() {
