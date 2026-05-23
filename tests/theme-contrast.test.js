@@ -26,7 +26,8 @@ const PAIRS = [
   ["muted", "bg"],
   ["accent-on", "accent"],
   ["sticker-yellow-ink", "accent-2"],
-  ["sticker-peach-ink",  "accent-3"]
+  ["sticker-peach-ink",  "accent-3"],
+  ["accent", "bg-warm"]
 ];
 
 for (const [fg, bg] of PAIRS) {
