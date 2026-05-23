@@ -581,32 +581,6 @@
   opacity: 0.62;
 }
 
-/* ── App footer ──────────────────────────────────────────────────────────── */
-
-.app-footer {
-  position: fixed;
-  left: 50%;
-  bottom: 0.8rem;
-  transform: translateX(-50%);
-  z-index: 20;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: var(--shadow-sm);
-  padding: 0.35rem 0.75rem;
-  font-size: 0.78rem;
-}
-
-.app-footer a {
-  color: var(--info);
-  text-decoration: none;
-  font-weight: 800;
-}
-
-.app-footer a:hover {
-  text-decoration: underline;
-}
-
 /* ── Responsive overrides ────────────────────────────────────────────────── */
 
 @media (max-width: 820px) {
