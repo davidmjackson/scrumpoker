@@ -7,3 +7,5 @@ scrum-poker.code-workspace
 scrumpoker.code-workspace
 keys.json
 admin-activity.jsonl
+.worktrees/
+.superpowers/
