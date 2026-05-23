@@ -466,7 +466,7 @@ function renderKeys(keys) {
 
     const rotateButton = document.createElement('button');
     rotateButton.type = 'button';
-    rotateButton.className = 'primary-action compact-action';
+    rotateButton.className = 'btn btn-primary compact-action';
     rotateButton.textContent = 'Rotate key';
     rotateButton.addEventListener('click', () => {
       openRotateKeyModal(key.name);

@@ -1,0 +1,74 @@
+/* public/css/theme-poker.css
+ *
+ * Scrum Poker's "Sticker Album" overlay. Loaded AFTER theme-core.css.
+ */
+
+:root {
+  /* --- Palette overrides — see spec §4.2 ---------------------------- */
+  --bg:        #FDF8EB;
+  --bg-warm:   #F4ECE0;
+  --surface:   #FFFFFF;
+  --border:    #E8D9C0;
+  --border-st: #C9B27A;
+  --ink:       #2A2118;
+  --muted:     #876641;
+  --faint:     #B0916B;
+  --accent:    #6B4FE8;
+  --accent-on: #FFFFFF;
+  --accent-2:  #F5D87E;   /* hero sticker yellow */
+  --accent-3:  #FFCFB0;   /* secondary sticker peach */
+
+  /* Sticker-specific tokens (used by .vote-card and .sticker-grid) */
+  --sticker-yellow-ink: #6B4D10;
+  --sticker-peach-ink:  #8B3A1A;
+}
+
+/* Album hero — the sunny open-book scene used on index.html */
+.album-hero {
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(245,216,126,0.4), transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(255,207,176,0.4), transparent 55%),
+    var(--bg-warm);
+  min-height: 100vh;
+  padding: var(--s-6);
+}
+
+/* Vote card — restyled to look like a sticker */
+.vote-sticker {
+  aspect-ratio: 1;
+  background: var(--accent-2);
+  color: var(--sticker-yellow-ink);
+  border-radius: var(--r-xl);
+  border: 3px dashed var(--surface);
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    0 3px 0 rgba(184, 145, 26, 0.4),
+    0 8px 18px rgba(0,0,0,0.06);
+  transition: transform 120ms ease;
+}
+.vote-sticker:hover  { transform: translateY(-2px) rotate(-2deg); }
+.vote-sticker.picked {
+  background: var(--accent-3);
+  color: var(--sticker-peach-ink);
+  transform: scale(1.06) rotate(2deg);
+}
+.vote-sticker.placed { animation: sticker-place 240ms cubic-bezier(.34,1.56,.64,1) both; }
+
+/* Sticker grid — flexible row of value stickers */
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: var(--s-3);
+}
+
+@keyframes sticker-reveal {
+  0%   { opacity: 0; transform: translateY(6px) rotate(-2deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+.revealed-sticker { animation: sticker-reveal 280ms cubic-bezier(.34,1.56,.64,1) both; }

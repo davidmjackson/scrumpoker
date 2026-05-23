@@ -883,7 +883,7 @@ function renderVotingCards() {
          voteContainer.dataset.userId = participant.id; // Link container to user
 
          const card = document.createElement('div');
-         card.classList.add('card');
+         card.classList.add('flip-card');
          // Determine flip state based on global votesRevealed and if participant voted
          if (votesRevealed && participant.vote !== null) {
              card.classList.add('flipped');
@@ -897,6 +897,9 @@ function renderVotingCards() {
          cardFaceBack.classList.add('card-face', 'card-back');
          // Show vote value only if revealed, otherwise show placeholder
          cardFaceBack.textContent = (votesRevealed && participant.vote !== null) ? participant.vote : '--';
+         if (votesRevealed && participant.vote !== null) {
+             cardFaceBack.classList.add('vote-sticker', 'revealed-sticker');
+         }
 
          card.appendChild(cardFaceFront);
          card.appendChild(cardFaceBack);
@@ -989,8 +992,10 @@ function renderVotingCards() {
     if (votesRevealed || !currentUser || currentUser.role === 'Observer') return;
         const selectedValue = event.currentTarget.dataset.value; // Use currentTarget!
         sendMessage('vote', { vote: selectedValue });
-        document.querySelectorAll('.vote-card').forEach(btn => btn.classList.remove('selected'));
-        event.currentTarget.classList.add('selected');
+        document.querySelectorAll('.vote-card').forEach(btn => btn.classList.remove('selected', 'picked'));
+        const picked = event.currentTarget;
+        picked.classList.add('selected', 'picked', 'placed');
+        picked.addEventListener('animationend', () => picked.classList.remove('placed'), { once: true });
     }
 
  function handleShowVotes() {
@@ -1008,7 +1013,7 @@ function renderVotingCards() {
 
  function resetAllCards() {
 
-     document.querySelectorAll('.card').forEach(card => card.classList.remove('flipped'));
+     document.querySelectorAll('.flip-card').forEach(card => card.classList.remove('flipped'));
  }
 
  function handleResetVotes() {
