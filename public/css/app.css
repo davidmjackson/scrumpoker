@@ -704,8 +704,7 @@
 }
 
 .vote-card:focus-visible {
-  /* Note: hardcoded to match --accent (#6B4FE8) at 28% opacity */
-  outline: 3px solid rgba(107, 79, 232, 0.28);
+  outline: 3px solid var(--accent-soft);
   outline-offset: 3px;
 }
 
@@ -766,8 +765,7 @@
 
 .vote-card.selected .card-front {
   border-color: var(--accent);
-  /* Note: hardcoded to match --accent (#6B4FE8) at 16% opacity */
-  box-shadow: 0 0 0 3px rgba(107, 79, 232, 0.16), 0 10px 24px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
 .vote-card-image {
