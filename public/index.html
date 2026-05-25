@@ -7,10 +7,12 @@
     <script src="js/cardDeck.js?v=1" defer></script>
     <script src="js/clipboard.js?v=1" defer></script>
     <script src="js/app.js?v=16" defer></script>
+    <script src="js/breathing-waves.js" defer></script>
 
     <link rel="stylesheet" href="css/theme-core.css">
     <link rel="stylesheet" href="css/theme-poker.css">
     <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/breathing-waves.css">
 </head>
 
 <body class="app-page album-hero">
@@ -88,36 +90,37 @@
     </main>
 
     <main id="poker-room-section" class="room-shell hidden">
-        <header class="room-header">
-            <div class="room-heading">
-                <span class="entry-kicker">Estimation room</span>
-                <h1>Scrum Poker Room</h1>
-                <p id="room-display" class="room-display"></p>
+        <header class="header-band" data-breathing-waves data-wave-palette="poker">
+            <canvas></canvas>
+            <div class="header-content">
+                <p class="eyebrow">Estimation room</p>
+                <h1 class="header-title">Scrum Poker Room</h1>
+                <p id="room-display" class="header-subtitle room-display"></p>
                 <a id="admin-room-link" href="/admin" class="room-admin-link hidden">Team access</a>
             </div>
-
-            <div class="room-userbar">
-                <span id="user-greeting" class="user-greeting"></span>
-                <div class="room-actions" aria-label="Room actions">
-                    <div class="invite-menu-wrap">
-                        <button id="invite-menu-button" class="toolbar-action hidden" type="button" aria-expanded="false" aria-controls="invite-menu">
-                            Invite
-                        </button>
-                        <div id="invite-menu" class="invite-menu hidden">
-                            <button id="copy-voter-invite-button" class="invite-action" type="button" data-invite-role="Voter">
-                                Copy voter invite
-                            </button>
-                            <button id="copy-observer-invite-button" class="invite-action" type="button" data-invite-role="Observer">
-                                Copy observer invite
-                            </button>
-                        </div>
-                    </div>
-                    <button id="end-session-button" class="toolbar-action danger hidden" type="button" aria-label="End session">End</button>
-                    <button id="edit-role-button" class="toolbar-action" type="button" aria-label="Change role">Role</button>
-                    <button id="logout-button" class="toolbar-action danger" type="button">Logout</button>
-                </div>
-            </div>
         </header>
+
+        <div class="room-userbar">
+            <span id="user-greeting" class="user-greeting"></span>
+            <div class="room-actions" aria-label="Room actions">
+                <div class="invite-menu-wrap">
+                    <button id="invite-menu-button" class="toolbar-action hidden" type="button" aria-expanded="false" aria-controls="invite-menu">
+                        Invite
+                    </button>
+                    <div id="invite-menu" class="invite-menu hidden">
+                        <button id="copy-voter-invite-button" class="invite-action" type="button" data-invite-role="Voter">
+                            Copy voter invite
+                        </button>
+                        <button id="copy-observer-invite-button" class="invite-action" type="button" data-invite-role="Observer">
+                            Copy observer invite
+                        </button>
+                    </div>
+                </div>
+                <button id="end-session-button" class="toolbar-action danger hidden" type="button" aria-label="End session">End</button>
+                <button id="edit-role-button" class="toolbar-action" type="button" aria-label="Change role">Role</button>
+                <button id="logout-button" class="toolbar-action danger" type="button">Logout</button>
+            </div>
+        </div>
 
         <div class="room-grid">
             <section class="room-card vote-panel" aria-labelledby="vote-panel-title">
