@@ -15,21 +15,22 @@
     <link rel="stylesheet" href="css/breathing-waves.css">
 </head>
 
-<body class="app-page album-hero">
+<body class="app-page">
 
     <div id="connection-status" class="connecting">Connecting...</div>
 
-    <main id="login-section" class="entry-shell">
-        <section class="entry-card" aria-labelledby="entry-title">
-            <div class="entry-heading">
-                <span class="brand">
-                  <svg class="brand-glyph" aria-hidden="true"><use href="/illos/theme-illos.svg#sticker-circle"/></svg>
-                  <span class="entry-kicker">Planning room</span>
-                </span>
-                <h1 id="entry-title">Scrum Poker</h1>
-                <p>Join a shared estimation room.</p>
+    <main id="login-section" class="login-page">
+        <header class="header-band login-band" data-breathing-waves data-wave-palette="poker">
+            <canvas></canvas>
+            <div class="header-content">
+                <p class="eyebrow">Planning room</p>
+                <h1 id="entry-title" class="header-title">Scrum Poker</h1>
+                <p class="header-subtitle">Join a shared estimation room.</p>
             </div>
+        </header>
 
+        <div class="entry-shell">
+        <section class="entry-card" aria-labelledby="entry-title">
             <div class="entry-form">
                 <label class="field" for="access-key-input">
                     <span>Access key</span>
@@ -87,9 +88,10 @@
                 <span>?</span>
             </div>
         </aside>
+        </div>
     </main>
 
-    <main id="poker-room-section" class="room-shell hidden">
+    <main id="poker-room-section" class="room-page hidden">
         <header class="header-band" data-breathing-waves data-wave-palette="poker">
             <canvas></canvas>
             <div class="header-content">
@@ -100,6 +102,7 @@
             </div>
         </header>
 
+        <div class="room-shell">
         <div class="room-userbar">
             <span id="user-greeting" class="user-greeting"></span>
             <div class="room-actions" aria-label="Room actions">
@@ -180,6 +183,7 @@
             <button id="reset-votes-button" class="danger-action">
                 Reset Votes
             </button>
+        </div>
         </div>
     </main>
 

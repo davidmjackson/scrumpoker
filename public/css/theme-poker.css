@@ -30,18 +30,6 @@
   --ok-bg: #D7E8DC;
 }
 
-/* Album hero — sunny open-book scene on index.html. Yellow + peach radials
-   removed; replaced with two accent-soft tints that keep the gradient
-   readable on the warm cream base without re-introducing off-palette hues. */
-.album-hero {
-  background:
-    radial-gradient(ellipse at 20% 10%, rgba(222, 235, 226, 0.65), transparent 50%),
-    radial-gradient(ellipse at 80% 90%, rgba(222, 235, 226, 0.45), transparent 55%),
-    var(--bg-warm);
-  min-height: 100vh;
-  padding: var(--s-6);
-}
-
 /* Vote card — sticker rendered in the forest accent. Default: filled
    forest with white ink. Picked: lifts into accent-soft with accent-deep
    ink to keep the two-tone rhythm without leaving the forest palette. */
