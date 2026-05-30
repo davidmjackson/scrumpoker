@@ -1,8 +1,5 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
 
 const {
   handleChangeRole,
@@ -17,18 +14,7 @@ const {
 const { joinRoom } = require('../lib/roomState');
 const { ROLES } = require('../lib/roles');
 
-const testAccessKey = 'handler-key';
-
-function withTempKeysFile(t) {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scrumpoker-handlers-test-'));
-  const keysFile = path.join(tempDir, 'keys.json');
-  fs.writeFileSync(keysFile, JSON.stringify({ team: testAccessKey }), 'utf8');
-  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
-  return keysFile;
-}
-
 function createHarness(t) {
-  const keysFile = withTempKeysFile(t);
   const rooms = new Map();
   const participants = {};
   const clientMessages = [];
@@ -37,7 +23,6 @@ function createHarness(t) {
 
   return {
     clientMessages,
-    keysFile,
     participants,
     rooms,
     roomMessages,
@@ -49,13 +34,11 @@ function createHarness(t) {
 }
 
 function loginPayload(overrides = {}) {
-  return {
-    accessKey: testAccessKey,
-    name: 'Alice',
-    role: ROLES.FACILITATOR,
-    room: 'planning',
-    ...overrides
-  };
+  return { name: 'Alice', role: ROLES.FACILITATOR, room: 'planning', teamId: 't1', ...overrides };
+}
+
+function wsWith(userId, teams = [{ id: 't1', name: 'Alpha', role: 'lead' }]) {
+  return { userId, teams };
 }
 
 function participant(id, roomName, overrides = {}) {
@@ -70,29 +53,27 @@ function participant(id, roomName, overrides = {}) {
   };
 }
 
-test('handleLogin rejects missing fields and invalid access keys', (t) => {
+test('handleLogin rejects missing fields and teamId not in ws.teams', (t) => {
   const harness = createHarness(t);
-  const ws = { userId: 'alice' };
+  const ws = wsWith('alice');
 
   handleLogin({
     ...harness,
     ws,
     userId: 'alice',
-    payload: {},
-    onKeyLoadError: () => {}
+    payload: {}
   });
 
   handleLogin({
     ...harness,
     ws,
     userId: 'alice',
-    payload: loginPayload({ accessKey: 'bad-key' }),
-    onKeyLoadError: () => {}
+    payload: loginPayload({ teamId: 'not-a-member' })
   });
 
   assert.deepEqual(harness.clientMessages.map(({ message }) => message.payload.message), [
-    'Login requires key, name, role, and room.',
-    'Invalid access key.'
+    'Login requires name, role, room, and team.',
+    "You're not a member of that team."
   ]);
 });
 
@@ -101,21 +82,19 @@ test('handleLogin creates participants and downgrades duplicate facilitator requ
 
   handleLogin({
     ...harness,
-    ws: { userId: 'alice' },
+    ws: wsWith('alice'),
     userId: 'alice',
-    payload: loginPayload({ name: 'Alice', role: ROLES.FACILITATOR }),
-    onKeyLoadError: () => {}
+    payload: loginPayload({ name: 'Alice', role: ROLES.FACILITATOR })
   });
 
   handleLogin({
     ...harness,
-    ws: { userId: 'bob' },
+    ws: wsWith('bob'),
     userId: 'bob',
-    payload: loginPayload({ name: 'Bob', role: ROLES.FACILITATOR }),
-    onKeyLoadError: () => {}
+    payload: loginPayload({ name: 'Bob', role: ROLES.FACILITATOR })
   });
 
-  const roomName = `planning-${testAccessKey}`;
+  const roomName = 't1-planning';
   assert.equal(harness.rooms.get(roomName).facilitatorId, 'alice');
   assert.equal(harness.participants.alice.role, ROLES.FACILITATOR);
   assert.equal(harness.participants.bob.role, ROLES.VOTER);
@@ -379,4 +358,29 @@ test('handleParticipantExit removes participants and reassigns facilitator', (t)
   assert.equal(harness.participants.bob.role, ROLES.FACILITATOR);
   assert.equal(room.facilitatorId, 'bob');
   assert.deepEqual(harness.roomStates, [roomName]);
+});
+
+test('handleLogin joins a room namespaced by teamId when the user is a member', (t) => {
+  const h = createHarness(t);
+  const ws = wsWith('u1');
+  handleLogin({ ws, userId: 'u1', payload: loginPayload(), rooms: h.rooms, participants: h.participants, sendToClient: h.sendToClient, sendRoomState: h.sendRoomState });
+  assert.ok(h.participants['u1']);
+  assert.equal(h.participants['u1'].roomName, 't1-planning');
+  assert.deepEqual(h.roomStates, ['t1-planning']);
+});
+
+test('handleLogin rejects a teamId the user is not a member of', (t) => {
+  const h = createHarness(t);
+  const ws = wsWith('u1');
+  handleLogin({ ws, userId: 'u1', payload: loginPayload({ teamId: 'other' }), rooms: h.rooms, participants: h.participants, sendToClient: h.sendToClient, sendRoomState: h.sendRoomState });
+  assert.equal(h.participants['u1'], undefined);
+  assert.equal(h.clientMessages.at(-1).message.payload.message, "You're not a member of that team.");
+});
+
+test('handleLogin rejects when teamId is missing', (t) => {
+  const h = createHarness(t);
+  const ws = wsWith('u1');
+  handleLogin({ ws, userId: 'u1', payload: loginPayload({ teamId: undefined }), rooms: h.rooms, participants: h.participants, sendToClient: h.sendToClient, sendRoomState: h.sendRoomState });
+  assert.equal(h.participants['u1'], undefined);
+  assert.equal(h.clientMessages.at(-1).message.payload.message, 'Login requires name, role, room, and team.');
 });
