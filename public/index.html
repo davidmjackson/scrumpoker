@@ -6,8 +6,9 @@
     <title>Scrum Poker Tool</title>
     <script src="js/cardDeck.js?v=1" defer></script>
     <script src="js/clipboard.js?v=1" defer></script>
-    <script src="js/app.js?v=16" defer></script>
+    <script src="js/app.js?v=17" defer></script>
     <script src="js/breathing-waves.js" defer></script>
+    <script src="/auth-client/heartbeat.js" defer></script>
 
     <link rel="stylesheet" href="css/theme-core.css">
     <link rel="stylesheet" href="css/theme-poker.css">
@@ -32,9 +33,9 @@
         <div class="entry-shell">
         <section class="entry-card" aria-labelledby="entry-title">
             <div class="entry-form">
-                <label class="field" for="access-key-input">
-                    <span>Access key</span>
-                    <input type="text" id="access-key-input" placeholder="Team key" autocomplete="off" required>
+                <label class="field" id="team-field" for="team-select">
+                    <span>Team</span>
+                    <select id="team-select"></select>
                 </label>
 
                 <label class="field" id="room-field" for="room-input">
@@ -53,7 +54,6 @@
                         <option value="Voter" selected>Voter</option>
                         <option value="Observer">Observer</option>
                         <option value="Facilitator">Facilitator</option>
-                        <option value="Admin">Admin</option>
                     </select>
                 </label>
 
@@ -98,7 +98,6 @@
                 <p class="eyebrow">Estimation room</p>
                 <h1 class="header-title">Scrum Poker Room</h1>
                 <p id="room-display" class="header-subtitle room-display"></p>
-                <a id="admin-room-link" href="/admin" class="room-admin-link hidden">Team access</a>
             </div>
         </header>
 

@@ -4,7 +4,7 @@
  const loginSection = document.getElementById('login-section');
  const roomDisplay = document.getElementById('room-display');
  const pokerRoomSection = document.getElementById('poker-room-section');
- const accessKeyInput = document.getElementById('access-key-input');
+ const teamSelect = document.getElementById('team-select');
  const nameInput = document.getElementById('name-input');
  const roomInput = document.getElementById('room-input');
  const roleSelect = document.getElementById('role-select');
@@ -24,7 +24,6 @@
  const voteSummary = document.getElementById('vote-summary');
  const averageVoteSpan = document.getElementById('average-vote');
  const roundStatus = document.getElementById('round-status');
- const adminRoomLink = document.getElementById('admin-room-link');
  const inviteMenuButton = document.getElementById('invite-menu-button');
  const inviteMenu = document.getElementById('invite-menu');
  const copyVoterInviteButton = document.getElementById('copy-voter-invite-button');
@@ -56,10 +55,7 @@
      getCards: () => votingCardsContainer.querySelectorAll('.vote-card .card-inner')
  });
  const ROOM_SESSION_STORAGE = 'scrumPokerRoomSession';
- const ROOM_RETURN_STORAGE = 'scrumPokerReturnToRoom';
  const ROOM_RECONNECT_STORAGE = 'scrumPokerReconnectToRoom';
- // Shared with admin.js, which reads this key to unlock /admin automatically.
- const ADMIN_KEY_STORAGE = 'scrumPokerAdminKey';
  // --- Application State (Managed primarily by server now) ---
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
@@ -76,6 +72,7 @@
 
  // --- WebSocket Setup ---
  let ws = null;
+ let everOpened = false;
 
 // Dynamically determine WebSocket URL from the current page origin.
 
@@ -84,12 +81,6 @@ const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
 const WEBSOCKET_URL = `${protocol}//${loc.host}/ws`;
 
 
-// Admin is a login role, not a room role: signing in as Admin routes to /admin
-// instead of joining a room over the WebSocket.
-function isAdminLoginMode() {
-    return roleSelect.value === 'Admin';
-}
-
 const LOGIN_BUTTON_SUFFIX = {
     connecting: ' (Connecting...)',
     connected: '',
@@ -97,11 +88,8 @@ const LOGIN_BUTTON_SUFFIX = {
     disconnected: ' (Disconnected)'
 };
 
-// The login button label depends on both the connection state and the
-// selected role, so both inputs funnel through here.
 function refreshLoginButton() {
-    const verb = isAdminLoginMode() ? 'Unlock admin' : 'Enter Room';
-    loginButton.textContent = `${verb}${LOGIN_BUTTON_SUFFIX[connectionState] || ''}`;
+    loginButton.textContent = `Enter Room${LOGIN_BUTTON_SUFFIX[connectionState] || ''}`;
     loginButton.disabled = connectionState !== 'connected';
 }
 
@@ -110,52 +98,6 @@ function setConnectionState(state) {
     refreshLoginButton();
 }
 
-// Admin sign-in only needs the key; room and name do not apply.
-function applyRoleMode() {
-    const adminMode = isAdminLoginMode();
-    nameField.classList.toggle('hidden', adminMode);
-    roomField.classList.toggle('hidden', adminMode);
-    accessKeyInput.placeholder = adminMode ? 'Admin key' : 'Team key';
-    refreshLoginButton();
-}
-
-async function handleAdminLogin() {
-    const key = accessKeyInput.value.trim();
-    if (!key) {
-        showLoginError('Please enter the admin key.');
-        return;
-    }
-
-    hideLoginError();
-    loginButton.disabled = true;
-    loginButton.textContent = 'Checking key...';
-
-    try {
-        const response = await fetch('/api/admin/session', {
-            headers: { Accept: 'application/json', 'x-scrum-poker-admin-key': key }
-        });
-
-        if (!response.ok) {
-            let message = 'Admin key not recognised.';
-            try {
-                const body = await response.json();
-                if (body && body.error) message = body.error;
-            } catch (_err) {
-                // Keep the default message if the body is not JSON.
-            }
-            showLoginError(message);
-            refreshLoginButton();
-            return;
-        }
-
-        // admin.js reads this on load and unlocks /admin without a second prompt.
-        sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
-        window.location.assign('/admin');
-    } catch (_err) {
-        showLoginError('Unable to reach the server. Please try again.');
-        refreshLoginButton();
-    }
-}
 
  function connectWebSocket() {
      updateConnectionStatus('connecting', 'Connecting...');
@@ -165,12 +107,12 @@ async function handleAdminLogin() {
      ws = new WebSocket(WEBSOCKET_URL);
 
      ws.onopen = () => {
+         everOpened = true;
          updateConnectionStatus('connected', 'Connected');
          setConnectionState('connected');
 
          showLogin(); // Show login screen for first time connection
          if (restoreDisconnectedRoomSession()) return;
-         restoreStoredRoomSession();
      };
 
      ws.onmessage = (event) => {
@@ -191,6 +133,12 @@ async function handleAdminLogin() {
      };
 
      ws.onclose = (event) => {
+         if (!everOpened) {
+             showLoginError('Your session expired — re-launch poker from the hub.');
+             setTimeout(() => window.location.reload(), 1500);
+             return;
+         }
+         everOpened = false;
          markRoomReconnectIntent();
          updateConnectionStatus('disconnected', 'Disconnected');
          setConnectionState('disconnected');
@@ -331,6 +279,7 @@ function showVoteError(message) {
                  }
                  pendingLoginContext = null;
                  pendingLoginSource = '';
+                 refreshLoginButton();
              }
              if (isRoomVisible()) {
                  if (isEndSessionModalOpen()) {
@@ -371,7 +320,6 @@ function getValidRole(value) {
 
 function clearRoomSession() {
     sessionStorage.removeItem(ROOM_SESSION_STORAGE);
-    sessionStorage.removeItem(ROOM_RETURN_STORAGE);
     sessionStorage.removeItem(ROOM_RECONNECT_STORAGE);
 }
 
@@ -380,7 +328,7 @@ function getStoredRoomSession() {
         const stored = JSON.parse(sessionStorage.getItem(ROOM_SESSION_STORAGE) || 'null');
         if (
             stored &&
-            typeof stored.accessKey === 'string' &&
+            typeof stored.teamId === 'string' &&
             typeof stored.room === 'string' &&
             typeof stored.name === 'string' &&
             getValidRole(stored.role)
@@ -397,7 +345,7 @@ function getStoredRoomSession() {
 
 function saveRoomSession(session) {
     sessionStorage.setItem(ROOM_SESSION_STORAGE, JSON.stringify({
-        accessKey: session.accessKey,
+        teamId: session.teamId,
         room: session.room,
         name: session.name,
         role: session.role
@@ -418,10 +366,10 @@ function persistRoomSession() {
 }
 
 function fillLoginFromStoredSession(storedSession) {
-    accessKeyInput.value = storedSession.accessKey;
     roomInput.value = storedSession.room;
     nameInput.value = storedSession.name;
     roleSelect.value = storedSession.role;
+    if (storedSession.teamId) teamSelect.value = storedSession.teamId;
     currentRoom = storedSession.room;
 }
 
@@ -445,25 +393,6 @@ function restoreDisconnectedRoomSession() {
     return true;
 }
 
-function restoreStoredRoomSession() {
-    if (!allowStoredRoomRestore || attemptedStoredRoomRestore) return;
-    if (sessionStorage.getItem(ROOM_RETURN_STORAGE) !== '1') return;
-
-    const storedSession = getStoredRoomSession();
-    if (!storedSession) return;
-
-    attemptedStoredRoomRestore = true;
-    sessionStorage.removeItem(ROOM_RETURN_STORAGE);
-    sendStoredLogin(storedSession, 'stored');
-}
-
-function markRoomReturnFromAdmin() {
-    if (currentUser?.role !== 'Facilitator') return;
-
-    persistRoomSession();
-    sessionStorage.setItem(ROOM_RETURN_STORAGE, '1');
-}
-
 function markRoomReconnectIntent() {
     if (!currentUser || !currentRoom) return;
 
@@ -474,26 +403,45 @@ function markRoomReconnectIntent() {
 }
 
 
+ // --- Team Loader ---
+ async function loadTeams() {
+     try {
+         const res = await fetch('/api/me', { credentials: 'same-origin' });
+         if (!res.ok) { window.location.reload(); return; }
+         const { teams = [] } = await res.json();
+         teamSelect.innerHTML = '';
+         for (const t of teams) {
+             const opt = document.createElement('option');
+             opt.value = t.id;
+             opt.textContent = t.name;
+             teamSelect.appendChild(opt);
+         }
+         const teamField = document.getElementById('team-field');
+         if (teams.length === 1) {
+             teamField.classList.add('hidden');
+         } else if (teams.length === 0) {
+             teamField.classList.add('hidden');
+             showLoginError("You're not on a team yet — ask your admin to add you.");
+         }
+     } catch {
+         showLoginError('Could not load your teams. Re-launch poker from the hub.');
+     }
+ }
+
  // --- Initialization ---
  function init() {
      const appliedInvitePrefill = applyInvitePrefill();
      allowStoredRoomRestore = !appliedInvitePrefill;
      setupEventListeners();
-     applyRoleMode(); // Reflect the initial (or invite-prefilled) role selection
      connectWebSocket(); // Start WebSocket connection attempt
+     loadTeams();        // Populate team dropdown from hub
  }
 
  function applyInvitePrefill() {
      const params = new URLSearchParams(window.location.search);
-     const invitedAccessKey = params.get('accessKey') || params.get('key');
      const invitedRoom = params.get('room');
      const invitedRole = params.get('role');
      let appliedPrefill = false;
-
-     if (invitedAccessKey) {
-         accessKeyInput.value = invitedAccessKey;
-         appliedPrefill = true;
-     }
 
      if (invitedRoom) {
          roomInput.value = invitedRoom;
@@ -518,15 +466,13 @@ function markRoomReconnectIntent() {
      nameInput.addEventListener('keypress', (e) => {
          if (e.key === 'Enter' && !loginButton.disabled) handleLogin();
      });
-     accessKeyInput.addEventListener('keypress', (e) => {
+     roomInput.addEventListener('keypress', (e) => {
          if (e.key === 'Enter' && !loginButton.disabled) handleLogin();
      });
-     roleSelect.addEventListener('change', applyRoleMode);
      showVotesButton.addEventListener('click', handleShowVotes);
      startNextRoundButton.addEventListener('click', handleStartNextRound);
      resetVotesButton.addEventListener('click', handleResetVotes);
 
-     adminRoomLink.addEventListener('click', markRoomReturnFromAdmin);
      inviteMenuButton.addEventListener('click', toggleInviteMenu);
      copyVoterInviteButton.addEventListener('click', handleCopyRoomInvite);
      copyObserverInviteButton.addEventListener('click', handleCopyRoomInvite);
@@ -694,7 +640,6 @@ function markRoomReconnectIntent() {
     // Show/Hide Facilitator Controls & Enable/Disable buttons
     if (currentUser.role === 'Facilitator') {
         facilitatorControls.classList.remove('hidden');
-        adminRoomLink.classList.remove('hidden');
         inviteMenuButton.classList.remove('hidden');
         showVotesButton.disabled = votesRevealed; // Disable if already revealed
         startNextRoundButton.classList.toggle('hidden', !votesRevealed);
@@ -703,7 +648,6 @@ function markRoomReconnectIntent() {
         endSessionButton.classList.remove('hidden');
     } else {
         facilitatorControls.classList.add('hidden');
-        adminRoomLink.classList.add('hidden');
         inviteMenuButton.classList.add('hidden');
         closeInviteMenu();
         startNextRoundButton.classList.add('hidden');
@@ -922,12 +866,10 @@ function renderVotingCards() {
  // --- Event Handlers (Send messages to server) ---
  function createRoomInviteUrl(role) {
   const storedSession = getStoredRoomSession();
-  const accessKey = storedSession?.accessKey;
   const room = currentRoom || storedSession?.room;
-  if (!accessKey || !room) return '';
+  if (!room) return '';
 
   const inviteUrl = new URL('/', window.location.origin);
-  inviteUrl.searchParams.set('accessKey', accessKey);
   inviteUrl.searchParams.set('room', room);
   inviteUrl.searchParams.set('role', role);
   return inviteUrl.toString();
@@ -961,29 +903,25 @@ function renderVotingCards() {
  }
 
  function handleLogin() {
-  if (isAdminLoginMode()) {
-    handleAdminLogin();
-    return;
-  }
-
-  const key = accessKeyInput.value.trim();
+  const teamId = teamSelect.value;
   const name = nameInput.value.trim();
   const role = roleSelect.value;
   const room = roomInput.value.trim();
 
-  if (key && name && role && room) {
+  if (!teamId) {
+    showLoginError('Select a team to join.');
+    return;
+  }
+
+  if (name && role && room) {
     hideLoginError();
+    loginButton.disabled = true;
     currentRoom = room;
-    pendingLoginContext = { accessKey: key, name, role, room };
+    pendingLoginContext = { teamId, name, role, room };
     pendingLoginSource = 'manual';
-    sendMessage('login', {
-      accessKey: key,
-      name: name,
-      role: role,
-      room: room
-    });
+    sendMessage('login', { name, role, room, teamId });
   } else {
-    showLoginError('Please enter your key, room name, name, and role.');
+    showLoginError('Please enter your room name and name.');
   }
 }
 
@@ -1062,15 +1000,13 @@ function renderVotingCards() {
      // Clear state and session
      resetRoomState();
 
-
      // Send logout to server
      if (ws && ws.readyState === WebSocket.OPEN) {
          sendMessage('logout', {});
      }
 
-     // Return to login screen
-     showLogin();
-     updateConnectionStatus('connected', 'Connected');
+     // Navigate to hub logout
+     window.location.assign('/auth/logout');
  }
 
  // --- Calculations (Uses local state derived from server) ---
