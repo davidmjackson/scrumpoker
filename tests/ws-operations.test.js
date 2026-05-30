@@ -6,9 +6,15 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const WebSocket = require('ws');
+const { createSessionsStore } = require('@suite/auth-client/lib/sessions-db');
 
 const repoRoot = path.resolve(__dirname, '..');
-const testAccessKey = 'test-access-key';
+
+// Stable test session used to authenticate WS upgrades.
+const TEST_SESSION_ID = 'test-session-token';
+const TEST_USER_ID = 'test-user-id';
+const TEST_TEAM = { id: 't1', name: 'Alpha', role: 'lead' };
+const SESSION_COOKIE = `poker_session=${TEST_SESSION_ID}`;
 
 function getFreePort() {
   return new Promise((resolve, reject) => {
@@ -59,11 +65,20 @@ async function stopProcess(child) {
   });
 }
 
-async function startServer(t, options = {}) {
+async function startServer(t) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scrumpoker-test-'));
-  const keysFile = path.join(tempDir, 'keys.json');
-  const activityFile = path.join(tempDir, 'admin-activity.jsonl');
-  fs.writeFileSync(keysFile, JSON.stringify({ baseline: testAccessKey }), 'utf8');
+  const dbPath = path.join(tempDir, 'poker-sessions.db');
+
+  // Pre-seed the sessions DB so the test session cookie is valid on first request.
+  const store = createSessionsStore(dbPath);
+  store.create({
+    id: TEST_SESSION_ID,
+    userId: TEST_USER_ID,
+    centralSessionId: 'central-test',
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+    entitled: true,
+    teams: [TEST_TEAM]
+  });
 
   const port = await getFreePort();
   const child = spawn(process.execPath, ['server.js'], {
@@ -72,9 +87,9 @@ async function startServer(t, options = {}) {
       ...process.env,
       NODE_ENV: 'test',
       PORT: String(port),
-      SCRUM_POKER_KEYS_FILE: keysFile,
-      SCRUM_POKER_ACTIVITY_FILE: activityFile,
-      ...(options.adminKey ? { SCRUM_POKER_ADMIN_KEY: options.adminKey } : {})
+      HUB_BASE_URL: 'https://hub.test',
+      HUB_API_KEY: 'test-hub-key',
+      APP_SESSIONS_DB: dbPath
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -93,7 +108,7 @@ async function startServer(t, options = {}) {
   });
 
   await waitForHealth(port, () => output);
-  return { activityFile, keysFile, port };
+  return { port };
 }
 
 function waitForMessage(ws, predicate, timeoutMs = 3000) {
@@ -143,7 +158,9 @@ function waitForMessage(ws, predicate, timeoutMs = 3000) {
 }
 
 async function connectClient(t, port) {
-  const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`, {
+    headers: { cookie: SESSION_COOKIE }
+  });
   t.after(() => {
     if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
       ws.close();
@@ -184,7 +201,7 @@ async function login(client, payload) {
   );
 
   send(client.ws, 'login', {
-    accessKey: testAccessKey,
+    teamId: TEST_TEAM.id,
     ...payload
   });
 
@@ -204,158 +221,51 @@ test('health endpoint reports a running app', async (t) => {
   assert.equal(body.rooms, 0);
 });
 
-test('admin page is served without exposing key data', async (t) => {
+test('admin routes are removed (404)', async (t) => {
   const { port } = await startServer(t);
-  const response = await fetch(`http://127.0.0.1:${port}/admin`);
-  const body = await response.text();
+  const keysRes = await fetch(`http://127.0.0.1:${port}/api/admin/keys`);
+  assert.equal(keysRes.status, 404);
 
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get('content-security-policy'), /default-src 'self'/);
-  assert.match(body, /Team access/);
-  assert.doesNotMatch(body, /test-access-key/);
+  const sessionRes = await fetch(`http://127.0.0.1:${port}/api/admin/session`);
+  assert.equal(sessionRes.status, 404);
 });
 
-test('admin key API requires configured admin authentication', async (t) => {
+test('unauthenticated WebSocket upgrade is rejected with 401', async (t) => {
   const { port } = await startServer(t);
-  const response = await fetch(`http://127.0.0.1:${port}/api/admin/keys`);
-  const body = await response.json();
 
-  assert.equal(response.status, 503);
-  assert.equal(body.error, 'Admin key management is not configured.');
-});
+  await new Promise((resolve, reject) => {
+    // No cookie header — server must reject the upgrade with 401.
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+    let assertionRan = false;
 
-test('admin session endpoint validates the admin key', async (t) => {
-  const adminKey = 'admin-session-secret';
-  const { port } = await startServer(t, { adminKey });
-  const url = `http://127.0.0.1:${port}/api/admin/session`;
+    const timer = setTimeout(() => {
+      ws.terminate();
+      reject(new Error('no upgrade response within timeout — 401 was never observed'));
+    }, 5000);
 
-  const missing = await fetch(url);
-  assert.equal(missing.status, 401);
+    ws.once('unexpected-response', (_req, res) => {
+      clearTimeout(timer);
+      assertionRan = true;
+      assert.equal(res.statusCode, 401);
+      ws.terminate();
+      resolve();
+    });
 
-  const wrong = await fetch(url, { headers: { 'x-scrum-poker-admin-key': 'nope' } });
-  assert.equal(wrong.status, 401);
+    ws.once('open', () => {
+      clearTimeout(timer);
+      ws.close();
+      reject(new Error('upgrade unexpectedly succeeded — expected 401 rejection'));
+    });
 
-  const ok = await fetch(url, { headers: { 'x-scrum-poker-admin-key': adminKey } });
-  const okBody = await ok.json();
-  assert.equal(ok.status, 200);
-  assert.equal(okBody.ok, true);
-});
-
-test('admin session endpoint reports unconfigured admin auth', async (t) => {
-  const { port } = await startServer(t);
-  const response = await fetch(`http://127.0.0.1:${port}/api/admin/session`);
-
-  assert.equal(response.status, 503);
-});
-
-test('admin key API lists, creates, and removes access keys', async (t) => {
-  const adminKey = 'admin-test-secret';
-  const { port } = await startServer(t, { adminKey });
-  const baseUrl = `http://127.0.0.1:${port}/api/admin/keys`;
-
-  const unauthorized = await fetch(baseUrl);
-  assert.equal(unauthorized.status, 401);
-
-  const headers = {
-    'content-type': 'application/json',
-    'x-scrum-poker-admin-key': adminKey
-  };
-
-  const initial = await fetch(baseUrl, { headers });
-  const initialBody = await initial.json();
-
-  assert.equal(initial.status, 200);
-  assert.deepEqual(initialBody.keys, [
-    { name: 'baseline', active: true, createdAt: null, weak: false }
-  ]);
-
-  const initialActivity = await fetch(`http://127.0.0.1:${port}/api/admin/activity`, { headers });
-  const initialActivityBody = await initialActivity.json();
-  assert.equal(initialActivity.status, 200);
-  assert.deepEqual(initialActivityBody.activity, []);
-
-  const created = await fetch(baseUrl, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ name: 'Gamma Team' })
+    ws.once('error', (err) => {
+      // A raw socket error before any HTTP response means we never saw the 401.
+      // Only treat it as a pass if the assertion already ran via unexpected-response.
+      if (!assertionRan) {
+        clearTimeout(timer);
+        reject(new Error(`socket error before 401 response was observed: ${err.message}`));
+      }
+    });
   });
-  const createdBody = await created.json();
-
-  assert.equal(created.status, 201);
-  assert.equal(createdBody.key.name, 'Gamma Team');
-  assert.equal(createdBody.key.active, true);
-  assert.match(createdBody.key.value, /^[A-Za-z0-9]{12}$/);
-
-  const afterCreate = await fetch(baseUrl, { headers });
-  const afterCreateBody = await afterCreate.json();
-  assert.equal(afterCreateBody.keys.length, 2);
-
-  const suspended = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify({ active: false })
-  });
-  const suspendedBody = await suspended.json();
-
-  assert.equal(suspended.status, 200);
-  assert.equal(suspendedBody.key.name, 'Gamma Team');
-  assert.equal(suspendedBody.key.active, false);
-
-  const restored = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify({ active: true })
-  });
-  const restoredBody = await restored.json();
-
-  assert.equal(restored.status, 200);
-  assert.equal(restoredBody.key.name, 'Gamma Team');
-  assert.equal(restoredBody.key.active, true);
-
-  const rotated = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}/rotate`, {
-    method: 'POST',
-    headers
-  });
-  const rotatedBody = await rotated.json();
-
-  assert.equal(rotated.status, 200);
-  assert.equal(rotatedBody.key.name, 'Gamma Team');
-  assert.equal(rotatedBody.key.active, true);
-  assert.match(rotatedBody.key.value, /^[A-Za-z0-9]{12}$/);
-  assert.notEqual(rotatedBody.key.value, createdBody.key.value);
-
-  const afterRotate = await fetch(baseUrl, { headers });
-  const afterRotateBody = await afterRotate.json();
-  assert.equal(afterRotateBody.keys.some((key) => key.name === 'Gamma Team'), true);
-
-  const removed = await fetch(`${baseUrl}/${encodeURIComponent('Gamma Team')}`, {
-    method: 'DELETE',
-    headers
-  });
-  const removedBody = await removed.json();
-
-  assert.equal(removed.status, 200);
-  assert.equal(removedBody.removed.name, 'Gamma Team');
-  assert.equal(removedBody.removed.active, true);
-
-  const afterRemove = await fetch(baseUrl, { headers });
-  const afterRemoveBody = await afterRemove.json();
-  assert.deepEqual(afterRemoveBody.keys, [
-    { name: 'baseline', active: true, createdAt: null, weak: false }
-  ]);
-
-  const activity = await fetch(`http://127.0.0.1:${port}/api/admin/activity`, { headers });
-  const activityBody = await activity.json();
-
-  assert.equal(activity.status, 200);
-  assert.deepEqual(
-    activityBody.activity.map((event) => event.action),
-    ['removed', 'rotated', 'restored', 'suspended', 'created']
-  );
-  assert.equal(activityBody.activity.every((event) => event.teamName === 'Gamma Team'), true);
-  assert.equal(activityBody.activity.every((event) => event.keyFingerprint.length === 12), true);
-  assert.doesNotMatch(JSON.stringify(activityBody), new RegExp(createdBody.key.value));
-  assert.doesNotMatch(JSON.stringify(activityBody), new RegExp(rotatedBody.key.value));
 });
 
 test('WebSocket workflow covers login, voting, reveal, reset, and role limits', async (t) => {
@@ -530,39 +440,16 @@ test('facilitator can end a room session for every participant', async (t) => {
   await loggedOutError;
 });
 
-test('invalid access keys are rejected', async (t) => {
+test('login is rejected when teamId is not in the session teams', async (t) => {
   const { port } = await startServer(t);
   const client = await connectClient(t, port);
 
   const errorPromise = waitForMessage(
     client.ws,
-    (message) => message.type === 'error' && message.payload?.message === 'Invalid access key.'
+    (message) => message.type === 'error' && message.payload?.message === "You're not a member of that team."
   );
   send(client.ws, 'login', {
-    accessKey: 'not-valid',
-    name: 'Mallory',
-    role: 'Voter',
-    room: 'baseline'
-  });
-
-  await errorPromise;
-});
-
-test('suspended access keys are rejected', async (t) => {
-  const { keysFile, port } = await startServer(t);
-  fs.writeFileSync(
-    keysFile,
-    JSON.stringify({ baseline: { value: testAccessKey, active: false } }),
-    'utf8'
-  );
-  const client = await connectClient(t, port);
-
-  const errorPromise = waitForMessage(
-    client.ws,
-    (message) => message.type === 'error' && message.payload?.message === 'Invalid access key.'
-  );
-  send(client.ws, 'login', {
-    accessKey: testAccessKey,
+    teamId: 'wrong-team',
     name: 'Mallory',
     role: 'Voter',
     room: 'baseline'
