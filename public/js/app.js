@@ -3,6 +3,7 @@
  // --- DOM Elements --- ****
  const loginSection = document.getElementById('login-section');
  const roomDisplay = document.getElementById('room-display');
+ const roomOrg = document.getElementById('room-org');
  const pokerRoomSection = document.getElementById('poker-room-section');
  const teamSelect = document.getElementById('team-select');
  const nameInput = document.getElementById('name-input');
@@ -57,6 +58,8 @@
  const ROOM_SESSION_STORAGE = 'scrumPokerRoomSession';
  const ROOM_RECONNECT_STORAGE = 'scrumPokerReconnectToRoom';
  // --- Application State (Managed primarily by server now) ---
+ let userTeams = []; // Teams fetched from /api/me — kept module-scoped for room-header lookup
+ let currentTeamId = null; // Team ID used when joining the current room
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
  let participants = []; // Array of user objects received from server
@@ -371,6 +374,7 @@ function fillLoginFromStoredSession(storedSession) {
     roleSelect.value = storedSession.role;
     if (storedSession.teamId) teamSelect.value = storedSession.teamId;
     currentRoom = storedSession.room;
+    currentTeamId = storedSession.teamId || null;
 }
 
 function sendStoredLogin(storedSession, source) {
@@ -409,6 +413,8 @@ function markRoomReconnectIntent() {
          const res = await fetch('/api/me', { credentials: 'same-origin' });
          if (!res.ok) { window.location.reload(); return; }
          const { teams = [] } = await res.json();
+         userTeams = teams;
+         if (currentTeamId && isRoomVisible()) updateUI();
          teamSelect.innerHTML = '';
          for (const t of teams) {
              const opt = document.createElement('option');
@@ -625,6 +631,8 @@ function markRoomReconnectIntent() {
 
      // ─── 8.3.1) Show current room at the top of the poker room UI
   roomDisplay.textContent = currentRoom ? `Room: ${currentRoom}` : '';
+  const joinedTeam = userTeams.find((t) => t.id === currentTeamId);
+  roomOrg.textContent = joinedTeam && joinedTeam.company ? `${joinedTeam.company} : ${joinedTeam.name}` : '';
 
     // Update greeting
     userGreeting.textContent = `Hello, ${currentUser.name} (${currentUser.role})`;
@@ -917,6 +925,7 @@ function renderVotingCards() {
     hideLoginError();
     loginButton.disabled = true;
     currentRoom = room;
+    currentTeamId = teamId;
     pendingLoginContext = { teamId, name, role, room };
     pendingLoginSource = 'manual';
     sendMessage('login', { name, role, room, teamId });
@@ -978,6 +987,7 @@ function renderVotingCards() {
      votesRevealed = false;
      facilitatorId = null;
      currentRoom = null;
+     currentTeamId = null;
      pendingLoginContext = null;
      pendingLoginSource = '';
 

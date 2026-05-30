@@ -20,6 +20,7 @@ test('authed user picks a team, joins a room, votes, reveals', async ({ page, co
 
   await expect(page.locator('#poker-room-section')).toBeVisible();
   await expect(page.locator('#room-display')).toHaveText('Room: planning');
+  await expect(page.locator('#room-org')).toHaveText('Acme Co : Alpha');
   await expect(page.locator('#user-greeting')).toHaveText('Hello, Alice (Facilitator)');
   await expect(page.locator('#participants-list')).toContainText('Alice (You)');
 
