@@ -9,3 +9,4 @@ keys.json
 admin-activity.jsonl
 .worktrees/
 .superpowers/
+tests/e2e/.data/
