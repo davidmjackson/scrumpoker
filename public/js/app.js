@@ -210,6 +210,7 @@ function showVoteError(message) {
                  votesRevealed = payload.votesRevealed || false;
                  facilitatorId = payload.facilitatorId || null;
                  currentShareToken = payload.shareToken || null;
+                 pokerRoomSection.dataset.shareToken = currentShareToken || '';
 
                  // Find the current user in the updated participant list
                 const myTempId    = sessionStorage.getItem('scrumPokerUserId_temp');
