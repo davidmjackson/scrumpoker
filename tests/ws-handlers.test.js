@@ -49,6 +49,7 @@ function participant(id, roomName, overrides = {}) {
     role: ROLES.VOTER,
     vote: null,
     roomName,
+    authed: true,
     ...overrides
   };
 }
@@ -234,8 +235,8 @@ test('handleChangeRole enforces facilitator-only changes to other users', (t) =>
   const room = joinRoom(harness.rooms, roomName, 'alice', 100);
   joinRoom(harness.rooms, roomName, 'bob', 100);
   room.facilitatorId = 'alice';
-  harness.participants.alice = participant('alice', roomName, { role: ROLES.FACILITATOR });
-  harness.participants.bob = participant('bob', roomName);
+  harness.participants.alice = participant('alice', roomName, { role: ROLES.FACILITATOR, authed: true });
+  harness.participants.bob = participant('bob', roomName, { authed: true });
 
   handleChangeRole({
     ...harness,
@@ -420,4 +421,26 @@ test('anonymous login to a missing room errors (closed/invalid link)', (t) => {
   handleLogin({ ws, userId: 'd', payload: { name: 'D' }, rooms: harness.rooms, participants: harness.participants, sendToClient: harness.sendToClient, sendRoomState: harness.sendRoomState });
   assert.equal(harness.participants.d, undefined);
   assert.match(harness.clientMessages.at(-1).message.payload.message, /closed|invalid/i);
+});
+
+test('changeRole cannot promote an anonymous participant to Facilitator', (t) => {
+  const harness = createHarness(t);
+  harness.rooms.set('co1-r', { users: new Set(['fac', 'anon']), lastActive: Date.now(), votesRevealed: false, facilitatorId: 'fac', shareToken: 'tok' });
+  harness.participants.fac = { id: 'fac', ws: { userId: 'fac' }, name: 'Fac', role: ROLES.FACILITATOR, vote: null, roomName: 'co1-r', authed: true };
+  harness.participants.anon = { id: 'anon', ws: { userId: 'anon' }, name: 'Anon', role: ROLES.VOTER, vote: null, roomName: 'co1-r', authed: false };
+  handleChangeRole({ ws: harness.participants.fac.ws, currentUser: harness.participants.fac, payload: { targetUserId: 'anon', newRole: ROLES.FACILITATOR }, participants: harness.participants, rooms: harness.rooms, sendToClient: harness.sendToClient, sendRoomState: harness.sendRoomState });
+  assert.equal(harness.participants.anon.role, ROLES.VOTER);
+  assert.equal(harness.rooms.get('co1-r').facilitatorId, 'fac');
+  assert.match(harness.clientMessages.at(-1).message.payload.message, /facilitator/i);
+});
+
+test('changeRole step-down will not hand facilitation to an anonymous member', (t) => {
+  const harness = createHarness(t);
+  harness.rooms.set('co1-r', { users: new Set(['fac', 'anon']), lastActive: Date.now(), votesRevealed: false, facilitatorId: 'fac', shareToken: 'tok' });
+  harness.participants.fac = { id: 'fac', ws: { userId: 'fac' }, name: 'Fac', role: ROLES.FACILITATOR, vote: null, roomName: 'co1-r', authed: true };
+  harness.participants.anon = { id: 'anon', ws: { userId: 'anon' }, name: 'Anon', role: ROLES.VOTER, vote: null, roomName: 'co1-r', authed: false };
+  handleChangeRole({ ws: harness.participants.fac.ws, currentUser: harness.participants.fac, payload: { targetUserId: 'fac', newRole: ROLES.VOTER }, participants: harness.participants, rooms: harness.rooms, sendToClient: harness.sendToClient, sendRoomState: harness.sendRoomState });
+  assert.equal(harness.participants.anon.role, ROLES.VOTER);
+  assert.equal(harness.rooms.get('co1-r').facilitatorId, 'fac');
+  assert.match(harness.clientMessages.at(-1).message.payload.message, /assign another facilitator/i);
 });
