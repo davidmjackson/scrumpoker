@@ -141,7 +141,8 @@ test('getRoomState projects room reveal and facilitator state', () => {
     alice: participant('alice', 'alpha', { role: 'Facilitator', vote: '8' })
   };
 
-  assert.deepEqual(getRoomState(rooms, participants, 'alpha'), {
+  const state = getRoomState(rooms, participants, 'alpha');
+  assert.deepEqual(state, {
     type: 'updateState',
     payload: {
       participants: [
@@ -154,7 +155,8 @@ test('getRoomState projects room reveal and facilitator state', () => {
         }
       ],
       votesRevealed: true,
-      facilitatorId: 'alice'
+      facilitatorId: 'alice',
+      shareToken: rooms.get('alpha').shareToken
     }
   });
 });
@@ -204,6 +206,23 @@ test("a created room has a non-empty hex shareToken and is findable by it", () =
   assert.equal(findRoomByToken(rooms, room.shareToken), "co1-planning");
   assert.equal(findRoomByToken(rooms, "nope"), null);
   assert.equal(findRoomByToken(rooms, ""), null);
+});
+
+test('getRoomState includes the room shareToken', () => {
+  const { joinRoom, getRoomState } = require('../lib/roomState');
+  const rooms = new Map();
+  joinRoom(rooms, 'co1-r', 'u1');
+  const state = getRoomState(rooms, {}, 'co1-r');
+  assert.match(state.payload.shareToken, /^[0-9a-f]{32}$/);
+});
+
+test('getRoomParticipants does not leak the internal authed flag', () => {
+  const { getRoomParticipants } = require('../lib/roomState');
+  const participants = { u1: { id: 'u1', ws: {}, name: 'U', role: 'Voter', vote: null, roomName: 'co1-r', authed: true } };
+  const out = getRoomParticipants(participants, 'co1-r');
+  assert.equal(out.length, 1);
+  assert.equal(out[0].authed, undefined);
+  assert.equal(out[0].name, 'U');
 });
 
 test('assignFacilitator skips anonymous participants', () => {
