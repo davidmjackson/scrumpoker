@@ -33,11 +33,6 @@
         <div class="entry-shell">
         <section class="entry-card" aria-labelledby="entry-title">
             <div class="entry-form">
-                <label class="field" id="team-field" for="team-select">
-                    <span>Team</span>
-                    <select id="team-select"></select>
-                </label>
-
                 <label class="field" id="room-field" for="room-input">
                     <span>Room</span>
                     <input type="text" id="room-input" placeholder="Room name" autocomplete="off">
@@ -111,11 +106,8 @@
                         Invite
                     </button>
                     <div id="invite-menu" class="invite-menu hidden">
-                        <button id="copy-voter-invite-button" class="invite-action" type="button" data-invite-role="Voter">
-                            Copy voter invite
-                        </button>
-                        <button id="copy-observer-invite-button" class="invite-action" type="button" data-invite-role="Observer">
-                            Copy observer invite
+                        <button id="copy-invite-link-button" class="invite-action" type="button">
+                            Copy invite link
                         </button>
                     </div>
                 </div>
