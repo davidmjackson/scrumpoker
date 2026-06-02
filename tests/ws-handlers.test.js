@@ -346,8 +346,8 @@ test('handleParticipantExit removes participants and reassigns facilitator', (t)
   const room = joinRoom(harness.rooms, roomName, 'alice', 100);
   joinRoom(harness.rooms, roomName, 'bob', 100);
   room.facilitatorId = 'alice';
-  harness.participants.alice = participant('alice', roomName, { role: ROLES.FACILITATOR });
-  harness.participants.bob = participant('bob', roomName);
+  harness.participants.alice = participant('alice', roomName, { role: ROLES.FACILITATOR, authed: true });
+  harness.participants.bob = participant('bob', roomName, { authed: true });
 
   handleParticipantExit({
     ...harness,

@@ -165,8 +165,8 @@ test('assignFacilitator chooses the first room member when needed', () => {
   joinRoom(rooms, 'alpha', 'bob', 100);
 
   const participants = {
-    alice: participant('alice', 'alpha'),
-    bob: participant('bob', 'alpha')
+    alice: participant('alice', 'alpha', { authed: true }),
+    bob: participant('bob', 'alpha', { authed: true })
   };
 
   const facilitatorId = assignFacilitator(rooms, participants, 'alpha');
@@ -184,8 +184,8 @@ test('reassignFacilitatorIfLeaving promotes the next room member', () => {
   room.facilitatorId = 'alice';
 
   const participants = {
-    alice: participant('alice', 'alpha', { role: 'Facilitator' }),
-    bob: participant('bob', 'alpha')
+    alice: participant('alice', 'alpha', { role: 'Facilitator', authed: true }),
+    bob: participant('bob', 'alpha', { authed: true })
   };
 
   leaveRoom(rooms, 'alpha', 'alice', 200);
@@ -204,4 +204,22 @@ test("a created room has a non-empty hex shareToken and is findable by it", () =
   assert.equal(findRoomByToken(rooms, room.shareToken), "co1-planning");
   assert.equal(findRoomByToken(rooms, "nope"), null);
   assert.equal(findRoomByToken(rooms, ""), null);
+});
+
+test('assignFacilitator skips anonymous participants', () => {
+  const { joinRoom, assignFacilitator } = require('../lib/roomState');
+  const rooms = new Map();
+  joinRoom(rooms, 'co1-r', 'anon1');
+  joinRoom(rooms, 'co1-r', 'auth1');
+  const participants = {
+    anon1: { id: 'anon1', role: 'Voter', roomName: 'co1-r', authed: false },
+    auth1: { id: 'auth1', role: 'Voter', roomName: 'co1-r', authed: true },
+  };
+  const fid = assignFacilitator(rooms, participants, 'co1-r');
+  assert.equal(fid, 'auth1');
+
+  const rooms2 = new Map();
+  joinRoom(rooms2, 'co1-x', 'anonA');
+  const p2 = { anonA: { id: 'anonA', role: 'Voter', roomName: 'co1-x', authed: false } };
+  assert.equal(assignFacilitator(rooms2, p2, 'co1-x'), null);
 });
