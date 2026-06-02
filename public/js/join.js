@@ -12,7 +12,6 @@
     const joinButton = document.getElementById('join-button');
     const joinError = document.getElementById('join-error');
     const connectionStatus = document.getElementById('connection-status');
-    const roomDisplay = document.getElementById('room-display');
     const userGreeting = document.getElementById('user-greeting');
     const votingCardsContainer = document.getElementById('voting-cards');
     const observerMessage = document.getElementById('observer-message');
@@ -92,6 +91,8 @@
         updateConnectionStatus('connecting', 'Connecting...');
         joinButton.disabled = true;
 
+        // Drop any prior socket so its onclose can't fire a second reconnect path.
+        if (ws) { ws.onclose = null; ws.close(); }
         ws = new WebSocket(url);
 
         ws.onopen = () => {
