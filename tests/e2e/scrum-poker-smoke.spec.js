@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { seedSession } = require('./helpers/seed');
 const { injectSession } = require('./helpers/_auth');
 
-test('authed user picks a team, joins a room, votes, reveals', async ({ page, context }) => {
+test('authed user joins a company room, votes, reveals', async ({ page, context }) => {
   seedSession();
   await injectSession(context);
   await page.goto('/');
@@ -10,8 +10,8 @@ test('authed user picks a team, joins a room, votes, reveals', async ({ page, co
   await expect(page.locator('#connection-status')).toHaveText('Connected');
   await expect(page.locator('#login-button')).toBeEnabled();
 
-  // One team option seeded ('Alpha')
-  await expect(page.locator('#team-select option')).toHaveCount(1);
+  // Team picker is gone in the company model.
+  await expect(page.locator('#team-field')).toHaveCount(0);
 
   await page.fill('#room-input', 'planning');
   await page.fill('#name-input', 'Alice');
@@ -20,7 +20,7 @@ test('authed user picks a team, joins a room, votes, reveals', async ({ page, co
 
   await expect(page.locator('#poker-room-section')).toBeVisible();
   await expect(page.locator('#room-display')).toHaveText('Room: planning');
-  await expect(page.locator('#room-org')).toHaveText('Acme Co : Alpha');
+  await expect(page.locator('#room-org')).toHaveText('Acme Co');
   await expect(page.locator('#user-greeting')).toHaveText('Hello, Alice (Facilitator)');
   await expect(page.locator('#participants-list')).toContainText('Alice (You)');
 
