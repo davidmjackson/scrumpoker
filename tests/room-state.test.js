@@ -194,3 +194,14 @@ test('reassignFacilitatorIfLeaving promotes the next room member', () => {
   assert.equal(rooms.get('alpha').facilitatorId, 'bob');
   assert.equal(participants.bob.role, 'Facilitator');
 });
+
+test("a created room has a non-empty hex shareToken and is findable by it", () => {
+  const { joinRoom, findRoomByToken } = require("../lib/roomState");
+  const rooms = new Map();
+  joinRoom(rooms, "co1-planning", "u1");
+  const room = rooms.get("co1-planning");
+  assert.match(room.shareToken, /^[0-9a-f]{32}$/);
+  assert.equal(findRoomByToken(rooms, room.shareToken), "co1-planning");
+  assert.equal(findRoomByToken(rooms, "nope"), null);
+  assert.equal(findRoomByToken(rooms, ""), null);
+});
