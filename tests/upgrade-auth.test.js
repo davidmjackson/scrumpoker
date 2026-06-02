@@ -22,3 +22,9 @@ test('propagates when verifySession throws', async () => {
   const boom = new Error('hub down');
   await assert.rejects(() => authenticateUpgrade(async () => { throw boom; }, 'c'), boom);
 });
+
+test('passes through company in the context', async () => {
+  const ctx = { userId: 'u1', entitled: true, teams: [], company: { id: 'co1', name: 'Acme' } };
+  const r = await authenticateUpgrade(async () => ctx, 'c');
+  assert.deepEqual(r, { ok: true, context: ctx });
+});

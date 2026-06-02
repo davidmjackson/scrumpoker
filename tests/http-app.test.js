@@ -4,13 +4,13 @@ const path = require('node:path');
 const request = require('supertest');
 const { createHttpApp } = require('../lib/httpApp');
 
-function fakeAuth({ entitled = true, teams = [{ id: 't1', name: 'Alpha', role: 'lead' }] } = {}) {
+function fakeAuth({ entitled = true, company = { id: 'co1', name: 'Acme' } } = {}) {
   return {
     staticAssets: (req, res, next) => next(),
     handleLaunch: (req, res) => res.send('launch'),
     handleLogout: (req, res) => res.send('logout'),
     handleHeartbeat: (req, res) => res.json({ ok: true }),
-    requireAuth: (req, res, next) => { req.user = { id: 'u1', entitled, teams }; next(); },
+    requireAuth: (req, res, next) => { req.user = { id: 'u1', entitled, company }; next(); },
     _ctx: { hubBaseUrl: 'https://hub' },
   };
 }
@@ -24,10 +24,10 @@ function build(authOverrides) {
   });
 }
 
-test('/api/me returns the authed user id + teams', async () => {
-  const res = await request(build()).get('/api/me');
+test('/api/me returns the authed user id + company', async () => {
+  const res = await request(build({ company: { id: 'co1', name: 'Acme' } })).get('/api/me');
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body, { userId: 'u1', teams: [{ id: 't1', name: 'Alpha', role: 'lead' }] });
+  assert.deepEqual(res.body, { userId: 'u1', company: { id: 'co1', name: 'Acme' } });
 });
 
 test('GET / bounces to the hub dashboard when not entitled', async () => {

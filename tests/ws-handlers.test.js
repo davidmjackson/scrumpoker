@@ -34,11 +34,11 @@ function createHarness(t) {
 }
 
 function loginPayload(overrides = {}) {
-  return { name: 'Alice', role: ROLES.FACILITATOR, room: 'planning', teamId: 't1', ...overrides };
+  return { name: 'Alice', role: ROLES.FACILITATOR, room: 'planning', ...overrides };
 }
 
-function wsWith(userId, teams = [{ id: 't1', name: 'Alpha', role: 'lead' }]) {
-  return { userId, teams };
+function wsWith(userId, company = { id: 'co1', name: 'Acme' }) {
+  return { userId, authed: true, company, teams: [] };
 }
 
 function participant(id, roomName, overrides = {}) {
@@ -49,31 +49,33 @@ function participant(id, roomName, overrides = {}) {
     role: ROLES.VOTER,
     vote: null,
     roomName,
+    authed: true,
     ...overrides
   };
 }
 
-test('handleLogin rejects missing fields and teamId not in ws.teams', (t) => {
+test('handleLogin rejects missing fields and no-company authed session', (t) => {
   const harness = createHarness(t);
-  const ws = wsWith('alice');
 
+  // Missing name — should error immediately
   handleLogin({
     ...harness,
-    ws,
+    ws: wsWith('alice'),
     userId: 'alice',
     payload: {}
   });
 
+  // Authed but company is null — must error
   handleLogin({
     ...harness,
-    ws,
+    ws: { userId: 'alice', authed: true, company: null, teams: [] },
     userId: 'alice',
-    payload: loginPayload({ teamId: 'not-a-member' })
+    payload: loginPayload()
   });
 
   assert.deepEqual(harness.clientMessages.map(({ message }) => message.payload.message), [
-    'Login requires name, role, room, and team.',
-    "You're not a member of that team."
+    'Login requires a name.',
+    'No company on your session — re-launch poker from the hub.'
   ]);
 });
 
@@ -94,7 +96,7 @@ test('handleLogin creates participants and downgrades duplicate facilitator requ
     payload: loginPayload({ name: 'Bob', role: ROLES.FACILITATOR })
   });
 
-  const roomName = 't1-planning';
+  const roomName = 'co1-planning';
   assert.equal(harness.rooms.get(roomName).facilitatorId, 'alice');
   assert.equal(harness.participants.alice.role, ROLES.FACILITATOR);
   assert.equal(harness.participants.bob.role, ROLES.VOTER);
@@ -233,8 +235,8 @@ test('handleChangeRole enforces facilitator-only changes to other users', (t) =>
   const room = joinRoom(harness.rooms, roomName, 'alice', 100);
   joinRoom(harness.rooms, roomName, 'bob', 100);
   room.facilitatorId = 'alice';
-  harness.participants.alice = participant('alice', roomName, { role: ROLES.FACILITATOR });
-  harness.participants.bob = participant('bob', roomName);
+  harness.participants.alice = participant('alice', roomName, { role: ROLES.FACILITATOR, authed: true });
+  harness.participants.bob = participant('bob', roomName, { authed: true });
 
   handleChangeRole({
     ...harness,
@@ -346,8 +348,8 @@ test('handleParticipantExit removes participants and reassigns facilitator', (t)
   const room = joinRoom(harness.rooms, roomName, 'alice', 100);
   joinRoom(harness.rooms, roomName, 'bob', 100);
   room.facilitatorId = 'alice';
-  harness.participants.alice = participant('alice', roomName, { role: ROLES.FACILITATOR });
-  harness.participants.bob = participant('bob', roomName);
+  harness.participants.alice = participant('alice', roomName, { role: ROLES.FACILITATOR, authed: true });
+  harness.participants.bob = participant('bob', roomName, { authed: true });
 
   handleParticipantExit({
     ...harness,
@@ -360,27 +362,85 @@ test('handleParticipantExit removes participants and reassigns facilitator', (t)
   assert.deepEqual(harness.roomStates, [roomName]);
 });
 
-test('handleLogin joins a room namespaced by teamId when the user is a member', (t) => {
+test('handleLogin joins a room namespaced by company id', (t) => {
   const h = createHarness(t);
   const ws = wsWith('u1');
   handleLogin({ ws, userId: 'u1', payload: loginPayload(), rooms: h.rooms, participants: h.participants, sendToClient: h.sendToClient, sendRoomState: h.sendRoomState });
   assert.ok(h.participants['u1']);
-  assert.equal(h.participants['u1'].roomName, 't1-planning');
-  assert.deepEqual(h.roomStates, ['t1-planning']);
+  assert.equal(h.participants['u1'].roomName, 'co1-planning');
+  assert.deepEqual(h.roomStates, ['co1-planning']);
 });
 
-test('handleLogin rejects a teamId the user is not a member of', (t) => {
+test('handleLogin rejects authed login missing role', (t) => {
   const h = createHarness(t);
   const ws = wsWith('u1');
-  handleLogin({ ws, userId: 'u1', payload: loginPayload({ teamId: 'other' }), rooms: h.rooms, participants: h.participants, sendToClient: h.sendToClient, sendRoomState: h.sendRoomState });
+  handleLogin({ ws, userId: 'u1', payload: loginPayload({ role: undefined }), rooms: h.rooms, participants: h.participants, sendToClient: h.sendToClient, sendRoomState: h.sendRoomState });
   assert.equal(h.participants['u1'], undefined);
-  assert.equal(h.clientMessages.at(-1).message.payload.message, "You're not a member of that team.");
+  assert.equal(h.clientMessages.at(-1).message.payload.message, 'Login requires name, role and room.');
 });
 
-test('handleLogin rejects when teamId is missing', (t) => {
+test('handleLogin rejects authed login with invalid role', (t) => {
   const h = createHarness(t);
   const ws = wsWith('u1');
-  handleLogin({ ws, userId: 'u1', payload: loginPayload({ teamId: undefined }), rooms: h.rooms, participants: h.participants, sendToClient: h.sendToClient, sendRoomState: h.sendRoomState });
+  handleLogin({ ws, userId: 'u1', payload: loginPayload({ role: 'Overlord' }), rooms: h.rooms, participants: h.participants, sendToClient: h.sendToClient, sendRoomState: h.sendRoomState });
   assert.equal(h.participants['u1'], undefined);
-  assert.equal(h.clientMessages.at(-1).message.payload.message, 'Login requires name, role, room, and team.');
+  assert.equal(h.clientMessages.at(-1).message.payload.message, 'Invalid role.');
+});
+
+test('authed login is company-scoped and ignores teamId', (t) => {
+  const harness = createHarness(t);
+  const ws = { userId: 'alice', authed: true, company: { id: 'co1', name: 'Acme' }, teams: [] };
+  handleLogin({ ws, userId: 'alice', payload: { name: 'Alice', role: ROLES.FACILITATOR, room: 'planning' }, rooms: harness.rooms, participants: harness.participants, sendToClient: harness.sendToClient, sendRoomState: harness.sendRoomState });
+  assert.ok(harness.rooms.has('co1-planning'));
+  assert.equal(harness.participants.alice.authed, true);
+  assert.equal(harness.participants.alice.role, ROLES.FACILITATOR);
+});
+
+test('anonymous login forces Voter, ignores requested role/room, binds to ws.anonRoom', (t) => {
+  const harness = createHarness(t);
+  harness.rooms.set('co1-planning', { users: new Set(), lastActive: Date.now(), votesRevealed: false, facilitatorId: null, shareToken: 'tok' });
+  const ws = { userId: 'bob', authed: false, anonRoom: 'co1-planning' };
+  handleLogin({ ws, userId: 'bob', payload: { name: 'Bob', role: ROLES.FACILITATOR, room: 'evil-room' }, rooms: harness.rooms, participants: harness.participants, sendToClient: harness.sendToClient, sendRoomState: harness.sendRoomState });
+  assert.equal(harness.participants.bob.roomName, 'co1-planning');
+  assert.equal(harness.participants.bob.role, ROLES.VOTER);
+  assert.equal(harness.participants.bob.authed, false);
+  assert.notEqual(harness.rooms.get('co1-planning').facilitatorId, 'bob');
+});
+
+test('authed login with no company errors', (t) => {
+  const harness = createHarness(t);
+  const ws = { userId: 'c', authed: true, company: null, teams: [] };
+  handleLogin({ ws, userId: 'c', payload: { name: 'C', role: ROLES.VOTER, room: 'r' }, rooms: harness.rooms, participants: harness.participants, sendToClient: harness.sendToClient, sendRoomState: harness.sendRoomState });
+  assert.equal(harness.participants.c, undefined);
+  assert.match(harness.clientMessages.at(-1).message.payload.message, /company/i);
+});
+
+test('anonymous login to a missing room errors (closed/invalid link)', (t) => {
+  const harness = createHarness(t);
+  const ws = { userId: 'd', authed: false, anonRoom: 'gone-room' };
+  handleLogin({ ws, userId: 'd', payload: { name: 'D' }, rooms: harness.rooms, participants: harness.participants, sendToClient: harness.sendToClient, sendRoomState: harness.sendRoomState });
+  assert.equal(harness.participants.d, undefined);
+  assert.match(harness.clientMessages.at(-1).message.payload.message, /closed|invalid/i);
+});
+
+test('changeRole cannot promote an anonymous participant to Facilitator', (t) => {
+  const harness = createHarness(t);
+  harness.rooms.set('co1-r', { users: new Set(['fac', 'anon']), lastActive: Date.now(), votesRevealed: false, facilitatorId: 'fac', shareToken: 'tok' });
+  harness.participants.fac = { id: 'fac', ws: { userId: 'fac' }, name: 'Fac', role: ROLES.FACILITATOR, vote: null, roomName: 'co1-r', authed: true };
+  harness.participants.anon = { id: 'anon', ws: { userId: 'anon' }, name: 'Anon', role: ROLES.VOTER, vote: null, roomName: 'co1-r', authed: false };
+  handleChangeRole({ ws: harness.participants.fac.ws, currentUser: harness.participants.fac, payload: { targetUserId: 'anon', newRole: ROLES.FACILITATOR }, participants: harness.participants, rooms: harness.rooms, sendToClient: harness.sendToClient, sendRoomState: harness.sendRoomState });
+  assert.equal(harness.participants.anon.role, ROLES.VOTER);
+  assert.equal(harness.rooms.get('co1-r').facilitatorId, 'fac');
+  assert.match(harness.clientMessages.at(-1).message.payload.message, /facilitator/i);
+});
+
+test('changeRole step-down will not hand facilitation to an anonymous member', (t) => {
+  const harness = createHarness(t);
+  harness.rooms.set('co1-r', { users: new Set(['fac', 'anon']), lastActive: Date.now(), votesRevealed: false, facilitatorId: 'fac', shareToken: 'tok' });
+  harness.participants.fac = { id: 'fac', ws: { userId: 'fac' }, name: 'Fac', role: ROLES.FACILITATOR, vote: null, roomName: 'co1-r', authed: true };
+  harness.participants.anon = { id: 'anon', ws: { userId: 'anon' }, name: 'Anon', role: ROLES.VOTER, vote: null, roomName: 'co1-r', authed: false };
+  handleChangeRole({ ws: harness.participants.fac.ws, currentUser: harness.participants.fac, payload: { targetUserId: 'fac', newRole: ROLES.VOTER }, participants: harness.participants, rooms: harness.rooms, sendToClient: harness.sendToClient, sendRoomState: harness.sendRoomState });
+  assert.equal(harness.participants.anon.role, ROLES.VOTER);
+  assert.equal(harness.rooms.get('co1-r').facilitatorId, 'fac');
+  assert.match(harness.clientMessages.at(-1).message.payload.message, /assign another facilitator/i);
 });

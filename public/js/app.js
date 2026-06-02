@@ -5,7 +5,6 @@
  const roomDisplay = document.getElementById('room-display');
  const roomOrg = document.getElementById('room-org');
  const pokerRoomSection = document.getElementById('poker-room-section');
- const teamSelect = document.getElementById('team-select');
  const nameInput = document.getElementById('name-input');
  const roomInput = document.getElementById('room-input');
  const roleSelect = document.getElementById('role-select');
@@ -27,8 +26,7 @@
  const roundStatus = document.getElementById('round-status');
  const inviteMenuButton = document.getElementById('invite-menu-button');
  const inviteMenu = document.getElementById('invite-menu');
- const copyVoterInviteButton = document.getElementById('copy-voter-invite-button');
- const copyObserverInviteButton = document.getElementById('copy-observer-invite-button');
+ const copyInviteLinkButton = document.getElementById('copy-invite-link-button');
  const endSessionButton = document.getElementById('end-session-button');
  const logoutButton = document.getElementById('logout-button');
 
@@ -58,8 +56,8 @@
  const ROOM_SESSION_STORAGE = 'scrumPokerRoomSession';
  const ROOM_RECONNECT_STORAGE = 'scrumPokerReconnectToRoom';
  // --- Application State (Managed primarily by server now) ---
- let userTeams = []; // Teams fetched from /api/me — kept module-scoped for room-header lookup
- let currentTeamId = null; // Team ID used when joining the current room
+ let currentCompany = null; // Company fetched from /api/me — kept module-scoped for room-header display
+ let currentShareToken = null; // Per-room anonymous share token received from server
  let currentUser = null; // { id: string, name: string, role: 'Voter' | 'Facilitator' | 'Observer', vote: string | null }
  let currentRoom = null;   // ← NEW: will hold the room name after login
  let participants = []; // Array of user objects received from server
@@ -211,6 +209,8 @@ function showVoteError(message) {
                  participants = payload.participants || [];
                  votesRevealed = payload.votesRevealed || false;
                  facilitatorId = payload.facilitatorId || null;
+                 currentShareToken = payload.shareToken || null;
+                 pokerRoomSection.dataset.shareToken = currentShareToken || '';
 
                  // Find the current user in the updated participant list
                 const myTempId    = sessionStorage.getItem('scrumPokerUserId_temp');
@@ -331,7 +331,6 @@ function getStoredRoomSession() {
         const stored = JSON.parse(sessionStorage.getItem(ROOM_SESSION_STORAGE) || 'null');
         if (
             stored &&
-            typeof stored.teamId === 'string' &&
             typeof stored.room === 'string' &&
             typeof stored.name === 'string' &&
             getValidRole(stored.role)
@@ -348,7 +347,6 @@ function getStoredRoomSession() {
 
 function saveRoomSession(session) {
     sessionStorage.setItem(ROOM_SESSION_STORAGE, JSON.stringify({
-        teamId: session.teamId,
         room: session.room,
         name: session.name,
         role: session.role
@@ -372,9 +370,7 @@ function fillLoginFromStoredSession(storedSession) {
     roomInput.value = storedSession.room;
     nameInput.value = storedSession.name;
     roleSelect.value = storedSession.role;
-    if (storedSession.teamId) teamSelect.value = storedSession.teamId;
     currentRoom = storedSession.room;
-    currentTeamId = storedSession.teamId || null;
 }
 
 function sendStoredLogin(storedSession, source) {
@@ -407,30 +403,16 @@ function markRoomReconnectIntent() {
 }
 
 
- // --- Team Loader ---
- async function loadTeams() {
+ // --- Company Loader ---
+ async function loadCompany() {
      try {
          const res = await fetch('/api/me', { credentials: 'same-origin' });
          if (!res.ok) { window.location.reload(); return; }
-         const { teams = [] } = await res.json();
-         userTeams = teams;
-         if (currentTeamId && isRoomVisible()) updateUI();
-         teamSelect.innerHTML = '';
-         for (const t of teams) {
-             const opt = document.createElement('option');
-             opt.value = t.id;
-             opt.textContent = t.name;
-             teamSelect.appendChild(opt);
-         }
-         const teamField = document.getElementById('team-field');
-         if (teams.length === 1) {
-             teamField.classList.add('hidden');
-         } else if (teams.length === 0) {
-             teamField.classList.add('hidden');
-             showLoginError("You're not on a team yet — ask your admin to add you.");
-         }
+         const { company = null } = await res.json();
+         currentCompany = company;
+         if (isRoomVisible()) updateUI();
      } catch {
-         showLoginError('Could not load your teams. Re-launch poker from the hub.');
+         showLoginError('Could not load your account. Re-launch poker from the hub.');
      }
  }
 
@@ -440,7 +422,7 @@ function markRoomReconnectIntent() {
      allowStoredRoomRestore = !appliedInvitePrefill;
      setupEventListeners();
      connectWebSocket(); // Start WebSocket connection attempt
-     loadTeams();        // Populate team dropdown from hub
+     loadCompany();      // Load company info from hub
  }
 
  function applyInvitePrefill() {
@@ -480,8 +462,7 @@ function markRoomReconnectIntent() {
      resetVotesButton.addEventListener('click', handleResetVotes);
 
      inviteMenuButton.addEventListener('click', toggleInviteMenu);
-     copyVoterInviteButton.addEventListener('click', handleCopyRoomInvite);
-     copyObserverInviteButton.addEventListener('click', handleCopyRoomInvite);
+     copyInviteLinkButton.addEventListener('click', handleCopyRoomInvite);
      endSessionButton.addEventListener('click', openEndSessionModal);
      confirmEndSessionButton.addEventListener('click', handleConfirmEndSession);
      cancelEndSessionButton.addEventListener('click', closeEndSessionModal);
@@ -631,8 +612,7 @@ function markRoomReconnectIntent() {
 
      // ─── 8.3.1) Show current room at the top of the poker room UI
   roomDisplay.textContent = currentRoom ? `Room: ${currentRoom}` : '';
-  const joinedTeam = userTeams.find((t) => t.id === currentTeamId);
-  roomOrg.textContent = joinedTeam && joinedTeam.company ? `${joinedTeam.company} : ${joinedTeam.name}` : '';
+  roomOrg.textContent = currentCompany?.name || '';
 
     // Update greeting
     userGreeting.textContent = `Hello, ${currentUser.name} (${currentUser.role})`;
@@ -872,34 +852,27 @@ function renderVotingCards() {
  }
 
  // --- Event Handlers (Send messages to server) ---
- function createRoomInviteUrl(role) {
-  const storedSession = getStoredRoomSession();
-  const room = currentRoom || storedSession?.room;
-  if (!room) return '';
-
-  const inviteUrl = new URL('/', window.location.origin);
-  inviteUrl.searchParams.set('room', room);
-  inviteUrl.searchParams.set('role', role);
-  return inviteUrl.toString();
+ function createRoomInviteUrl() {
+  if (!currentShareToken) return '';
+  return `${window.location.origin}/join?token=${currentShareToken}`;
  }
 
  async function handleCopyRoomInvite(event) {
   if (currentUser?.role !== 'Facilitator') return;
 
   const button = event.currentTarget;
-  const role = button.dataset.inviteRole;
-  const inviteUrl = createRoomInviteUrl(role);
+  const inviteUrl = createRoomInviteUrl();
   if (!inviteUrl) {
     showVoteError('Invite link unavailable. Rejoin the room and try again.');
     return;
   }
 
-  const originalText = button.textContent;
+  const originalText = button.textContent.trim();
   button.disabled = true;
 
   try {
     await copyText(inviteUrl);
-    button.textContent = `Copied ${role.toLowerCase()} invite`;
+    button.textContent = 'Copied invite link';
   } catch (_err) {
     button.textContent = 'Copy failed';
   } finally {
@@ -911,24 +884,16 @@ function renderVotingCards() {
  }
 
  function handleLogin() {
-  const teamId = teamSelect.value;
   const name = nameInput.value.trim();
   const role = roleSelect.value;
   const room = roomInput.value.trim();
-
-  if (!teamId) {
-    showLoginError('Select a team to join.');
-    return;
-  }
-
   if (name && role && room) {
     hideLoginError();
     loginButton.disabled = true;
     currentRoom = room;
-    currentTeamId = teamId;
-    pendingLoginContext = { teamId, name, role, room };
+    pendingLoginContext = { name, role, room };
     pendingLoginSource = 'manual';
-    sendMessage('login', { name, role, room, teamId });
+    sendMessage('login', { name, role, room });
   } else {
     showLoginError('Please enter your room name and name.');
   }
@@ -987,7 +952,7 @@ function renderVotingCards() {
      votesRevealed = false;
      facilitatorId = null;
      currentRoom = null;
-     currentTeamId = null;
+     currentShareToken = null;
      pendingLoginContext = null;
      pendingLoginSource = '';
 

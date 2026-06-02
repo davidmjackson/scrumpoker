@@ -141,7 +141,8 @@ test('getRoomState projects room reveal and facilitator state', () => {
     alice: participant('alice', 'alpha', { role: 'Facilitator', vote: '8' })
   };
 
-  assert.deepEqual(getRoomState(rooms, participants, 'alpha'), {
+  const state = getRoomState(rooms, participants, 'alpha');
+  assert.deepEqual(state, {
     type: 'updateState',
     payload: {
       participants: [
@@ -154,7 +155,8 @@ test('getRoomState projects room reveal and facilitator state', () => {
         }
       ],
       votesRevealed: true,
-      facilitatorId: 'alice'
+      facilitatorId: 'alice',
+      shareToken: rooms.get('alpha').shareToken
     }
   });
 });
@@ -165,8 +167,8 @@ test('assignFacilitator chooses the first room member when needed', () => {
   joinRoom(rooms, 'alpha', 'bob', 100);
 
   const participants = {
-    alice: participant('alice', 'alpha'),
-    bob: participant('bob', 'alpha')
+    alice: participant('alice', 'alpha', { authed: true }),
+    bob: participant('bob', 'alpha', { authed: true })
   };
 
   const facilitatorId = assignFacilitator(rooms, participants, 'alpha');
@@ -184,8 +186,8 @@ test('reassignFacilitatorIfLeaving promotes the next room member', () => {
   room.facilitatorId = 'alice';
 
   const participants = {
-    alice: participant('alice', 'alpha', { role: 'Facilitator' }),
-    bob: participant('bob', 'alpha')
+    alice: participant('alice', 'alpha', { role: 'Facilitator', authed: true }),
+    bob: participant('bob', 'alpha', { authed: true })
   };
 
   leaveRoom(rooms, 'alpha', 'alice', 200);
@@ -193,4 +195,50 @@ test('reassignFacilitatorIfLeaving promotes the next room member', () => {
 
   assert.equal(rooms.get('alpha').facilitatorId, 'bob');
   assert.equal(participants.bob.role, 'Facilitator');
+});
+
+test("a created room has a non-empty hex shareToken and is findable by it", () => {
+  const { joinRoom, findRoomByToken } = require("../lib/roomState");
+  const rooms = new Map();
+  joinRoom(rooms, "co1-planning", "u1");
+  const room = rooms.get("co1-planning");
+  assert.match(room.shareToken, /^[0-9a-f]{32}$/);
+  assert.equal(findRoomByToken(rooms, room.shareToken), "co1-planning");
+  assert.equal(findRoomByToken(rooms, "nope"), null);
+  assert.equal(findRoomByToken(rooms, ""), null);
+});
+
+test('getRoomState includes the room shareToken', () => {
+  const { joinRoom, getRoomState } = require('../lib/roomState');
+  const rooms = new Map();
+  joinRoom(rooms, 'co1-r', 'u1');
+  const state = getRoomState(rooms, {}, 'co1-r');
+  assert.match(state.payload.shareToken, /^[0-9a-f]{32}$/);
+});
+
+test('getRoomParticipants does not leak the internal authed flag', () => {
+  const { getRoomParticipants } = require('../lib/roomState');
+  const participants = { u1: { id: 'u1', ws: {}, name: 'U', role: 'Voter', vote: null, roomName: 'co1-r', authed: true } };
+  const out = getRoomParticipants(participants, 'co1-r');
+  assert.equal(out.length, 1);
+  assert.equal(out[0].authed, undefined);
+  assert.equal(out[0].name, 'U');
+});
+
+test('assignFacilitator skips anonymous participants', () => {
+  const { joinRoom, assignFacilitator } = require('../lib/roomState');
+  const rooms = new Map();
+  joinRoom(rooms, 'co1-r', 'anon1');
+  joinRoom(rooms, 'co1-r', 'auth1');
+  const participants = {
+    anon1: { id: 'anon1', role: 'Voter', roomName: 'co1-r', authed: false },
+    auth1: { id: 'auth1', role: 'Voter', roomName: 'co1-r', authed: true },
+  };
+  const fid = assignFacilitator(rooms, participants, 'co1-r');
+  assert.equal(fid, 'auth1');
+
+  const rooms2 = new Map();
+  joinRoom(rooms2, 'co1-x', 'anonA');
+  const p2 = { anonA: { id: 'anonA', role: 'Voter', roomName: 'co1-x', authed: false } };
+  assert.equal(assignFacilitator(rooms2, p2, 'co1-x'), null);
 });

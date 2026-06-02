@@ -14,6 +14,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const TEST_SESSION_ID = 'test-session-token';
 const TEST_USER_ID = 'test-user-id';
 const TEST_TEAM = { id: 't1', name: 'Alpha', role: 'lead' };
+const TEST_COMPANY = { id: 'co1', name: 'Acme' };
 const SESSION_COOKIE = `poker_session=${TEST_SESSION_ID}`;
 
 function getFreePort() {
@@ -77,7 +78,8 @@ async function startServer(t) {
     centralSessionId: 'central-test',
     expiresAt: Date.now() + 24 * 60 * 60 * 1000,
     entitled: true,
-    teams: [TEST_TEAM]
+    teams: [TEST_TEAM],
+    company: TEST_COMPANY
   });
 
   const port = await getFreePort();
@@ -200,10 +202,7 @@ async function login(client, payload) {
     (state) => Boolean(findParticipant(state, payload.name))
   );
 
-  send(client.ws, 'login', {
-    teamId: TEST_TEAM.id,
-    ...payload
-  });
+  send(client.ws, 'login', payload);
 
   return statePromise;
 }
@@ -440,19 +439,17 @@ test('facilitator can end a room session for every participant', async (t) => {
   await loggedOutError;
 });
 
-test('login is rejected when teamId is not in the session teams', async (t) => {
+test('login is rejected when required fields are missing', async (t) => {
   const { port } = await startServer(t);
   const client = await connectClient(t, port);
 
   const errorPromise = waitForMessage(
     client.ws,
-    (message) => message.type === 'error' && message.payload?.message === "You're not a member of that team."
+    (message) => message.type === 'error' && message.payload?.message === 'Login requires name, role and room.'
   );
   send(client.ws, 'login', {
-    teamId: 'wrong-team',
-    name: 'Mallory',
-    role: 'Voter',
-    room: 'baseline'
+    name: 'Mallory'
+    // missing role and room
   });
 
   await errorPromise;
