@@ -317,3 +317,5 @@
   .ins .participant-row,
   .ins .result-row{align-items:flex-start;}
 }
+
+.ins .join-narrow{grid-template-columns:1fr; max-width:480px;}
