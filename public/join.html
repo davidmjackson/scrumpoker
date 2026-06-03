@@ -5,38 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Join Poker Room</title>
 
-    <link rel="stylesheet" href="css/theme-core.css">
-    <link rel="stylesheet" href="css/theme-poker.css">
-    <link rel="stylesheet" href="css/app.css">
-    <link rel="stylesheet" href="css/breathing-waves.css">
+    <link rel="stylesheet" href="/css/instrument-core.css">
+    <link rel="stylesheet" href="/css/poker.css">
 </head>
 
-<body class="app-page">
+<body class="ins app-page" data-app="poker">
 
     <div id="connection-status" class="connecting">Connecting...</div>
 
     <main id="join-section" class="login-page">
-        <header class="header-band login-band" data-breathing-waves data-wave-palette="poker">
-            <canvas></canvas>
-            <div class="header-content">
-                <p class="eyebrow">Planning room</p>
-                <h1 id="entry-title" class="header-title">Scrum Poker</h1>
-                <p class="header-subtitle">Join a shared estimation room.</p>
-            </div>
-        </header>
-
-        <div class="entry-shell">
+        <div class="entry-shell join-narrow">
         <section class="entry-card" aria-labelledby="entry-title">
+            <h1 id="entry-title">Join a room</h1>
+            <p class="sub">Enter your name to join this estimation room.</p>
             <div class="entry-form">
                 <label class="field" id="name-field" for="join-name-input">
                     <span>Your name</span>
                     <input type="text" id="join-name-input" placeholder="Your name" autocomplete="name" maxlength="80">
                 </label>
-
-                <button id="join-button" class="btn btn-primary">
-                    Join
-                </button>
-
+                <button id="join-button" class="btn btn-primary">Join</button>
                 <p id="join-error" class="form-error hidden"></p>
             </div>
         </section>
@@ -44,14 +31,11 @@
     </main>
 
     <main id="poker-room-section" class="room-page hidden">
-        <header class="header-band" data-breathing-waves data-wave-palette="poker">
-            <canvas></canvas>
-            <div class="header-content">
-                <p class="eyebrow">Estimation room</p>
-                <h1 class="header-title">Scrum Poker Room</h1>
-                <p id="room-display" class="header-subtitle room-display"></p>
-            </div>
-        </header>
+        <div class="band"><div class="waves"></div><div class="band-in">
+            <div class="eyebrow">Estimation room</div>
+            <h1>Scrum Poker Room</h1>
+            <p class="sub room-display" id="room-display"></p>
+        </div></div>
 
         <div class="room-shell">
         <div class="room-userbar">
@@ -112,8 +96,8 @@
         <a href="/license">License Terms</a>
     </footer>
 
-    <script src="js/cardDeck.js?v=1" defer></script>
-    <script src="js/breathing-waves.js" defer></script>
+    <script src="js/cardDeck.js?v=2" defer></script>
+    <script type="module" src="/js/oscilloscope.js"></script>
     <script src="js/join.js?v=1" defer></script>
 </body>
 </html>

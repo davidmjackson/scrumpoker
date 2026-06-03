@@ -13,28 +13,26 @@ function attachErrorListeners(page) {
   return errs;
 }
 
-async function assertSizedCanvas(band) {
-  // Canvas.width is set by the component's resize() to host width × devicePixelRatio.
-  // A non-zero value proves the component initialised and the host had real dimensions —
-  // catches the "hidden section returns 0×0 from getBoundingClientRect" regression.
-  await expect
-    .poll(async () => band.locator("canvas").evaluate((c) => c.width))
-    .toBeGreaterThan(0);
-}
-
-test.describe("breathing-waves header band", () => {
-  test("renders on /license with aria-hidden canvas", async ({ page }) => {
+test.describe("oscilloscope band", () => {
+  test("entry screen (index.html #login-section) has a band with mounted svg", async ({ page, context }) => {
     const errs = attachErrorListeners(page);
-    await page.goto("/license");
-    const band = page.locator(".header-band[data-breathing-waves]").first();
+
+    seedSession();
+    await injectSession(context);
+    await page.goto("/");
+
+    // Entry screen is visible before joining a room.
+    await expect(page.locator("#login-section")).toBeVisible();
+
+    const band = page.locator("#login-section .band").first();
     await expect(band).toBeVisible();
-    await expect(band.locator("canvas")).toHaveAttribute("aria-hidden", "true");
-    await expect(band.locator(".header-title")).toContainText("Scrum Poker Free Use License");
-    await assertSizedCanvas(band);
+    // The oscilloscope module mounts an <svg> into each empty .waves div after load.
+    await expect.poll(async () => band.locator(".waves svg").count()).toBeGreaterThan(0);
+
     expect(errs).toEqual([]);
   });
 
-  test("renders inside initially-hidden room section after login", async ({ page, context }) => {
+  test("room section (index.html #poker-room-section) has a band with mounted svg after joining", async ({ page, context }) => {
     const errs = attachErrorListeners(page);
 
     seedSession();
@@ -50,11 +48,60 @@ test.describe("breathing-waves header band", () => {
 
     await expect(page.locator("#poker-room-section")).toBeVisible();
 
-    const band = page.locator("#poker-room-section .header-band[data-breathing-waves]");
+    const band = page.locator("#poker-room-section .band").first();
     await expect(band).toBeVisible();
-    await expect(band.locator("canvas")).toHaveAttribute("aria-hidden", "true");
-    await expect(band.locator(".header-title")).toContainText("Scrum Poker Room");
-    await assertSizedCanvas(band);
+    await expect.poll(async () => band.locator(".waves svg").count()).toBeGreaterThan(0);
+
+    expect(errs).toEqual([]);
+  });
+
+  test("anonymous join entry (join.html #join-section) has NO band; room has a band after joining", async ({ page, context, browser }) => {
+    const errs = attachErrorListeners(page);
+
+    // Set up a room with a share token via an authenticated facilitator.
+    seedSession();
+    await injectSession(context);
+    await page.goto("/");
+
+    await page.locator("#room-input").fill("waves-anon-room");
+    await page.locator("#name-input").fill("Alice");
+    await page.locator("#role-select").selectOption("Facilitator");
+    await page.locator("#login-button").click();
+    await expect(page.locator("#poker-room-section")).toBeVisible();
+
+    const token = await page.locator("#poker-room-section").getAttribute("data-share-token");
+    expect(token).toMatch(/^[0-9a-f]{32}$/);
+
+    // Anonymous user visits join.html via the share link.
+    const anonCtx = await browser.newContext();
+    const anon = await anonCtx.newPage();
+    const anonErrs = [];
+    anon.on("pageerror", (e) => anonErrs.push(String(e)));
+    anon.on("console", (m) => {
+      if (m.type() === "error") anonErrs.push(m.text());
+    });
+
+    try {
+      await anon.goto(`/join?token=${token}`);
+
+      // The join entry screen has no band — it's a focused card, not an oscilloscope surface.
+      await expect(anon.locator("#join-section")).toBeVisible();
+      await expect(anon.locator("#join-section .band")).toHaveCount(0);
+
+      // Join the room.
+      await anon.fill("#join-name-input", "Guest");
+      await anon.click("#join-button");
+      await expect(anon.locator("#poker-room-section")).toBeVisible();
+
+      // The room section in join.html DOES have a band with a mounted svg.
+      const anonRoomBand = anon.locator("#poker-room-section .band").first();
+      await expect(anonRoomBand).toBeVisible();
+      await expect.poll(async () => anonRoomBand.locator(".waves svg").count()).toBeGreaterThan(0);
+
+      expect(anonErrs).toEqual([]);
+    } finally {
+      await anonCtx.close();
+    }
 
     expect(errs).toEqual([]);
   });

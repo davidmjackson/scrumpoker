@@ -4,25 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>License | Scrum Poker Tool</title>
-  <link rel="stylesheet" href="css/theme-core.css">
-  <link rel="stylesheet" href="css/theme-poker.css">
-  <link rel="stylesheet" href="css/app.css">
-  <link rel="stylesheet" href="css/breathing-waves.css">
-  <script src="js/breathing-waves.js" defer></script>
+  <link rel="stylesheet" href="/css/instrument-core.css">
+  <link rel="stylesheet" href="/css/poker.css">
+  <script type="module" src="/js/oscilloscope.js"></script>
 </head>
-<body class="legal-page">
-  <header class="header-band" data-breathing-waves data-wave-palette="poker">
-    <canvas></canvas>
-    <div class="header-content">
-      <span class="brand">
-        <svg class="brand-glyph" aria-hidden="true"><use href="/illos/theme-illos.svg#sticker-circle"/></svg>
-        <span>Scrum Poker</span>
-      </span>
-      <p class="eyebrow">Legal</p>
-      <h1 class="header-title">Scrum Poker Free Use License</h1>
-      <p class="header-subtitle">This tool is free to use, but it is not open source.</p>
-    </div>
-  </header>
+<body class="ins legal-page" data-app="poker">
+  <div class="band"><div class="waves"></div><div class="band-in">
+    <span class="brand"><svg class="mk" width="22" height="22" aria-hidden="true"><use href="/illos/glyphs.svg#glyph-poker"/></svg> <span>Scrum Poker</span></span>
+    <div class="eyebrow">Legal</div>
+    <h1>Scrum Poker Free Use License</h1>
+    <p class="sub">This tool is free to use, but it is not open source.</p>
+  </div></div>
 
   <main class="license-wrap">
     <p>You may use the software at no cost, but you may not copy, redistribute, modify, or sell it.</p>
@@ -86,5 +78,6 @@ you must stop using the software immediately.
 This license is governed by the laws of England and Wales, excluding conflict
 of law rules.</pre>
   </main>
+  <footer class="app-footer"><a href="/license">License Terms</a></footer>
 </body>
 </html>

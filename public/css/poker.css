@@ -1,0 +1,321 @@
+/* poker.css — Poker-owned layer over instrument-core.css.
+   Holds everything Instrument doesn't provide, re-pointed to Instrument tokens.
+   Loaded AFTER instrument-core.css. NOT part of the synced foundation. */
+
+.ins{
+  /* Spacing + radii + shadows Instrument doesn't define */
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-6:24px; --s-8:32px; --s-12:48px;
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-pill:999px;
+  --shadow-sm:0 1px 0 rgba(20,30,28,0.04);
+  --shadow-md:0 1px 0 rgba(20,30,28,0.04), 0 8px 24px rgba(20,30,28,0.06);
+  --shadow-lg:0 1px 0 rgba(20,30,28,0.04), 0 16px 44px rgba(20,30,28,0.10);
+  /* Poker-local danger red (foundation has no red token) */
+  --danger:oklch(0.5 0.13 25);
+  --danger-bg:color-mix(in oklab, oklch(0.5 0.13 25) 12%, var(--panel));
+  /* Semantic aliases mapped onto the Instrument palette */
+  --ok:var(--green); --ok-bg:var(--greenwash);
+  --warn:oklch(0.5 0.12 60); --warn-bg:var(--amberwash);
+  --err:var(--danger); --err-bg:var(--danger-bg);
+  --info:var(--teal); --info-bg:var(--tealwash);
+  --accent-on:#fff; --accent-deep:var(--accent);
+  --accent-soft:oklch(0.235 0.013 250 / 0.12);   /* translucent ink — focus ring / halo */
+  --mono-font:'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* The HTML [hidden] attr and .hidden class must always win over layout display.
+   SECURITY-RELEVANT: keeps facilitator-only controls + observer note hidden. */
+[hidden]{display:none !important;}
+.ins .hidden{display:none !important;}
+
+/* Utilities not in Instrument */
+.ins .kicker{font-family:var(--mono-font); font-size:0.66rem; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; color:var(--soft);}
+.ins .muted{color:var(--soft);}
+.ins .faint{color:var(--faint); font-size:0.85rem;}
+.ins .mono{font-family:var(--mono-font);}
+.ins .center{text-align:center;}
+
+/* App-footer (Poker links /license at the bottom of each shell) */
+.ins .app-footer{text-align:center; padding:var(--s-6); font-size:0.8rem; color:var(--faint);}
+.ins .app-footer a{color:var(--faint);}
+
+/* Inputs / selects (Poker markup uses .field > span + bare input/select) */
+.ins input[type="text"], .ins input[type="email"], .ins input[type="password"],
+.ins input[type="number"], .ins select, .ins textarea{
+  width:100%; padding:10px 12px; border:1px solid var(--line2); border-radius:var(--r-md);
+  background:var(--bone); color:var(--ink); font:inherit;
+  transition:border-color 120ms ease, box-shadow 120ms ease;
+}
+.ins input::placeholder, .ins textarea::placeholder{color:var(--faint);}
+.ins input:focus, .ins select:focus, .ins textarea:focus{
+  outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);
+}
+.ins .field{display:block; margin-bottom:var(--s-4);}
+.ins .field > span{display:block; font-weight:600; font-size:0.85rem; margin-bottom:var(--s-1); color:var(--ink);}
+.ins .form-error{margin:0; min-height:1.2rem; color:var(--danger); font-size:0.9rem;}
+
+/* Poker's OWN buttons (kept in markup; restyled onto Instrument).
+   Primary = ink (the accent — monochrome poker = dark buttons). */
+.ins .btn-primary{
+  background:var(--accent); border:1px solid var(--accent); color:#fff;
+  box-shadow:0 1px 2px rgba(20,30,28,0.16);
+}
+.ins .btn-primary:hover:not(:disabled){filter:brightness(1.15); transform:translateY(-1px); box-shadow:0 4px 12px rgba(20,30,28,0.20);}
+.ins .btn-primary:disabled{opacity:0.55; cursor:not-allowed; transform:none; filter:none;}
+
+/* Toolbar + invite-popover + facilitator buttons */
+.ins .toolbar-action{
+  min-height:2.25rem; border:1px solid var(--line2); border-radius:var(--r-md);
+  background:var(--panel); color:var(--ink); font:inherit; font-size:0.84rem; font-weight:700;
+  cursor:pointer; padding:0.42rem 0.65rem;
+  transition:border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+.ins .toolbar-action:hover:not(:disabled){border-color:var(--accent); color:var(--accent);}
+.ins .toolbar-action.danger{border-color:color-mix(in oklab, var(--danger) 45%, var(--line2)); background:var(--danger-bg); color:var(--danger);}
+.ins .toolbar-action.danger:hover:not(:disabled){border-color:var(--danger);}
+
+.ins .invite-action{
+  width:100%; min-height:2.4rem; border:0; border-radius:calc(var(--r-md) - 2px);
+  background:transparent; color:var(--ink); cursor:pointer; font:inherit; font-size:0.86rem;
+  font-weight:600; padding:0.5rem 0.6rem; text-align:left;
+}
+.ins .invite-action:hover:not(:disabled){background:var(--bone);}
+.ins .invite-action:disabled{cursor:not-allowed; opacity:0.68;}
+
+.ins .text-action{border:0; background:none; color:var(--accent); font:inherit; font-size:0.88rem; font-weight:600; cursor:pointer; padding:0; text-decoration:none;}
+.ins .text-action:hover{text-decoration:underline;}
+.ins .text-action.danger{color:var(--danger);}
+
+.ins .success-action, .ins .secondary-action, .ins .danger-action{
+  min-height:2.75rem; border:1px solid transparent; border-radius:var(--r-md);
+  font:inherit; font-weight:700; cursor:pointer; padding:0.7rem 1rem;
+  transition:filter 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.ins .success-action{background:var(--green); color:#fff;}
+.ins .success-action:hover:not(:disabled){filter:brightness(1.1);}
+.ins .secondary-action{background:var(--panel); color:var(--ink); border-color:var(--line2);}
+.ins .secondary-action:hover:not(:disabled){border-color:var(--accent); color:var(--accent);}
+.ins .danger-action{background:var(--danger); color:#fff;}
+.ins .danger-action:hover:not(:disabled){filter:brightness(1.1);}
+.ins .success-action:disabled, .ins .secondary-action:disabled, .ins .danger-action:disabled{cursor:not-allowed; opacity:0.62;}
+
+/* Status pills */
+.ins .status-pill{display:inline-flex; align-items:center; min-height:1.6rem; padding:0.2rem 0.6rem; border-radius:var(--r-pill); background:var(--greenwash); color:var(--green); font-size:0.8rem; font-weight:700;}
+.ins .status-pill.is-locked{background:var(--tealwash); color:var(--teal);}
+.ins .section-kicker{color:var(--soft); font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;}
+
+/* Connection-status indicator (re-tokenised from hardcoded hexes) */
+.ins #connection-status, #connection-status{position:fixed; top:10px; right:10px; padding:5px 10px; border-radius:var(--r-md); font-size:0.8rem; font-weight:700; z-index:100;}
+#connection-status.connected{background:var(--greenwash); color:var(--green);}
+#connection-status.disconnected{background:var(--danger-bg); color:var(--danger);}
+#connection-status.connecting{background:var(--amberwash); color:oklch(0.5 0.12 60);}
+
+/* Modal (Poker keeps .modal-overlay/.modal-content/.modal-actions markup) */
+.ins .modal-overlay{position:fixed; inset:0; background:oklch(0.235 0.013 250 / 0.48); display:flex; align-items:center; justify-content:center; z-index:50; padding:var(--s-4);}
+.ins .modal-overlay.hidden{display:none;}
+.ins .modal-content{width:min(420px,100%); background:var(--panel); border:1px solid var(--line2); border-radius:var(--r-xl); box-shadow:var(--shadow-lg); padding:var(--s-6);}
+.ins .modal-content h2{margin:0 0 var(--s-2);}
+.ins .modal-actions{display:flex; justify-content:flex-end; gap:var(--s-2); margin-top:var(--s-6);}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   poker.css — Part B: App-specific components (re-tokenised onto Instrument)
+   Migrated from app.css. Scoped under .ins. Skip .admin-* (dead code).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+
+.ins .app-page{min-height:100vh; padding-bottom:4.5rem;}
+
+/* ── Entry / login layout ────────────────────────────────────────────────── */
+
+.ins .entry-shell{
+  width:min(1040px, calc(100% - 2rem)); margin:2rem auto 0;
+  display:grid; grid-template-columns:minmax(300px,430px) minmax(320px,1fr);
+  gap:1rem; align-items:center;
+}
+.ins .entry-card,
+.ins .entry-preview{background:var(--panel); border:1px solid var(--line); border-radius:var(--r-md); box-shadow:var(--shadow-md);}
+.ins .entry-card{padding:1.5rem;}
+.ins .entry-form{display:grid; gap:0.85rem;}
+
+.ins .entry-preview{min-height:440px; padding:1.25rem; display:grid; align-content:space-between; gap:1rem; overflow:hidden;}
+
+@media (min-width:821px){
+  .ins .entry-shell{align-content:center; align-items:stretch;}
+  .ins .entry-card, .ins .entry-preview{min-height:100%;}
+}
+
+/* ── Preview pane (entry page right column) ───────────────────────────── */
+
+.ins .preview-stage{min-height:250px; border:1px solid var(--line); border-radius:var(--r-md); background:var(--bone); position:relative; display:grid; place-items:center; overflow:hidden;}
+.ins .preview-card{width:108px; aspect-ratio:64/90; border-radius:9px; border:1px solid var(--line2); box-shadow:0 12px 28px oklch(0.235 0.013 250 / 0.14); display:grid; place-items:center; font-weight:700; font-family:'Bricolage Grotesque', var(--mono-font);}
+.ins .preview-card-back{grid-area:1 / 1; transform:rotate(-8deg) translateX(-52px); border-color:var(--accent); background-color:var(--ink); background-image:repeating-linear-gradient(45deg, oklch(1 0 0 / 0.10) 0 2px, transparent 2px 8px), repeating-linear-gradient(-45deg, oklch(1 0 0 / 0.10) 0 2px, transparent 2px 8px);}
+.ins .preview-card-front{grid-area:1 / 1; background:var(--panel); color:var(--ink); font-size:2.6rem; transform:rotate(7deg) translateX(46px);}
+.ins .preview-card-small{position:absolute; right:15%; bottom:14%; width:68px; background:var(--panel); color:var(--soft); font-size:1.35rem;}
+.ins .preview-header{display:flex; align-items:center; justify-content:space-between; gap:0.75rem; color:var(--soft); font-weight:700;}
+.ins .preview-votes{display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:0.5rem;}
+.ins .preview-votes span{min-height:2.25rem; border:1px solid var(--line); border-radius:var(--r-md); background:var(--panel); display:grid; place-items:center; color:var(--ink); font-weight:700;}
+
+/* Hide the cardback img inside preview (CSS lattice replaces it) */
+.ins .preview-card-back img{display:none;}
+
+/* ── Planning room layout ────────────────────────────────────────────────── */
+
+.ins .room-shell{width:min(1180px, calc(100% - 2rem)); margin:2rem auto 5rem;}
+
+.ins .room-header{display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin-bottom:1rem;}
+
+.ins .room-heading h1{margin:0.7rem 0 0.25rem; font-size:2rem; line-height:1.1;}
+.ins .room-display{margin:0; color:var(--soft); font-weight:700;}
+.ins .room-org{margin:0; color:var(--soft); font-weight:700;}
+
+.ins .room-admin-link{display:inline-flex; width:fit-content; margin-top:0.35rem; color:var(--accent); font-size:0.85rem; font-weight:700; text-decoration:none;}
+.ins .room-admin-link:hover{text-decoration:underline;}
+
+.ins .room-userbar{min-width:240px; border:1px solid var(--line); border-radius:var(--r-md); background:var(--panel); box-shadow:var(--shadow-sm); padding:0.8rem; display:grid; gap:0.55rem; justify-items:end;}
+.ins .user-greeting{color:var(--ink); font-weight:700; text-align:right;}
+.ins .room-actions{display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap; justify-content:flex-end;}
+
+/* ── Invite popover ──────────────────────────────────────────────────────── */
+
+.ins .invite-menu-wrap{position:relative;}
+.ins .invite-menu{position:absolute; top:calc(100% + 0.45rem); right:0; z-index:35; min-width:190px; border:1px solid var(--line); border-radius:var(--r-md); background:var(--panel); box-shadow:var(--shadow-md); padding:0.35rem;}
+
+/* ── Room content grid ───────────────────────────────────────────────────── */
+
+.ins .room-grid{display:grid; grid-template-columns:minmax(0,1.45fr) minmax(280px,0.85fr); gap:1rem; align-items:start;}
+.ins .room-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--r-md); box-shadow:var(--shadow-sm); padding:1rem;}
+
+.ins .section-heading{display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem;}
+.ins .section-heading.compact{margin-bottom:0.55rem;}
+.ins .section-heading h2{margin:0.2rem 0 0; font-size:1.15rem; line-height:1.2;}
+
+/* ── Vote deck ───────────────────────────────────────────────────────────── */
+
+.ins .voting-deck{display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:0.7rem; align-items:center;}
+.ins .voting-deck.is-disabled{opacity:0.62; pointer-events:none;}
+
+.ins .observer-note{grid-column:1 / -1; border:1px solid var(--line); border-radius:var(--r-md); background:var(--bone); color:var(--soft); padding:0.75rem; text-align:center; font-weight:700;}
+.ins .room-error{text-align:center; margin-top:0.75rem;}
+
+/* ── Vote card system (the playing-card flip mechanic) ─────────────────── */
+
+/* The button wrapper keeps the 3-D perspective + flip mechanic (unchanged geometry) */
+.ins .vote-card{appearance:none; border:0; background:transparent; width:100%; aspect-ratio:64/90; min-width:0; padding:0; perspective:1000px; cursor:pointer; transition:transform 0.2s ease, opacity 0.2s ease;}
+.ins .vote-card:hover:not(:disabled){transform:translateY(-4px);}
+.ins .vote-card:focus-visible{outline:3px solid var(--accent-soft); outline-offset:3px;}
+.ins .vote-card:disabled{cursor:not-allowed; opacity:0.55;}
+.ins .vote-card .card-inner{width:100%; height:100%; position:relative; transform-style:preserve-3d; transition:transform 0.6s cubic-bezier(0.4,2,0.4,0.8);}
+.ins .vote-card .card-inner.is-face-down{transform:rotateY(180deg);}
+.ins .vote-card .card-face{position:absolute; inset:0; backface-visibility:hidden; display:flex; align-items:center; justify-content:center; border-radius:9px; box-shadow:0 7px 16px oklch(0.235 0.013 250 / 0.12);}
+
+/* .pkfront — number card: bone face, ink number, Bricolage 700 */
+.ins .pkfront, .ins .vote-card .card-front{
+  background:var(--panel); color:var(--ink); border:1px solid var(--line2);
+  font-family:'Bricolage Grotesque', var(--mono-font); font-weight:700; font-size:1.5rem;
+}
+/* .pkback — CSS lattice (replaces cardback.jpg); rotated for the flip back face */
+.ins .pkback, .ins .vote-card .card-back{
+  border:1px solid var(--accent);
+  background-color:var(--ink);
+  background-image:repeating-linear-gradient(45deg, oklch(1 0 0 / 0.10) 0 2px, transparent 2px 8px),
+                   repeating-linear-gradient(-45deg, oklch(1 0 0 / 0.10) 0 2px, transparent 2px 8px);
+}
+.ins .vote-card .card-back{transform:rotateY(180deg); overflow:hidden;}
+
+/* Hide the JS-injected img (CSS lattice replaces cardback.jpg) */
+.ins .vote-card .card-back img{display:none;}
+
+/* Selected card: ink outline + translucent ink glow (alpha, NOT a *wash) */
+.ins .vote-card.selected .card-front{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft), 0 10px 24px oklch(0.235 0.013 250 / 0.14);}
+.ins .vote-checkmark{position:absolute; top:-0.35rem; right:-0.35rem; min-width:1.2rem; min-height:1.2rem; border-radius:999px; background:var(--green); color:#fff; display:grid; place-items:center; font-size:0.72rem; font-weight:700; box-shadow:var(--shadow-sm);}
+
+/* ── Participant mini card-indicator (second flip card) ─────────────────── */
+
+.ins .card-container{perspective:1000px; width:44px; height:62px; position:relative;}
+.ins .card-container .card-inner, .ins .card-container .flip-card{width:100%; height:100%; position:relative; transform-style:preserve-3d; transition:transform 0.6s cubic-bezier(0.4,2,0.4,0.8);}
+.ins .card-container .flip-card.flipped, .ins .card-container .card-inner.is-face-down{transform:rotateY(180deg);}
+.ins .card-container .card-front{background:var(--panel); color:var(--ink); font-size:1.05rem; font-family:'Bricolage Grotesque', var(--mono-font); font-weight:700; border-radius:8px; border:1px solid var(--line2);}
+.ins .card-container .card-back{background-color:var(--ink); background-image:repeating-linear-gradient(45deg, oklch(1 0 0 / 0.10) 0 2px, transparent 2px 8px), repeating-linear-gradient(-45deg, oklch(1 0 0 / 0.10) 0 2px, transparent 2px 8px); transform:rotateY(180deg); font-size:1rem; border-radius:8px; border:1px solid var(--accent);}
+
+/* ── Participant / result lists ──────────────────────────────────────────── */
+
+.ins .participants-list,
+.ins .ordered-votes-list{display:grid; gap:0.65rem;}
+
+.ins .participant-row,
+.ins .result-row{min-width:0; border:1px solid var(--line); border-radius:var(--r-md); background:var(--bone); display:flex; align-items:center; justify-content:space-between; gap:0.8rem; padding:0.75rem;}
+
+.ins .participant-info{min-width:0; display:flex; align-items:baseline; gap:0.45rem; flex-wrap:wrap;}
+.ins .participant-name{color:var(--ink); font-weight:700;}
+.ins .participant-name.is-current-user{color:var(--accent);}
+.ins .participant-role{color:var(--soft); font-size:0.86rem; font-weight:700;}
+.ins .participant-role.is-facilitator{color:var(--warn);}
+
+.ins .participant-role-controls{flex-basis:100%;}
+.ins .participant-role-select{min-height:2rem; border:1px solid var(--line2); border-radius:var(--r-md); background:var(--panel); color:var(--ink); font:inherit; font-size:0.82rem; font-weight:700; padding:0.25rem 0.45rem;}
+
+.ins .participant-vote{flex-shrink:0;}
+
+.ins .result-card{grid-column:1;}
+.ins .result-card p{margin:0; color:var(--soft); font-weight:700;}
+.ins .result-card p + p{margin-top:0.35rem;}
+
+.ins #average-vote,
+.ins .result-value{color:var(--accent); font-weight:700;}
+
+.ins .grouped-results{grid-column:1 / -1;}
+.ins .result-names{color:var(--ink); font-weight:700; overflow-wrap:anywhere;}
+
+/* ── Facilitator controls ────────────────────────────────────────────────── */
+
+.ins .facilitator-controls{display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap; margin-top:1rem;}
+
+/* ── License page ────────────────────────────────────────────────────────── */
+
+.ins .license-wrap{max-width:900px; margin:2rem auto; background:var(--panel); border-radius:var(--r-lg); box-shadow:var(--shadow-md); padding:2rem;}
+.ins .license-wrap h1{font-size:1.75rem; margin:0 0 1rem; color:var(--ink);}
+.ins .license-wrap p{margin:0 0 1rem; color:var(--soft); line-height:1.6;}
+.ins .license-wrap a{color:var(--accent); text-decoration:underline;}
+.ins .license-wrap pre{margin-top:1rem; background:var(--bone); border:1px solid var(--line); border-radius:var(--r-md); padding:1rem; white-space:pre-wrap; word-break:break-word; color:var(--ink); line-height:1.5;}
+
+/* ── Responsive overrides ────────────────────────────────────────────────── */
+
+@media (max-width:820px){
+  .ins .app-page{padding-bottom:1.5rem;}
+
+  .ins .entry-shell{grid-template-columns:1fr; align-items:stretch; margin-top:1.5rem;}
+  .ins .entry-preview{min-height:320px;}
+
+  .ins .room-shell{margin-top:1.5rem;}
+  .ins .room-header{align-items:stretch; flex-direction:column;}
+  .ins .room-userbar{justify-items:start; min-width:0;}
+  .ins .user-greeting{text-align:left;}
+  .ins .room-actions{justify-content:flex-start;}
+
+  .ins .invite-menu{left:0; right:auto;}
+
+  .ins .room-grid{grid-template-columns:1fr;}
+  .ins .voting-deck{grid-template-columns:repeat(4, minmax(0,1fr));}
+
+  .ins .result-card,
+  .ins .grouped-results{grid-column:auto;}
+
+  .ins .app-footer{position:static; transform:none; width:fit-content; margin:1.5rem auto 0;}
+}
+
+@media (max-width:520px){
+  .ins .entry-card,
+  .ins .entry-preview{padding:1rem;}
+
+  .ins .preview-votes{grid-template-columns:repeat(4, minmax(0,1fr));}
+  .ins .preview-stage{min-height:220px;}
+
+  .ins .room-heading h1{font-size:1.65rem;}
+  .ins .room-card{padding:0.85rem;}
+  .ins .voting-deck{gap:0.5rem;}
+
+  .ins .participant-row,
+  .ins .result-row{align-items:flex-start;}
+}
+
+.ins .join-narrow{grid-template-columns:1fr; max-width:480px;}
