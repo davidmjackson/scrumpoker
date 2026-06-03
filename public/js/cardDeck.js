@@ -11,8 +11,7 @@
         value,
         selected = false,
         disabled = false,
-        onClick = null,
-        cardBackImageSrc = '/images/cardback.jpg'
+        onClick = null
     }) {
         const cardButton = document.createElement('button');
         cardButton.dataset.value = value;
@@ -23,16 +22,10 @@
         cardInner.classList.add('card-inner');
 
         const cardBack = document.createElement('div');
-        cardBack.classList.add('card-face', 'card-back');
-
-        const cardBackImg = document.createElement('img');
-        cardBackImg.src = cardBackImageSrc;
-        cardBackImg.alt = 'Playing card back';
-        cardBackImg.classList.add('vote-card-image');
-        cardBack.appendChild(cardBackImg);
+        cardBack.classList.add('card-face', 'card-back', 'pkback');
 
         const cardFront = document.createElement('div');
-        cardFront.classList.add('card-face', 'card-front');
+        cardFront.classList.add('card-face', 'card-front', 'pkfront');
         cardFront.textContent = value;
 
         cardInner.appendChild(cardBack);
