@@ -1,0 +1,117 @@
+/* poker.css — Poker-owned layer over instrument-core.css.
+   Holds everything Instrument doesn't provide, re-pointed to Instrument tokens.
+   Loaded AFTER instrument-core.css. NOT part of the synced foundation. */
+
+.ins{
+  /* Spacing + radii + shadows Instrument doesn't define */
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-6:24px; --s-8:32px; --s-12:48px;
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-pill:999px;
+  --shadow-sm:0 1px 0 rgba(20,30,28,0.04);
+  --shadow-md:0 1px 0 rgba(20,30,28,0.04), 0 8px 24px rgba(20,30,28,0.06);
+  --shadow-lg:0 1px 0 rgba(20,30,28,0.04), 0 16px 44px rgba(20,30,28,0.10);
+  /* Poker-local danger red (foundation has no red token) */
+  --danger:oklch(0.5 0.13 25);
+  --danger-bg:color-mix(in oklab, oklch(0.5 0.13 25) 12%, var(--panel));
+  /* Semantic aliases mapped onto the Instrument palette */
+  --ok:var(--green); --ok-bg:var(--greenwash);
+  --warn:oklch(0.5 0.12 60); --warn-bg:var(--amberwash);
+  --err:var(--danger); --err-bg:var(--danger-bg);
+  --info:var(--teal); --info-bg:var(--tealwash);
+  --accent-on:#fff; --accent-deep:var(--accent);
+  --accent-soft:oklch(0.235 0.013 250 / 0.12);   /* translucent ink — focus ring / halo */
+  --mono-font:'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* The HTML [hidden] attr and .hidden class must always win over layout display.
+   SECURITY-RELEVANT: keeps facilitator-only controls + observer note hidden. */
+[hidden]{display:none !important;}
+.ins .hidden{display:none !important;}
+
+/* Utilities not in Instrument */
+.ins .kicker{font-family:var(--mono-font); font-size:0.66rem; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; color:var(--soft);}
+.ins .muted{color:var(--soft);}
+.ins .faint{color:var(--faint); font-size:0.85rem;}
+.ins .mono{font-family:var(--mono-font);}
+.ins .center{text-align:center;}
+
+/* App-footer (Poker links /license at the bottom of each shell) */
+.ins .app-footer{text-align:center; padding:var(--s-6); font-size:0.8rem; color:var(--faint);}
+.ins .app-footer a{color:var(--faint);}
+
+/* Inputs / selects (Poker markup uses .field > span + bare input/select) */
+.ins input[type="text"], .ins input[type="email"], .ins input[type="password"],
+.ins input[type="number"], .ins select, .ins textarea{
+  width:100%; padding:10px 12px; border:1px solid var(--line2); border-radius:var(--r-md);
+  background:var(--bone); color:var(--ink); font:inherit;
+  transition:border-color 120ms ease, box-shadow 120ms ease;
+}
+.ins input::placeholder, .ins textarea::placeholder{color:var(--faint);}
+.ins input:focus, .ins select:focus, .ins textarea:focus{
+  outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);
+}
+.ins .field{display:block; margin-bottom:var(--s-4);}
+.ins .field > span{display:block; font-weight:600; font-size:0.85rem; margin-bottom:var(--s-1); color:var(--ink);}
+.ins .form-error{margin:0; min-height:1.2rem; color:var(--danger); font-size:0.9rem;}
+
+/* Poker's OWN buttons (kept in markup; restyled onto Instrument).
+   Primary = ink (the accent — monochrome poker = dark buttons). */
+.ins .btn-primary{
+  background:var(--accent); border:1px solid var(--accent); color:#fff;
+  box-shadow:0 1px 2px rgba(20,30,28,0.16);
+}
+.ins .btn-primary:hover:not(:disabled){filter:brightness(1.15); transform:translateY(-1px); box-shadow:0 4px 12px rgba(20,30,28,0.20);}
+.ins .btn-primary:disabled{opacity:0.55; cursor:not-allowed; transform:none; filter:none;}
+
+/* Toolbar + invite-popover + facilitator buttons */
+.ins .toolbar-action{
+  min-height:2.25rem; border:1px solid var(--line2); border-radius:var(--r-md);
+  background:var(--panel); color:var(--ink); font:inherit; font-size:0.84rem; font-weight:700;
+  cursor:pointer; padding:0.42rem 0.65rem;
+  transition:border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+.ins .toolbar-action:hover:not(:disabled){border-color:var(--accent); color:var(--accent);}
+.ins .toolbar-action.danger{border-color:color-mix(in oklab, var(--danger) 45%, var(--line2)); background:var(--danger-bg); color:var(--danger);}
+.ins .toolbar-action.danger:hover:not(:disabled){border-color:var(--danger);}
+
+.ins .invite-action{
+  width:100%; min-height:2.4rem; border:0; border-radius:calc(var(--r-md) - 2px);
+  background:transparent; color:var(--ink); cursor:pointer; font:inherit; font-size:0.86rem;
+  font-weight:600; padding:0.5rem 0.6rem; text-align:left;
+}
+.ins .invite-action:hover:not(:disabled){background:var(--bone);}
+.ins .invite-action:disabled{cursor:not-allowed; opacity:0.68;}
+
+.ins .text-action{border:0; background:none; color:var(--accent); font:inherit; font-size:0.88rem; font-weight:600; cursor:pointer; padding:0; text-decoration:none;}
+.ins .text-action:hover{text-decoration:underline;}
+.ins .text-action.danger{color:var(--danger);}
+
+.ins .success-action, .ins .secondary-action, .ins .danger-action{
+  min-height:2.75rem; border:1px solid transparent; border-radius:var(--r-md);
+  font:inherit; font-weight:700; cursor:pointer; padding:0.7rem 1rem;
+  transition:filter 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.ins .success-action{background:var(--green); color:#fff;}
+.ins .success-action:hover:not(:disabled){filter:brightness(1.1);}
+.ins .secondary-action{background:var(--panel); color:var(--ink); border-color:var(--line2);}
+.ins .secondary-action:hover:not(:disabled){border-color:var(--accent); color:var(--accent);}
+.ins .danger-action{background:var(--danger); color:#fff;}
+.ins .danger-action:hover:not(:disabled){filter:brightness(1.1);}
+.ins .success-action:disabled, .ins .secondary-action:disabled, .ins .danger-action:disabled{cursor:not-allowed; opacity:0.62;}
+
+/* Status pills */
+.ins .status-pill{display:inline-flex; align-items:center; min-height:1.6rem; padding:0.2rem 0.6rem; border-radius:var(--r-pill); background:var(--greenwash); color:var(--green); font-size:0.8rem; font-weight:700;}
+.ins .status-pill.is-locked{background:var(--tealwash); color:var(--teal);}
+.ins .section-kicker{color:var(--soft); font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;}
+
+/* Connection-status indicator (re-tokenised from hardcoded hexes) */
+.ins #connection-status, #connection-status{position:fixed; top:10px; right:10px; padding:5px 10px; border-radius:var(--r-md); font-size:0.8rem; font-weight:700; z-index:100;}
+#connection-status.connected{background:var(--greenwash); color:var(--green);}
+#connection-status.disconnected{background:var(--danger-bg); color:var(--danger);}
+#connection-status.connecting{background:var(--amberwash); color:oklch(0.5 0.12 60);}
+
+/* Modal (Poker keeps .modal-overlay/.modal-content/.modal-actions markup) */
+.ins .modal-overlay{position:fixed; inset:0; background:oklch(0.235 0.013 250 / 0.48); display:flex; align-items:center; justify-content:center; z-index:50; padding:var(--s-4);}
+.ins .modal-overlay.hidden{display:none;}
+.ins .modal-content{width:min(420px,100%); background:var(--panel); border:1px solid var(--line2); border-radius:var(--r-xl); box-shadow:var(--shadow-lg); padding:var(--s-6);}
+.ins .modal-content h2{margin:0 0 var(--s-2);}
+.ins .modal-actions{display:flex; justify-content:flex-end; gap:var(--s-2); margin-top:var(--s-6);}
