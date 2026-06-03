@@ -22,10 +22,10 @@ async function loginAs(page, context, { sessionId, name, role }) {
 }
 
 test('facilitator, voter, and observer room state stays synchronized', async ({ page, context }) => {
-  // Seed three distinct sessions — all on the same team so any one of them can log into the room.
-  seedSession({ id: 's-alice', userId: 'u-alice', teams: [{ id: 't1', name: 'Alpha', role: 'lead' }] });
-  seedSession({ id: 's-bob',   userId: 'u-bob',   teams: [{ id: 't1', name: 'Alpha', role: 'member' }] });
-  seedSession({ id: 's-carol', userId: 'u-carol', teams: [{ id: 't1', name: 'Alpha', role: 'member' }] });
+  // Seed three distinct sessions — all in the same (default) company so any one of them can log into the room.
+  seedSession({ id: 's-alice', userId: 'u-alice' });
+  seedSession({ id: 's-bob',   userId: 'u-bob' });
+  seedSession({ id: 's-carol', userId: 'u-carol' });
 
   const facilitatorCtx = context;
   const voterCtx       = await page.context().browser().newContext();
@@ -132,8 +132,8 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
 });
 
 test('voter automatically rejoins after a transient disconnect', async ({ browser }) => {
-  seedSession({ id: 's-fac', userId: 'u-fac', teams: [{ id: 't1', name: 'Alpha', role: 'lead' }] });
-  seedSession({ id: 's-voter', userId: 'u-voter', teams: [{ id: 't1', name: 'Alpha', role: 'member' }] });
+  seedSession({ id: 's-fac', userId: 'u-fac' });
+  seedSession({ id: 's-voter', userId: 'u-voter' });
 
   const facilitatorContext = await browser.newContext();
   const voterContext       = await browser.newContext();
