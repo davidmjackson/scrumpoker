@@ -12,9 +12,6 @@
   /* Poker-local danger red (foundation has no red token) */
   --danger:oklch(0.5 0.13 25);
   --danger-bg:color-mix(in oklab, oklch(0.5 0.13 25) 12%, var(--panel));
-  /* Traditional playing-card-back red (decorative; distinct from --danger) */
-  --card-red:oklch(0.52 0.19 25);
-  --card-red-deep:oklch(0.42 0.16 25);
   /* Semantic aliases mapped onto the Instrument palette */
   --ok:var(--green); --ok-bg:var(--greenwash);
   --warn:oklch(0.5 0.12 60); --warn-bg:var(--amberwash);
@@ -156,7 +153,7 @@
 
 .ins .preview-stage{min-height:250px; border:1px solid var(--line); border-radius:var(--r-md); background:var(--bone); position:relative; display:grid; place-items:center; overflow:hidden;}
 .ins .preview-card{width:108px; aspect-ratio:64/90; border-radius:9px; border:1px solid var(--line2); box-shadow:0 12px 28px oklch(0.235 0.013 250 / 0.14); display:grid; place-items:center; font-weight:700; font-family:'Bricolage Grotesque', var(--mono-font);}
-.ins .preview-card-back{grid-area:1 / 1; transform:rotate(-8deg) translateX(-52px); border-color:var(--card-red-deep); background-color:var(--card-red); background-image:repeating-linear-gradient(45deg, oklch(1 0 0 / 0.18) 0 2px, transparent 2px 8px), repeating-linear-gradient(-45deg, oklch(1 0 0 / 0.18) 0 2px, transparent 2px 8px);}
+.ins .preview-card-back{grid-area:1 / 1; transform:rotate(-8deg) translateX(-52px); border-color:var(--line2); background:var(--bone) url("/images/cardback.jpg") center / cover no-repeat;}
 .ins .preview-card-front{grid-area:1 / 1; background:var(--panel); color:var(--ink); font-size:2.6rem; transform:rotate(7deg) translateX(46px);}
 .ins .preview-card-small{position:absolute; right:15%; bottom:14%; width:68px; background:var(--panel); color:var(--soft); font-size:1.35rem;}
 .ins .preview-header{display:flex; align-items:center; justify-content:space-between; gap:0.75rem; color:var(--soft); font-weight:700;}
@@ -214,23 +211,24 @@
 .ins .vote-card:disabled{cursor:not-allowed; opacity:0.55;}
 .ins .vote-card .card-inner{width:100%; height:100%; position:relative; transform-style:preserve-3d; transition:transform 0.6s cubic-bezier(0.4,2,0.4,0.8);}
 .ins .vote-card .card-inner.is-face-down{transform:rotateY(180deg);}
-.ins .vote-card .card-face{position:absolute; inset:0; backface-visibility:hidden; display:flex; align-items:center; justify-content:center; border-radius:9px; box-shadow:0 7px 16px oklch(0.235 0.013 250 / 0.12);}
+/* Base face: absolute + backface-hidden so the two faces stack and flip
+   correctly. MUST be generic (both .vote-card AND .card-container/.flip-card
+   faces rely on it) — scoping it to .vote-card stacks the participant card. */
+.ins .card-face{position:absolute; inset:0; backface-visibility:hidden; display:flex; align-items:center; justify-content:center; border-radius:9px; box-shadow:0 7px 16px oklch(0.235 0.013 250 / 0.12);}
 
 /* .pkfront — number card: bone face, ink number, Bricolage 700 */
 .ins .pkfront, .ins .vote-card .card-front{
   background:var(--panel); color:var(--ink); border:1px solid var(--line2);
   font-family:'Bricolage Grotesque', var(--mono-font); font-weight:700; font-size:1.5rem;
 }
-/* .pkback — CSS lattice (replaces cardback.jpg); rotated for the flip back face */
+/* .pkback — traditional card-back image (CSP img-src 'self' allows the url()) */
 .ins .pkback, .ins .vote-card .card-back{
-  border:1px solid var(--card-red-deep);
-  background-color:var(--card-red);
-  background-image:repeating-linear-gradient(45deg, oklch(1 0 0 / 0.18) 0 2px, transparent 2px 8px),
-                   repeating-linear-gradient(-45deg, oklch(1 0 0 / 0.18) 0 2px, transparent 2px 8px);
+  border:1px solid var(--line2);
+  background:var(--bone) url("/images/cardback.jpg") center / cover no-repeat;
 }
 .ins .vote-card .card-back{transform:rotateY(180deg); overflow:hidden;}
 
-/* Hide the JS-injected img (CSS lattice replaces cardback.jpg) */
+/* Card back is a CSS background-image now; hide any stray <img> defensively */
 .ins .vote-card .card-back img{display:none;}
 
 /* Selected card: ink outline + translucent ink glow (alpha, NOT a *wash) */
@@ -243,7 +241,7 @@
 .ins .card-container .card-inner, .ins .card-container .flip-card{width:100%; height:100%; position:relative; transform-style:preserve-3d; transition:transform 0.6s cubic-bezier(0.4,2,0.4,0.8);}
 .ins .card-container .flip-card.flipped, .ins .card-container .card-inner.is-face-down{transform:rotateY(180deg);}
 .ins .card-container .card-front{background:var(--panel); color:var(--ink); font-size:1.05rem; font-family:'Bricolage Grotesque', var(--mono-font); font-weight:700; border-radius:8px; border:1px solid var(--line2);}
-.ins .card-container .card-back{background-color:var(--card-red); background-image:repeating-linear-gradient(45deg, oklch(1 0 0 / 0.18) 0 2px, transparent 2px 8px), repeating-linear-gradient(-45deg, oklch(1 0 0 / 0.18) 0 2px, transparent 2px 8px); transform:rotateY(180deg); font-size:1rem; border-radius:8px; border:1px solid var(--card-red-deep);}
+.ins .card-container .card-back{background:var(--bone) url("/images/cardback.jpg") center / cover no-repeat; color:transparent; transform:rotateY(180deg); font-size:1rem; border-radius:8px; border:1px solid var(--line2);}
 
 /* ── Participant / result lists ──────────────────────────────────────────── */
 
