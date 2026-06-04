@@ -10,6 +10,7 @@ function fakeAuth({ entitled = true, company = { id: 'co1', name: 'Acme' } } = {
     handleLaunch: (req, res) => res.send('launch'),
     handleLogout: (req, res) => res.send('logout'),
     handleHeartbeat: (req, res) => res.json({ ok: true }),
+    handleWhoami: (req, res) => res.json({ authed: false }),
     requireAuth: (req, res, next) => { req.user = { id: 'u1', entitled, company }; next(); },
     _ctx: { hubBaseUrl: 'https://hub' },
   };
