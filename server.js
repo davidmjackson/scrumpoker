@@ -8,8 +8,9 @@ const {
 const { getBuildInfo } = require('./lib/buildInfo');
 const { createHttpApp } = require('./lib/httpApp');
 const { createWsServer } = require('./lib/wsServer');
-
-console.log('⏳ server.js is starting');
+const { logger } = require('./lib/logger');
+const { makeRequestLogger } = require('./middleware/requestLogger');
+const { makeErrorHandler } = require('./middleware/errorHandler');
 
 // Map<roomName: string, { users: Set<string>, lastActive: number }>
 const rooms = new Map();
@@ -30,11 +31,13 @@ const app = createHttpApp({
   publicDir,
   auth,
   buildInfo: getBuildInfo(__dirname),
-  getRoomCount: () => rooms.size
+  getRoomCount: () => rooms.size,
+  requestLogger: makeRequestLogger(logger),
+  errorHandler: makeErrorHandler({ logger, nodeEnv: process.env.NODE_ENV }),
 });
 
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Scrum Poker listening on :${PORT}`);
+  logger.info({ port: Number(PORT) }, 'poker listening');
 });
 server.on('request', (_req, res) => {
   if (!res.headersSent) {
