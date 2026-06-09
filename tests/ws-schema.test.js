@@ -40,6 +40,11 @@ test('validateMessage: login with invalid role is invalid', () => {
   assert.equal(result.ok, false);
 });
 
+test('validateMessage: login with a 150-char room name is valid (old handler had no length cap)', () => {
+  const result = validateMessage('login', { name: 'Alice', role: 'Facilitator', room: 'r'.repeat(150) });
+  assert.equal(result.ok, true);
+});
+
 // --- vote ---
 
 test('validateMessage: vote with valid value is valid', () => {

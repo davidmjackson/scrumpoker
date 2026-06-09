@@ -15,7 +15,7 @@ const SCHEMAS = {
   login: z.object({
     name: z.string().min(1).max(80),
     role: z.enum(ROLE_VALUES).optional(),
-    room: z.string().min(1).max(100).optional(),
+    room: z.string().min(1).max(200).optional(),
   }),
 
   // vote: carry a single vote value from the allowed deck.
