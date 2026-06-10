@@ -18,7 +18,7 @@ function makeSecurityHeaders({ contentSecurityPolicy = DEFAULT_CSP } = {}) {
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-    res.setHeader("Permissions-Policy", "geolocation=(), camera=(), microphone=(), payment=()");
+    res.setHeader("Permissions-Policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()");
     next();
   };
 }

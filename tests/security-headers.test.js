@@ -64,6 +64,30 @@ test("GET /health carries Permissions-Policy containing camera=()", async () => 
   );
 });
 
+test("GET /health Permissions-Policy contains accelerometer=()", async () => {
+  const res = await request(build()).get("/health");
+  assert.ok(
+    res.headers["permissions-policy"].includes("accelerometer=()"),
+    `Permissions-Policy missing accelerometer=(): ${res.headers["permissions-policy"]}`
+  );
+});
+
+test("GET /health Permissions-Policy contains gyroscope=()", async () => {
+  const res = await request(build()).get("/health");
+  assert.ok(
+    res.headers["permissions-policy"].includes("gyroscope=()"),
+    `Permissions-Policy missing gyroscope=(): ${res.headers["permissions-policy"]}`
+  );
+});
+
+test("GET /health Permissions-Policy contains usb=()", async () => {
+  const res = await request(build()).get("/health");
+  assert.ok(
+    res.headers["permissions-policy"].includes("usb=()"),
+    `Permissions-Policy missing usb=(): ${res.headers["permissions-policy"]}`
+  );
+});
+
 test("GET /health carries Content-Security-Policy with script-src 'self'", async () => {
   const res = await request(build()).get("/health");
   const csp = res.headers["content-security-policy"];
