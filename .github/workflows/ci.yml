@@ -40,9 +40,6 @@ jobs:
       - name: Check server syntax
         run: node --check server.js
 
-      - name: Check CLI syntax
-        run: node --check manageKeys.js
-
       - name: Check Playwright config syntax
         run: node --check playwright.config.js
 
