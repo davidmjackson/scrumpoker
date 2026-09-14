@@ -72,6 +72,17 @@ test('facilitator, voter, and observer room state stays synchronized', async ({ 
       await expect(roomPage.locator('#ordered-votes-list')).toContainText('5');
     }
 
+    // Revealed participant cards must render the vote value, not the deck back.
+    const bobVoteFace = facilitator.locator('.participant-row').filter({ hasText: 'Bob' })
+      .locator('.participant-vote .card-face', { hasText: '8' });
+    await expect(bobVoteFace).toHaveCount(1);
+    const bobVoteRendering = await bobVoteFace.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { color: style.color, backgroundImage: style.backgroundImage };
+    });
+    expect(bobVoteRendering.backgroundImage).toBe('none');
+    expect(bobVoteRendering.color).not.toMatch(/,\s*0\)$/);
+
     await expect(facilitator.locator('#start-next-round-button')).toBeVisible();
     await expect(voter.locator('#start-next-round-button')).toBeHidden();
     await expect(observer.locator('#start-next-round-button')).toBeHidden();
