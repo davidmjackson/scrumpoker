@@ -54,6 +54,32 @@ master
 
 Use feature branches for development work and merge to `main` after checks pass.
 
+## The sibling `suite` checkout
+
+This repository resolves two things by relative path from its own parent
+directory, so `suite` must be cloned alongside it:
+
+```text
+<parent>/scrumpoker
+<parent>/suite
+```
+
+- `package.json` pins `@suite/auth-client` as `file:../suite/shared/auth-client`
+- `tests/theme-drift.test.js` reads the Instrument foundation from
+  `../suite/shared/theme`
+
+`@suite/auth-client` is *linked*, not installed, so `npm ci` here does not pull
+its dependencies (`better-sqlite3` among them) into this tree. Install them in
+the sibling once:
+
+```bash
+cd ../suite/shared/auth-client && npm ci
+```
+
+Skipping that leaves the link resolvable but unloadable, and the failure shows up
+as `Cannot find module 'better-sqlite3'` in the WebSocket tests rather than as an
+install error.
+
 ## Local Verification
 
 Run these checks before pushing application changes:
@@ -61,7 +87,6 @@ Run these checks before pushing application changes:
 ```bash
 npm ci
 node --check server.js
-node --check manageKeys.js
 node --check playwright.config.js
 for file in lib/*.js; do node --check "$file"; done
 for file in public/js/*.js; do node --check "$file"; done
@@ -87,12 +112,15 @@ CI is defined in:
 .github/workflows/ci.yml
 ```
 
-It runs:
+It checks out this repository and `davidmjackson/suite` as siblings under the
+runner workspace, reproducing the layout described above, then runs:
 
+- `npm ci` in `suite/shared/auth-client` (the linked package's own dependencies)
 - `npm ci`
+- a load check on `@suite/auth-client` — `require`, not `require.resolve`, so a
+  link that resolves but cannot load fails here rather than mid-suite
 - `npx playwright install --with-deps chromium`
 - `node --check server.js`
-- `node --check manageKeys.js`
 - `node --check playwright.config.js`
 - syntax checks for `lib/*.js`
 - syntax checks for `public/js/*.js`
@@ -100,6 +128,10 @@ It runs:
 - `npm test`
 - `npm run test:e2e`
 - `npm audit --omit=dev`
+
+The suite checkout tracks its default branch, so a change to the Instrument
+foundation can turn this repository's CI red — which is what
+`tests/theme-drift.test.js` is for.
 
 CI uses Node.js 24 and opts JavaScript actions into the Node 24 runtime with `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`.
 

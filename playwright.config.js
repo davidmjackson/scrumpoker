@@ -1,7 +1,11 @@
 const path = require('path');
 module.exports = require('@playwright/test').defineConfig({
   testDir: './tests/e2e',
+  // One server and one sessions DB are shared by the whole suite, and the specs
+  // seed a fixed session id, so concurrent files delete each other's auth row
+  // mid-test. fullyParallel only serialises within a file; this serialises across.
   fullyParallel: false,
+  workers: 1,
   reporter: 'list',
   timeout: 30 * 1000,
   use: {
