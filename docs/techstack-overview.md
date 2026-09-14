@@ -5,7 +5,8 @@
 > of the two existing apps so future app decisions can build on a known
 > baseline (and reuse what already works).
 >
-> **As of:** 2026-05-22. Both apps live on the same host under `/var/www/`.
+> **As of:** 2026-09-14. Both apps live on the same host under `/var/www/`,
+> alongside `signal`, `raid` and the `suite` hub.
 
 ---
 
@@ -21,21 +22,26 @@ Two small, self-contained real-time collaboration web apps for agile ceremonies:
 | Domain | `scrum-poker.uk` | (placeholder `retro.example.com`) |
 | Runtime | Node.js + Express 5 + `ws` | Node.js + Express 4 + `ws` |
 | Persistence | **None** — fully in-memory | **SQLite** (`better-sqlite3`) |
-| Auth model | Access keys over WebSocket login | Signed-cookie sessions (HMAC) |
+| Auth model | Suite session cookie, verified via `@suite/auth-client` | Suite session cookie, verified via `@suite/auth-client` |
 | Frontend | Vanilla HTML/CSS/JS, no build step | Vanilla HTML/CSS/JS, no build step |
-| Code shape | Modular (`lib/` + thin `server.js`) | Monolithic (`server.js` ~1.7k lines) |
-| CI | GitHub Actions | None committed |
+| Code shape | Modular (`lib/` + thin `server.js`) | `server.js` (~1.2k lines) + a growing `lib/` |
+| CI | GitHub Actions | GitHub Actions |
 
 Both share a deliberate philosophy: **minimal dependencies, no front-end
 framework, no build/transpile step, no client-side bundler.** All browser code
 is plain ES served as static files under a strict Content-Security-Policy that
-forbids inline scripts and `eval`. Both sit behind Nginx (TLS termination) and
+forbids inline scripts and `eval`. Both sit behind Apache (TLS termination) and
 run as `systemd` services.
 
-They are **independent codebases** — no shared package, no shared module — but
-they have converged on near-identical patterns (security headers, rate
-limiting, salted-SHA-256 key hashing, health endpoints, "Admin" role). That
-convergence is the strongest signal for the architecture decision in Section 9.
+They are **no longer independent codebases.** Both — along with `signal` and
+`raid` — depend on `@suite/auth-client`, pinned as `file:../suite/shared/auth-client`
+and resolved by relative path from the parent directory. Authentication is now
+the suite hub's job, not each app's.
+
+That coupling is the single most important thing to know before changing either
+app: the shared package is *linked*, not installed, so its own dependencies live
+in the sibling checkout and one `npm ci` there changes what all four apps load.
+None of them pick it up until restarted.
 
 ---
 
@@ -45,10 +51,13 @@ convergence is the strongest signal for the architecture decision in Section 9.
 
 - **Node.js** (CI targets Node 24; host currently runs v20.19.6).
 - **Production dependencies** (`package.json`):
+  - `@suite/auth-client` — `file:../suite/shared/auth-client`; session verification.
   - `express` `^5.1.0` — HTTP server, static files, JSON body parsing.
   - `ws` `^8.18.2` — WebSocket server.
   - `uuid` `^11.1.0` — per-connection user IDs (`uuidv4`).
-- **Dev dependencies:** `@playwright/test` `^1.59.1`.
+  - `pino` / `pino-http` — structured logging.
+  - `zod` — message and request validation.
+- **Dev dependencies:** `@playwright/test`, `pino-pretty`, `supertest`.
 - **No ORM, no database driver, no front-end framework, no bundler.**
 - Package name in manifest is still the generic `websocket-server`.
 
@@ -63,19 +72,20 @@ convergence is the strongest signal for the architecture decision in Section 9.
 | `lib/wsHandlers.js` | Per-message-type business logic (login, vote, reveal, reset, end, next round, change role, exit). |
 | `lib/roomState.js` | Room lifecycle: create/join/leave/touch, facilitator (re)assignment, idle expiry, room-state snapshots. |
 | `lib/roles.js` | Role constants (`Voter`, `Observer`, `Facilitator`) and permission predicates. |
-| `lib/accessKeys.js` | Access-key store: generate, hash, validate, rotate, list, status; `keys.json` persistence. |
-| `lib/adminActivity.js` | Append-only admin audit log (`admin-activity.jsonl`). |
-| `lib/loginRateLimiter.js` | In-memory sliding-window brute-force throttle. |
-| `lib/buildInfo.js` | Resolves version (from `package.json`) and git commit (`git rev-parse HEAD`). |
-| `manageKeys.js` | Standalone CLI for managing access keys. |
+| `lib/upgradeAuth.js` | Decides whether a WebSocket upgrade is allowed, from the auth-client's `verifySession` + the raw Cookie header. |
+| `lib/validate.js` | zod-backed validation for WS messages and HTTP payloads. |
+| `lib/logger.js` | pino logger construction and redaction rules. |
+| `lib/contrast.js` | Colour-contrast helpers backing the theme tests. |
+| `lib/buildInfo.js` | Resolves version (from `package.json`) and commit (`SCRUM_POKER_COMMIT` / `GITHUB_SHA`, else `git rev-parse HEAD`). |
 
 This separation makes the unit-test surface clean — each `lib/` module has a
 matching `tests/*.test.js`.
 
 ### 2.3 Data Model & State
 
-**Entirely in-memory. Nothing survives a process restart** (except `keys.json`,
-the access-key file, and the admin activity log file).
+**Entirely in-memory. Nothing survives a process restart.** With the access-key
+files gone, the app holds no state of its own on disk; sessions live in the
+hub-written SQLite file it only reads.
 
 - `rooms` — `Map<roomName, { users: Set<userId>, lastActive, votesRevealed, facilitatorId }>`.
 - `participants` — object keyed by `userId` holding the live `ws` socket, role, name, vote, room.
@@ -95,21 +105,20 @@ the access-key file, and the admin activity log file).
 
 ### 2.5 Authentication & Authorization
 
-- **Room access keys** ("team keys") are the only gate to join a room. The
-  internal room name is derived from the key.
-- Keys live in `keys.json` (path overridable via `SCRUM_POKER_KEYS_FILE`).
-- **Keys are hashed at rest:** per-key 16-byte random salt + SHA-256. A fast
-  hash is intentional — keys are high-entropy random tokens, and login checks a
-  candidate against every stored key, so a slow KDF would be a bottleneck.
-- Minimum key length **12 chars**; shorter keys are flagged `weak`.
-- Comparison is timing-safe; keys carry metadata (created date, status).
-- **Admin surface** (`/admin`, `/api/admin/*`) is gated separately by the
-  `SCRUM_POKER_ADMIN_KEY` env var, supplied in the `x-scrum-poker-admin-key`
-  request header. If the env var is unset, the admin API returns `503`.
-- Admin REST API: list / create / rotate / suspend-restore / delete keys,
-  read activity log, confirm session.
-- Every admin mutation appends to `admin-activity.jsonl` with a 12-hex key
-  fingerprint (not the key itself).
+- **Suite session cookies.** A `poker_session` cookie is verified through
+  `@suite/auth-client`'s `verifySession`; the session must also be `entitled`.
+  Unauthenticated visitors are bounced to the hub dashboard.
+- WebSocket upgrades are gated by the same check (`lib/upgradeAuth.js`), so an
+  unauthenticated upgrade is rejected with **401** rather than being accepted
+  and policed later.
+- Anonymous players can join a room through a **share link** carrying a token,
+  without a suite session, and cannot facilitate.
+- Sessions are stored in a local SQLite file, written by the hub and read by
+  each app (`APP_SESSIONS_DB`).
+- **The access-key model is gone.** `keys.json`, `lib/accessKeys.js`,
+  `manageKeys.js`, `lib/loginRateLimiter.js`, `lib/adminActivity.js` and the
+  entire `/admin` surface were removed; `/admin` now returns **404**, which a
+  test pins.
 
 ### 2.6 Security Posture
 
@@ -122,34 +131,41 @@ the access-key file, and the admin activity log file).
 - `Server` and `X-Powered-By` headers stripped; `etag` disabled; all responses
   `no-store`.
 - `express.json({ limit: '8kb' })`.
-- `trust proxy` = 1 (correct client IP from `X-Forwarded-For` behind Nginx).
-- **Login rate limiter:** sliding window, keyed on real client IP, default
-  **20 failed logins / 10 min**. Only failures count; a success clears the counter.
+- `trust proxy` = 1 (correct client IP from `X-Forwarded-For` behind Apache).
+- Rate limiting moved out with the access-key login it protected; authentication
+  is now the hub's responsibility.
 
 ### 2.7 Frontend
 
-- Static files in `public/`: `index.html` (215 lines), `admin.html`,
-  `license.html`, plus `js/app.js` (~1.1k lines), `js/admin.js` (~685),
-  `js/cardDeck.js`, `js/clipboard.js`, and `css/app.css`.
+- Static files in `public/`: `index.html`, `join.html` (anonymous share-link
+  entry), `license.html`, plus `js/app.js` (~1k lines), `js/join.js`,
+  `js/cardDeck.js`, `js/clipboard.js`, `js/oscilloscope.js`, and
+  `css/poker.css` + `css/instrument-core.css` (the synced Instrument theme).
+  `admin.html` / `js/admin.js` were removed with the admin surface.
 - No framework, no build step. All JS is external (CSP forbids inline).
 - `robots.txt` + `sitemap.xml` present.
 
 ### 2.8 Testing & CI
 
 - **Unit tests:** `node --test` over `tests/*.test.js` (one per `lib/` module).
-- **E2E:** Playwright (`tests/e2e/`) — smoke, multi-user room, admin key
-  management. Headless Chrome, serial (`fullyParallel: false`).
-- **CI** — `.github/workflows/ci.yml`, GitHub Actions on PR + push:
-  Node 24 → `npm ci` → `playwright install chromium` → `node --check` syntax
-  pass over every JS file → `npm test` → `npm run test:e2e` →
+- **E2E:** Playwright (`tests/e2e/`) — smoke, multi-user room, anonymous join,
+  header waves. Headless Chrome, **serial: `workers: 1`**, because the specs
+  share one server and one sessions DB and seed a fixed session id;
+  `fullyParallel: false` alone only serialises *within* a file.
+- **CI** — `.github/workflows/ci.yml`, GitHub Actions on PR + push. It checks
+  out **`davidmjackson/suite` as a sibling**, because `@suite/auth-client` and
+  the theme foundation are resolved by relative path, and installs the linked
+  package's own dependencies separately — `npm ci` here does not pull them.
+  Then Node 24 → syntax pass → `npm test` (135) → `npm run test:e2e` (9) →
   `npm audit --omit=dev`.
 
 ### 2.9 Operations
 
 - `GET /health` → `{ status, version, commit, uptime, rooms }` (unauthenticated).
-- Runs as a `systemd` service on port 3000 behind Nginx (TLS, security headers
-  mirrored at the edge, `/ws` proxied with `Upgrade`). Deployment runbook in
-  `docs/deployment.md`.
+- Runs as the `scrumpoker` `systemd` service on port 3000 behind **Apache**
+  (TLS, `/ws` proxied with `Upgrade`; vhosts in `suite/infrastructure/apache/`).
+  Deployment runbook in `docs/deployment.md`, which also documents the sibling
+  `suite` checkout this repo needs.
 - Custom free-use license; in-app page at `/license` (and `/licence`).
 
 ---
@@ -160,11 +176,14 @@ the access-key file, and the admin activity log file).
 
 - **Node.js** (host v20.19.6).
 - **Production dependencies** (`package.json`):
+  - `@suite/auth-client` — `file:../suite/shared/auth-client`; session verification.
   - `express` `^4.19.2` — HTTP server. *(Note: Express **4**, vs Scrum Poker's 5.)*
   - `ws` `^8.17.1` — WebSocket server.
   - `better-sqlite3` `^12.6.2` — **synchronous** SQLite driver.
   - `dotenv` `^17.2.4` — loads `.env`.
-- **Dev dependencies:** `@playwright/test` `^1.59.1`.
+  - `pino` / `pino-http` — structured logging.
+  - `zod` — validation.
+- **Dev dependencies:** `@playwright/test`, `pino-pretty`, `supertest`.
 - No ORM (raw SQL via `better-sqlite3`), no front-end framework, no bundler.
 
 ### 3.2 Process & Module Layout
@@ -173,11 +192,14 @@ Two large files do most of the work:
 
 | File | Lines | Responsibility |
 |---|---|---|
-| `server.js` | ~1,676 | HTTP routes, page routes, REST API, WebSocket server, auth (HMAC tokens, cookies), validation, rate limiting, timer reconciliation, retention scheduling. |
+| `server.js` | ~1,211 | HTTP routes, page routes, REST API, WebSocket server, timer reconciliation, retention scheduling. |
 | `db.js` | ~1,008 | SQLite: schema creation & migrations, normalization helpers, CRUD/upserts for retros/cards/actions, team table + key hashing, retention, JSON seed import. |
 | `scripts/db-maintenance.js` | — | CLI: `migrate`, `retention`, `vacuum`. |
 
-`server.js` is monolithic — no `lib/` decomposition like Scrum Poker has.
+`server.js` is **no longer monolithic**: it has shed ~460 lines into a `lib/`
+(`upgradeAuth.js`, `companyAccess.js`, `validate.js`, `logger.js`, `contrast.js`)
+plus a `middleware/` directory, converging on Scrum Poker's layout. Auth is now
+the shared auth-client's `verifySession`, not a hand-rolled HMAC token.
 
 ### 3.3 Persistence & Data Model
 
@@ -185,9 +207,10 @@ Two large files do most of the work:
   is expected to point this outside the git tree, e.g. `/var/lib/retrospective/`).
 - `foreign_keys = ON`; cascade deletes from `retros` → `cards` / `actions`.
 - **Schema (current version 5, tracked in a `meta` key/value table):**
-  - `teams` — `id`, `name` (UNIQUE, `COLLATE NOCASE`), `key_hash`, `key_salt`,
-    `weak`, `created_at`.
-  - `retros` — `id`, `title`, `team`, `created_at`, `closed`, `closed_at`,
+  - `teams` — **dropped.** Tenancy moved to `retros.company_id`, taken from the
+    verified suite session.
+  - `retros` — `id`, `title`, `company_id` (NOT NULL), `share_token`,
+    `created_at`, `closed`, `closed_at`,
     timer columns (`duration/remaining/running/end_at`), `last_action_json`,
     `updated_at`.
   - `cards` — `id`, `retro_id` (FK), `column_type` (`well`/`improve`/`continue`),
@@ -254,24 +277,16 @@ Two large files do most of the work:
 
 ### 3.7 Authentication & Authorization
 
-- **Session token:** a self-signed HMAC token, format `base64url(body).signature`,
-  HMAC-SHA256 over the body with `RETRO_AUTH_SECRET`. Payload carries
-  `{ name, role, team, iat, exp }`. *(This is a hand-rolled JWT-equivalent — no
-  JWT library.)*
-- Delivered as cookie **`retro_auth`**: `httpOnly`, `sameSite=lax`,
-  `secure` when the request is HTTPS. Also accepted as a `Bearer` header.
-- Signature verification is timing-safe; expiry checked against `exp`.
-- TTL configurable via `RETRO_AUTH_TTL_HOURS` (default 24).
-- If `RETRO_AUTH_SECRET` is unset the server generates a random one and warns
-  (sessions then reset on restart); in `NODE_ENV=production` an unset secret is
-  **fatal** (`process.exit(1)`).
-- **Roles:** `participant`, `facilitator`, `admin`.
-- **Team keys:** 12-char lowercase-alphanumeric, generated with
-  `crypto.randomInt`, hashed at rest (per-team 16-byte salt + SHA-256),
-  verified timing-safe. The `Admin` team uses a fixed key from `RETRO_ADMIN_KEY`
-  (must be 5–64 lowercase alphanumerics; default `admin` is rejected in production).
-- Team membership is enforced per request (`ensureTeamAccess`): a user can only
-  see/modify retros belonging to their token's team.
+- **Suite session cookies**, verified through `@suite/auth-client`'s
+  `verifySession` — the same mechanism as Scrum Poker. WebSocket upgrades go
+  through `lib/upgradeAuth.js`, which also admits a valid board **share token**
+  for anonymous participants.
+- **Tenancy by company.** A board carries `company_id`; `lib/companyAccess.js`
+  allows a request only when that matches the company on the verified session.
+- **The hand-rolled HMAC token is gone** — `RETRO_AUTH_SECRET`, the `retro_auth`
+  cookie, the `teams` table and `RETRO_ADMIN_KEY` team keys were all removed
+  when auth moved to the hub. The "replace this with a real JWT library"
+  recommendation in the 2026-05 draft was overtaken by deleting it instead.
 
 ### 3.8 Security Posture
 
@@ -279,7 +294,7 @@ Two large files do most of the work:
   `frame-ancestors 'none'`, `form-action 'self'`), `X-Content-Type-Options`,
   `Referrer-Policy: same-origin`, `X-Frame-Options: DENY`, `Permissions-Policy`.
   *(Slightly lighter than Scrum Poker — no HSTS / COOP / COEP / CORP in the app
-  layer; those would be added at Nginx.)*
+  layer; those are added at the Apache edge.)*
 - `express.json({ limit: '1mb' })`.
 - **Extensive input validation** in `server.js`: max lengths for name (80),
   team (80), retro title (140), card text (500), card details (2000), action
@@ -321,9 +336,10 @@ Two large files do most of the work:
 ### 3.12 Operations & Maintenance
 
 - `GET /health` (unauthenticated).
-- `systemd` service on port 3001 behind Nginx (`deploy/systemd/` and
-  `deploy/nginx/` contain ready-to-adapt configs). Nginx config maps the
-  WebSocket `Upgrade` header and uses a 1-hour read timeout.
+- `retrospective` `systemd` service on port 3001. **Production fronts it with
+  Apache**, alongside every other app (vhosts in `suite/infrastructure/apache/`);
+  the `deploy/nginx/` sample configs still committed in this repo describe a
+  topology that is not the one in use. `deploy/systemd/` is current.
 - **DB maintenance** via `scripts/db-maintenance.js`:
   `npm run db:migrate`, `npm run db:retention`, `npm run db:vacuum`.
 - **Retention:** if `RETRO_RETENTION_DAYS` is set, closed retros older than the
@@ -340,29 +356,29 @@ Two large files do most of the work:
 | `ws` version | 8.18.2 | 8.17.1 |
 | Persistence | In-memory only (ephemeral) | SQLite, durable, normalized + migrations |
 | State on restart | Rooms & votes lost (keys/audit kept) | Fully restored from DB |
-| Auth mechanism | Access key over WS `login` | Signed HMAC cookie session |
-| User identity | Not persisted; ephemeral `userId` | `name`/`role`/`team` in token |
-| Team store | `keys.json` file | `teams` table in SQLite |
-| Admin gate | `SCRUM_POKER_ADMIN_KEY` header | `admin` role + `Admin` team key |
+| Auth mechanism | Suite session cookie (`@suite/auth-client`) | Suite session cookie (`@suite/auth-client`) |
+| User identity | From the suite session; anonymous share-link joins supported | From the suite session |
+| Team store | Hub-side (company on the session) | `teams` table in SQLite |
+| Admin gate | Removed — `/admin` returns 404 | `admin` role + `Admin` team key |
 | WebSocket path | Dedicated `/ws` | Same server, query-string routed |
 | WS origin check | None (relies on CSP/proxy) | `RETRO_ALLOWED_ORIGINS` enforced |
-| Code organization | Modular `lib/` + thin `server.js` | Monolithic `server.js` (~1.7k lines) |
-| Unit test coverage | Per-module test files | Single test file (gap noted) |
-| CI | GitHub Actions | None |
+| Code organization | Modular `lib/` + thin `server.js` | `server.js` (~1.2k) + a growing `lib/` |
+| Unit test coverage | Per-module test files | Per-concern test files |
+| CI | GitHub Actions | GitHub Actions |
 | Body size limit | 8 KB | 1 MB |
-| Security headers | Full set incl. HSTS/COOP/COEP/CORP | Lighter set (HSTS etc. left to Nginx) |
-| Audit log | `admin-activity.jsonl` | None |
+| Security headers | Full set incl. HSTS/COOP/COEP/CORP | Lighter set (HSTS etc. left to the edge) |
+| Audit log | Removed with the admin surface | None |
 | Config loading | Env vars directly | `dotenv` + `.env` |
 
 ### Shared, near-identical patterns (already converged)
 
 - Node + Express + `ws`; vanilla static frontend; no framework; no build step.
 - Strict CSP forbidding inline JS / `eval`; external-asset-only policy.
-- Salted SHA-256 key hashing with a `weak` flag and timing-safe comparison.
-- In-memory sliding-window login rate limiter.
-- `/health` endpoint; `X-Forwarded-For`-aware client IP behind Nginx.
-- Nginx reverse proxy + TLS at the edge + `systemd` service per app.
-- Recently added an **Admin** role to both.
+- **`@suite/auth-client` for session verification** — the convergence in the
+  2026-05 draft has since been extracted into an actual shared package.
+- `/health` endpoint; `X-Forwarded-For`-aware client IP behind Apache.
+- Apache reverse proxy + TLS at the edge + `systemd` service per app.
+- Structured `pino` logging with redaction; `zod` validation.
 - Custom free-use license + in-app `/license` page in both.
 - Playwright + `node --test` (Scrum Poker) / `node:test`-style scripts (Retro).
 
@@ -374,7 +390,7 @@ Two large files do most of the work:
                  Internet (443/TLS)
                         │
                    ┌────▼────┐
-                   │  Nginx  │  TLS termination, edge security headers,
+                   │ Apache  │  TLS termination, edge security headers,
                    │ (proxy) │  WebSocket Upgrade pass-through
                    └────┬────┘
             ┌───────────┴───────────┐
@@ -384,12 +400,16 @@ Two large files do most of the work:
    │  systemd svc     │     │  systemd svc      │
    │  node :3000      │     │  node :3001       │
    │  in-memory state │     │  SQLite retros.db │
-   │  keys.json       │     │  .env config      │
+   │  suite session   │     │  .env config      │
    └──────────────────┘     └───────────────────┘
 ```
 
+The hub (`suite-hub`, :3004) sits alongside these and owns authentication;
+`signal` and `raid` are two further apps on the same pattern. All four apps read
+sessions written by the hub.
+
 - Each app is a single Node process (no clustering, no worker threads).
-- Each binds `0.0.0.0` and is fronted by Nginx; production guidance is to bind
+- Each binds `0.0.0.0` and is fronted by Apache; production guidance is to bind
   to `127.0.0.1` and expose only 80/443 via firewall.
 - No container/orchestration layer — bare `systemd` units.
 - **Operational note:** the tool/development host is *not* the production
@@ -439,58 +459,72 @@ Redis, plus externalized session/rate-limit state).
 
 ---
 
-## 8. Reuse Opportunities for the Next App
+## 8. What Was Extracted, and What Was Not
 
-If a third app is built, these are already-solved, battle-tested pieces worth
-extracting into a shared internal package rather than re-implementing:
+The 2026-05 draft listed candidates for extraction into a shared package. That
+extraction has since happened, so this section records the outcome rather than
+the wish-list.
 
-1. **Security-header middleware** — Scrum Poker's `applySecurityHeaders` /
-   `setNoCacheHeaders` (`lib/httpApp.js`) is the more complete of the two.
-2. **Access-key / team-key module** — generation, salted-SHA-256 hashing,
-   `weak` flag, rotation, timing-safe verification. Both apps have a variant;
-   Scrum Poker's `lib/accessKeys.js` is the more factored one.
-3. **Login rate limiter** — sliding-window throttle (`lib/loginRateLimiter.js`).
-4. **Build-info / `/health`** — version + git-commit reporting (`lib/buildInfo.js`).
-5. **Role model** — small predicate-based permission helpers (`lib/roles.js`).
-6. **Admin audit log** — append-only JSONL with key fingerprints
-   (`lib/adminActivity.js`).
-7. **Session-token helper** — Retrospective's HMAC sign/verify (or, better,
-   standardize on a real JWT library when extracting).
+**Extracted** into `suite/shared/`:
 
-Scrum Poker's modular `lib/` layout is the better template for new work;
-Retrospective's SQLite schema + migration approach is the better template for
-anything needing durable state.
+- **`auth-client`** — session verification (`verifySession`), the sessions-DB
+  store, and the Express wiring. Consumed by scrumpoker, retrospective, signal
+  and raid, all by relative path.
+- **`theme`** — the Instrument foundation (tokens, `instrument-core.css`,
+  glyphs, oscilloscope) plus a **drift checker** each app runs as a test, so a
+  synced asset cannot quietly diverge from source.
+
+**Deleted rather than extracted** — the access-key model they belonged to is
+gone, replaced by hub sessions: the key store, the admin audit log, the login
+rate limiter and the admin surface.
+
+**Still duplicated per app** and worth a look if a fifth is built: the
+security-header middleware (scrumpoker's `applySecurityHeaders` remains the
+most complete), build-info/`/health` reporting, and the role predicates.
+
+**The cost of the shared package**, which the original list did not anticipate:
+it is *linked*, not installed. Its own dependencies live in the sibling
+checkout, `npm ci` in a consuming app does not pull them, and a running process
+holds the old copy until restarted. Both CI pipelines now encode that.
 
 ---
 
 ## 9. Architectural Decision Inputs
 
-Questions the architect agent will likely need to weigh, given the above:
+Of the eight questions the 2026-05 draft raised, four have been answered by
+what shipped since. They are recorded as settled so nobody re-opens them:
 
-1. **Consolidation vs. independence** — extract a shared `@internal/web-kit`
-   package (security headers, key hashing, rate limiter, health, roles) vs.
-   keep apps fully independent. The pattern overlap strongly favors extraction.
-2. **Persistence baseline** — adopt SQLite (`better-sqlite3`) as the default
-   for any new app and consider giving Scrum Poker optional durability, so a
-   restart no longer wipes active rooms.
-3. **Express version** — standardize on Express 5 (Scrum Poker is already there;
-   Retrospective lags at 4).
-4. **Auth standardization** — pick one model: replace Retrospective's
-   hand-rolled HMAC token with a vetted JWT library, and decide whether Scrum
-   Poker should also move to cookie sessions for consistency.
-5. **Code organization standard** — adopt Scrum Poker's `lib/`-module layout as
-   the house style; refactor Retrospective's monolith over time.
-6. **CI baseline** — every app should have the Scrum Poker GitHub Actions
-   workflow (syntax check + unit + e2e + `npm audit`).
-7. **Scaling** — decide now whether multi-instance is a future requirement; if
-   so, design shared state (Redis pub/sub, externalized sessions) in from the
-   start rather than retrofitting.
-8. **Frontend stance** — both apps prove a no-build, no-framework, strict-CSP
-   frontend is viable; decide whether the next app keeps that constraint or
-   introduces a build step (which would change the CSP and deployment story).
+1. **Consolidation vs. independence — settled: consolidated.** `@suite/auth-client`
+   and `shared/theme` are real shared packages (§8).
+2. **Auth standardization — settled.** Both apps moved to hub-issued session
+   cookies; the hand-rolled HMAC token and the access-key model are both gone.
+3. **Code organization — settled in practice.** Retrospective has grown a `lib/`
+   and shed ~460 lines from `server.js`; the house style is scrumpoker's layout.
+4. **CI baseline — settled.** Both apps have pipelines, and so does the `suite`
+   repo itself as of 2026-09-14.
+
+Still open:
+
+5. **Persistence baseline** — Scrum Poker remains fully in-memory, so a restart
+   still wipes active rooms. Worth deciding deliberately rather than by default,
+   especially now that restarts are routine (a shared-package patch forces one).
+6. **Express version** — Retrospective still lags at 4; Scrum Poker is on 5.
+7. **Scaling** — unchanged, and now slightly sharper: five single-process
+   services share one host. Multi-instance still needs shared state designed in
+   rather than retrofitted (§6).
+8. **Frontend stance** — both apps still prove no-build, no-framework, strict-CSP
+   is viable. Unchanged.
+
+New, not in the original list:
+
+9. **The linked-dependency boundary.** Four apps resolve a shared package by
+   relative path from their parent directory. It is the most load-bearing and
+   least visible assumption in the estate: it is invisible to `npm ci`, absent
+   on a fresh CI runner, and silently stale in a running process. Decide whether
+   to keep the relative-path link or publish the package properly.
 
 ---
 
-*Generated 2026-05-22 from the working source of both apps. Cross-check against
-`docs/deployment.md` (each repo), `docs/session-log.md`, and `README.md` for
-operational detail and historical decisions.*
+*Written 2026-05-22; corrected 2026-09-14 against the working source of both
+apps. Cross-check against `docs/deployment.md` (each repo), `docs/session-log.md`
+and `README.md` for operational detail and historical decisions.*
